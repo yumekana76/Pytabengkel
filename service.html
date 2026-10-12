@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Workshop Pro - Service</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="brand"><h1>Workshop Pro</h1></div>
+      <div class="admin">Admin</div>
+    </header>
+    <div class="layout">
+      <aside class="sidebar">
+        <nav class="nav">
+          <a href="dashboard.html" class="nav-link">Dashboard</a>
+          <a href="customers.html" class="nav-link">Customers</a>
+          <a href="kendaraan.html" class="nav-link">Kendaraan</a>
+          <a href="service.html" class="nav-link active">Service</a>
+          <a href="riwayat.html" class="nav-link">Riwayat</a>
+          <a href="mekanik.html" class="nav-link">Mekanik</a>
+          <a href="sparepart.html" class="nav-link">Sparepart</a>
+          <a href="pengaturan.html" class="nav-link">Pengaturan</a>
+        </nav>
+      </aside>
+      <main class="main">
+        <div class="page-header">
+          <h2>Service</h2>
+          <p>Proses dan pantau service kendaraan pelanggan.</p>
+        </div>
+        <section class="stats-grid">
+          <div class="stat-card">
+            <span class="stat-number" id="totalService">0</span
+            ><span class="stat-label">Total Service</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-number" id="serviceMenunggu">0</span
+            ><span class="stat-label">Menunggu</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-number" id="serviceDikerjakan">0</span
+            ><span class="stat-label">Dikerjakan</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-number" id="serviceSelesai">0</span
+            ><span class="stat-label">Selesai</span>
+          </div>
+        </section>
+        <section class="panel vehicle-panel">
+          <div class="panel-header">
+            <div>
+              <h3>Daftar Service</h3>
+              <p>Setiap kendaraan terdaftar dapat diproses sebagai service.</p>
+            </div>
+            <div class="vehicle-toolbar">
+              <div class="search-box">
+                <input
+                  type="search"
+                  id="searchService"
+                  placeholder="Cari service..."
+                />
+              </div>
+              <button
+                type="button"
+                class="btn btn-primary"
+                id="btnProsesService"
+              >
+                + Proses Service
+              </button>
+            </div>
+          </div>
+          <div class="table-container">
+            <table>
+              <thead>
+                <tr>
+                  <th>No</th>
+                  <th>No. Polisi</th>
+                  <th>Pelanggan</th>
+                  <th>Keluhan</th>
+                  <th>Mekanik</th>
+                  <th>Status</th>
+                  <th>Total</th>
+                  <th>Tanggal</th>
+                  <th>Aksi</th>
+                </tr>
+              </thead>
+              <tbody id="serviceTable"></tbody>
+            </table>
+          </div>
+          <div class="table-footer"><span id="serviceInfo"></span></div>
+        </section>
+      </main>
+    </div>
+    <div class="modal-overlay" id="serviceModal">
+      <div class="modal">
+        <div class="modal-header">
+          <div>
+            <h3 id="serviceModalTitle">Proses Service</h3>
+            <p>Tugaskan mekanik dan perbarui status service.</p>
+          </div>
+          <button
+            type="button"
+            class="modal-close"
+            data-close-modal="serviceModal"
+            aria-label="Tutup"
+          >
+            ×
+          </button>
+        </div>
+        <form id="serviceForm">
+          <div class="modal-body">
+            <div class="form-grid">
+              <div class="form-group form-full">
+                <label for="serviceVehicle">Kendaraan</label
+                ><select
+                  id="serviceVehicle"
+                  class="form-control"
+                  required
+                ></select>
+              </div>
+              <div class="form-group">
+                <label for="serviceMekanik">Mekanik</label
+                ><select
+                  id="serviceMekanik"
+                  class="form-control"
+                  required
+                ></select>
+              </div>
+              <div class="form-group">
+                <label for="serviceStatus">Status</label
+                ><select id="serviceStatus" class="form-control">
+                  <option value="Menunggu">Menunggu</option>
+                  <option value="Dikerjakan">Dikerjakan</option>
+                  <option value="Quality Check">Quality Check</option>
+                  <option value="Selesai">Selesai</option>
+                </select>
+              </div>
+              <div class="form-group form-full">
+                <label for="serviceTanggal">Tanggal Service</label
+                ><input
+                  type="date"
+                  id="serviceTanggal"
+                  class="form-control"
+                  required
+                />
+              </div>
+              <div class="form-group">
+                <label for="serviceBiayaJasa">Biaya Jasa</label
+                ><input
+                  type="number"
+                  id="serviceBiayaJasa"
+                  class="form-control"
+                  min="0"
+                  placeholder="0"
+                  required
+                />
+              </div>
+              <div class="form-group">
+                <label>Total Tagihan</label
+                ><output id="serviceTotalPreview" class="total-preview"
+                  >Rp0</output
+                >
+              </div>
+              <div class="form-group form-full">
+                <div class="form-label-action">
+                  <label>Sparepart yang Dipakai</label
+                  ><button
+                    type="button"
+                    class="action-btn"
+                    id="btnTambahServiceSparepart"
+                  >
+                    + Tambah Sparepart
+                  </button>
+                </div>
+                <div id="serviceSparepartList" class="service-part-list"></div>
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button
+              type="button"
+              class="btn btn-secondary"
+              data-close-modal="serviceModal"
+            >
+              Batal</button
+            ><button type="submit" class="btn btn-primary">Simpan</button>
+          </div>
+        </form>
+      </div>
+    </div>
+    <script src="script.js"></script>
+  </body>
+</html>

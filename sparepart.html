@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Workshop Pro - Sparepart</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="brand"><h1>Workshop Pro</h1></div>
+      <div class="admin">Admin</div>
+    </header>
+    <div class="layout">
+      <aside class="sidebar">
+        <nav class="nav">
+          <a href="dashboard.html" class="nav-link">Dashboard</a>
+          <a href="customers.html" class="nav-link">Customers</a>
+          <a href="kendaraan.html" class="nav-link">Kendaraan</a>
+          <a href="service.html" class="nav-link">Service</a>
+          <a href="riwayat.html" class="nav-link">Riwayat</a>
+          <a href="mekanik.html" class="nav-link">Mekanik</a>
+          <a href="sparepart.html" class="nav-link active">Sparepart</a>
+          <a href="pengaturan.html" class="nav-link">Pengaturan</a>
+        </nav>
+      </aside>
+      <main class="main">
+        <div class="page-header">
+          <h2>Sparepart</h2>
+          <p>Kelola data sparepart Workshop Pro.</p>
+        </div>
+        <section class="stats-grid">
+          <div class="stat-card">
+            <span class="stat-number" id="totalSparepart">0</span
+            ><span class="stat-label">Total Sparepart</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-number" id="sparepartTersedia">0</span
+            ><span class="stat-label">Tersedia</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-number" id="sparepartHabis">0</span
+            ><span class="stat-label">Habis</span>
+          </div>
+        </section>
+        <section class="panel vehicle-panel">
+          <div class="panel-header">
+            <div>
+              <h3>Daftar Sparepart</h3>
+              <p>Data sparepart yang terdaftar di Workshop Pro.</p>
+            </div>
+            <div class="vehicle-toolbar">
+              <div class="search-box">
+                <input
+                  type="search"
+                  id="searchSparepart"
+                  placeholder="Cari sparepart..."
+                />
+              </div>
+              <button
+                type="button"
+                class="btn btn-primary"
+                id="btnTambahSparepart"
+              >
+                + Tambah Sparepart
+              </button>
+            </div>
+          </div>
+          <div class="table-container">
+            <table>
+              <thead>
+                <tr>
+                  <th>No</th>
+                  <th>Nama Sparepart</th>
+                  <th>Stok</th>
+                  <th>Harga</th>
+                  <th>Aksi</th>
+                </tr>
+              </thead>
+              <tbody id="sparepartPageTable"></tbody>
+            </table>
+          </div>
+          <div class="table-footer"><span id="sparepartInfo"></span></div>
+        </section>
+      </main>
+    </div>
+    <div class="modal-overlay" id="sparepartModal">
+      <div class="modal">
+        <div class="modal-header">
+          <div>
+            <h3 id="sparepartModalTitle">Tambah Sparepart</h3>
+            <p>Masukkan informasi sparepart .</p>
+          </div>
+          <button
+            type="button"
+            class="modal-close"
+            data-close-modal="sparepartModal"
+            aria-label="Tutup"
+          >
+            ×
+          </button>
+        </div>
+        <form id="sparepartForm">
+          <input type="hidden" id="sparepartId" />
+          <div class="modal-body">
+            <div class="form-grid">
+              <div class="form-group form-full">
+                <label for="sparepartNama">Nama Sparepart</label
+                ><input
+                  type="text"
+                  id="sparepartNama"
+                  class="form-control"
+                  required
+                />
+              </div>
+              <div class="form-group">
+                <label for="sparepartStok">Stok</label
+                ><input
+                  type="number"
+                  id="sparepartStok"
+                  class="form-control"
+                  placeholder="Jumlah stok"
+                  required
+                />
+              </div>
+              <div class="form-group">
+                <label for="sparepartHarga">Harga</label
+                ><input
+                  type="number"
+                  id="sparepartHarga"
+                  class="form-control"
+                  placeholder="Harga sparepart"
+                  required
+                />
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button
+              type="button"
+              class="btn btn-secondary"
+              data-close-modal="sparepartModal"
+            >
+              Batal</button
+            ><button type="submit" class="btn btn-primary">Simpan</button>
+          </div>
+        </form>
+      </div>
+    </div>
+    <script src="script.js"></script>
+  </body>
+</html>

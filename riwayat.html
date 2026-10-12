@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Workshop Pro - Riwayat</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="brand"><h1>Workshop Pro</h1></div>
+      <div class="admin">Admin</div>
+    </header>
+    <div class="layout">
+      <aside class="sidebar">
+        <nav class="nav">
+          <a href="dashboard.html" class="nav-link">Dashboard</a
+          ><a href="customers.html" class="nav-link">Customers</a
+          ><a href="kendaraan.html" class="nav-link">Kendaraan</a
+          ><a href="service.html" class="nav-link">Service</a
+          ><a href="riwayat.html" class="nav-link active">Riwayat</a
+          ><a href="mekanik.html" class="nav-link">Mekanik</a
+          ><a href="sparepart.html" class="nav-link">Sparepart</a
+          ><a href="pengaturan.html" class="nav-link">Pengaturan</a>
+        </nav>
+      </aside>
+      <main class="main">
+        <div class="page-header">
+          <h2>Riwayat Service</h2>
+          <p>Daftar service yang telah selesai.</p>
+        </div>
+        <section class="stats-grid">
+          <div class="stat-card">
+            <span class="stat-number" id="totalRiwayat">0</span
+            ><span class="stat-label">Service Selesai</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-number money" id="pendapatanSelesai">Rp0</span
+            ><span class="stat-label">Pendapatan Service Selesai</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-number" id="pelangganSelesai">0</span
+            ><span class="stat-label">Pelanggan Terlayani</span>
+          </div>
+        </section>
+        <section class="panel vehicle-panel">
+          <div class="panel-header">
+            <div>
+              <h3>Daftar Riwayat</h3>
+              <p>
+                Riwayat ditampilkan otomatis saat status service menjadi
+                selesai.
+              </p>
+            </div>
+            <div class="search-box">
+              <input
+                type="search"
+                id="searchRiwayat"
+                placeholder="Cari riwayat..."
+              />
+            </div>
+          </div>
+          <div class="table-container">
+            <table>
+              <thead>
+                <tr>
+                  <th>No</th>
+                  <th>Tanggal</th>
+                  <th>No. Polisi</th>
+                  <th>Pelanggan</th>
+                  <th>Keluhan</th>
+                  <th>Mekanik</th>
+                  <th>Total</th>
+                </tr>
+              </thead>
+              <tbody id="riwayatTable"></tbody>
+            </table>
+          </div>
+          <div class="table-footer"><span id="riwayatInfo"></span></div>
+        </section>
+      </main>
+    </div>
+    <script src="script.js"></script>
+  </body>
+</html>

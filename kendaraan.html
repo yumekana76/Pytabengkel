@@ -90,7 +90,7 @@
           <div class="stat-card">
             <span class="stat-number money" id="totalPendapatan"> Rp0 </span>
 
-            <span class="stat-label"> Estimasi Pendapatan </span>
+            <span class="stat-label"> Pendapatan Service Selesai </span>
           </div>
         </section>
 
@@ -195,16 +195,51 @@
                 />
               </div>
 
-              <!-- PELANGGAN -->
               <div class="form-group">
-                <label for="vehiclePelanggan"> Pelanggan </label>
+                <label for="vehicleCustomerId">Pelanggan Terdaftar</label>
+                <select id="vehicleCustomerId" class="form-control">
+                  <option value="">Tambah pelanggan baru</option>
+                </select>
+              </div>
 
+              <div class="form-group">
+                <label for="vehiclePelanggan">Nama Pelanggan</label>
                 <input
                   type="text"
                   id="vehiclePelanggan"
                   class="form-control"
                   placeholder="Nama pelanggan"
                   required
+                />
+              </div>
+
+              <div class="form-group">
+                <label for="vehicleCustomerTelepon">No. HP Pelanggan</label>
+                <input
+                  type="tel"
+                  id="vehicleCustomerTelepon"
+                  class="form-control"
+                  placeholder="08xxxxxxxxxx"
+                />
+              </div>
+
+              <div class="form-group">
+                <label for="vehicleCustomerEmail">Email Pelanggan</label>
+                <input
+                  type="email"
+                  id="vehicleCustomerEmail"
+                  class="form-control"
+                  placeholder="email@contoh.com"
+                />
+              </div>
+
+              <div class="form-group form-full">
+                <label for="vehicleCustomerAlamat">Alamat Pelanggan</label>
+                <input
+                  type="text"
+                  id="vehicleCustomerAlamat"
+                  class="form-control"
+                  placeholder="Alamat pelanggan"
                 />
               </div>
 
@@ -262,7 +297,7 @@
 
               <!-- ESTIMASI -->
               <div class="form-group">
-                <label for="vehicleEstimasi"> Estimasi Biaya </label>
+                <label for="vehicleEstimasi"> Estimasi Awal Biaya </label>
 
                 <input
                   type="number"
@@ -271,6 +306,99 @@
                   placeholder="350000"
                   min="0"
                   required
+                />
+              </div>
+
+              <div class="form-group">
+                <label for="vehicleMekanikId">Mekanik Terdaftar</label>
+                <select id="vehicleMekanikId" class="form-control">
+                  <option value="">Tambah mekanik baru</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label for="vehicleMekanikNama">Nama Mekanik</label>
+                <input
+                  type="text"
+                  id="vehicleMekanikNama"
+                  class="form-control"
+                  placeholder="Nama mekanik"
+                />
+              </div>
+
+              <div class="form-group">
+                <label for="vehicleMekanikSpesialisasi"
+                  >Spesialisasi Mekanik</label
+                >
+                <input
+                  type="text"
+                  id="vehicleMekanikSpesialisasi"
+                  class="form-control"
+                  placeholder="Contoh: Mesin"
+                />
+              </div>
+
+              <div class="form-group">
+                <label for="vehicleBiayaJasa">Biaya Jasa</label>
+                <input
+                  type="number"
+                  id="vehicleBiayaJasa"
+                  class="form-control"
+                  min="0"
+                  placeholder="0"
+                />
+              </div>
+
+              <div class="form-group form-full">
+                <div class="form-section-title">Sparepart (opsional)</div>
+              </div>
+              <div class="form-group">
+                <label for="vehicleSparepartId">Sparepart Terdaftar</label>
+                <select id="vehicleSparepartId" class="form-control">
+                  <option value="">Tambah sparepart baru</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label for="vehicleSparepartNama">Nama Sparepart</label>
+                <input
+                  type="text"
+                  id="vehicleSparepartNama"
+                  class="form-control"
+                  placeholder="Contoh: Oli Mesin"
+                />
+              </div>
+
+              <div class="form-group">
+                <label for="vehicleSparepartStok">Stok Awal</label>
+                <input
+                  type="number"
+                  id="vehicleSparepartStok"
+                  class="form-control"
+                  min="0"
+                  placeholder="0"
+                />
+              </div>
+
+              <div class="form-group">
+                <label for="vehicleSparepartHarga">Harga Satuan</label>
+                <input
+                  type="number"
+                  id="vehicleSparepartHarga"
+                  class="form-control"
+                  min="0"
+                  placeholder="0"
+                />
+              </div>
+
+              <div class="form-group">
+                <label for="vehicleSparepartJumlah">Jumlah Dipakai</label>
+                <input
+                  type="number"
+                  id="vehicleSparepartJumlah"
+                  class="form-control"
+                  min="1"
+                  placeholder="0"
                 />
               </div>
             </div>

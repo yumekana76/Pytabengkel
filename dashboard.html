@@ -45,11 +45,14 @@
         </nav>
       </aside>
       <main class="main">
-        <section class="page-header">
+        <section class="page-header dashboard-header">
           <div>
             <h2>Dashboard</h2>
             <p>Selamat datang kembali, Admin</p>
           </div>
+          <button type="button" class="btn btn-primary" id="btnInputTerpadu">
+            + Input data
+          </button>
         </section>
         <section class="stats-grid">
           <div class="stat-card">
@@ -74,7 +77,7 @@
           </div>
           <div class="stat-card">
             <span class="stat-number money" id="totalPendapatan"> Rp 0 </span>
-            <span class="stat-label">Estimasi Pendapatan</span>
+            <span class="stat-label">Pendapatan Service Selesai</span>
           </div>
         </section>
         <section class="dashboard-grid">
@@ -174,6 +177,265 @@
           </div>
         </section>
       </main>
+    </div>
+    <!-- MODAL Input Data: satu kali isi -> otomatis terbagi ke
+         customers, kendaraan/service, mekanik, sparepart.
+         Primary key tiap tabel adalah id numerik, nama boleh kembar. -->
+    <div class="modal-overlay" id="unifiedModal">
+      <div class="modal modal-wide">
+        <div class="modal-header">
+          <div>
+            <h3>Input Data</h3>
+            <p>
+              Cukup isi di sini. Data otomatis tersimpan ke Customers,
+              Kendaraan, Service, Mekanik, dan Sparepart.
+            </p>
+          </div>
+          <button
+            type="button"
+            class="modal-close"
+            data-close-modal="unifiedModal"
+            aria-label="Tutup"
+          >
+            ×
+          </button>
+        </div>
+        <form id="unifiedForm">
+          <div class="modal-body">
+            <div class="form-grid">
+              <div class="form-group form-full">
+                <div class="form-section-title">
+                  Customer (boleh pilih yang sudah ada / buat baru)
+                </div>
+              </div>
+              <div class="form-group">
+                <label for="unifiedCustomerId"
+                  >Customer Terdaftar (berdasar ID)</label
+                >
+                <select id="unifiedCustomerId" class="form-control">
+                  <option value="">-- Buat customer baru --</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="unifiedCustomerNama">Nama Customer</label>
+                <input
+                  type="text"
+                  id="unifiedCustomerNama"
+                  class="form-control"
+                  placeholder="Nama boleh sama dengan customer lain"
+                  required
+                />
+              </div>
+              <div class="form-group">
+                <label for="unifiedCustomerTelepon">No. HP</label>
+                <input
+                  type="tel"
+                  id="unifiedCustomerTelepon"
+                  class="form-control"
+                  placeholder="08xxxxxxxxxx"
+                />
+              </div>
+              <div class="form-group">
+                <label for="unifiedCustomerEmail">Email</label>
+                <input
+                  type="email"
+                  id="unifiedCustomerEmail"
+                  class="form-control"
+                  placeholder="email@contoh.com"
+                />
+              </div>
+              <div class="form-group form-full">
+                <label for="unifiedCustomerAlamat">Alamat</label>
+                <input
+                  type="text"
+                  id="unifiedCustomerAlamat"
+                  class="form-control"
+                  placeholder="Alamat customer"
+                />
+              </div>
+
+              <div class="form-group form-full">
+                <div class="form-section-title">Kendaraan + Service</div>
+              </div>
+              <div class="form-group">
+                <label for="unifiedPolisi">No. Polisi</label>
+                <input
+                  type="text"
+                  id="unifiedPolisi"
+                  class="form-control"
+                  placeholder="Contoh: B 1234 KZ"
+                  required
+                />
+              </div>
+              <div class="form-group">
+                <label for="unifiedJenis">Jenis</label>
+                <select id="unifiedJenis" class="form-control">
+                  <option value="Mobil">Mobil</option>
+                  <option value="Motor">Motor</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="unifiedMerk">Merk</label>
+                <input
+                  type="text"
+                  id="unifiedMerk"
+                  class="form-control"
+                  placeholder="Contoh: Toyota"
+                  required
+                />
+              </div>
+              <div class="form-group">
+                <label for="unifiedStatus">Status Service</label>
+                <select id="unifiedStatus" class="form-control">
+                  <option value="Menunggu">Menunggu</option>
+                  <option value="Dikerjakan">Dikerjakan</option>
+                  <option value="Quality Check">Quality Check</option>
+                  <option value="Selesai">Selesai</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="unifiedTanggal">Tanggal Service</label>
+                <input type="date" id="unifiedTanggal" class="form-control" />
+              </div>
+              <div class="form-group">
+                <label for="unifiedEstimasi">Estimasi Awal Biaya</label>
+                <input
+                  type="number"
+                  id="unifiedEstimasi"
+                  class="form-control"
+                  min="0"
+                  placeholder="0"
+                />
+              </div>
+              <div class="form-group form-full">
+                <label for="unifiedKeluhan">Keluhan</label>
+                <input
+                  type="text"
+                  id="unifiedKeluhan"
+                  class="form-control"
+                  placeholder="Contoh: Ganti oli"
+                  required
+                />
+              </div>
+
+              <div class="form-group form-full">
+                <div class="form-section-title">
+                  Mekanik (boleh pilih yang sudah ada / buat baru)
+                </div>
+              </div>
+              <div class="form-group">
+                <label for="unifiedMekanikId"
+                  >Mekanik Terdaftar (berdasar ID)</label
+                >
+                <select id="unifiedMekanikId" class="form-control">
+                  <option value="">-- Buat mekanik baru --</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="unifiedMekanikNama">Nama Mekanik</label>
+                <input
+                  type="text"
+                  id="unifiedMekanikNama"
+                  class="form-control"
+                  placeholder="Nama boleh sama, yang dipakai ID"
+                />
+              </div>
+              <div class="form-group">
+                <label for="unifiedMekanikSpesialisasi">Spesialisasi</label>
+                <input
+                  type="text"
+                  id="unifiedMekanikSpesialisasi"
+                  class="form-control"
+                  placeholder="Contoh: Mesin"
+                />
+              </div>
+              <div class="form-group">
+                <label for="unifiedBiayaJasa">Biaya Jasa</label>
+                <input
+                  type="number"
+                  id="unifiedBiayaJasa"
+                  class="form-control"
+                  min="0"
+                  placeholder="0"
+                />
+              </div>
+
+              <div class="form-group form-full">
+                <div class="form-section-title">
+                  Sparepart (opsional, boleh pilih / buat baru)
+                </div>
+              </div>
+              <div class="form-group">
+                <label for="unifiedSparepartId"
+                  >Sparepart Terdaftar (berdasar ID)</label
+                >
+                <select id="unifiedSparepartId" class="form-control">
+                  <option value="">-- Buat sparepart baru --</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="unifiedSparepartNama">Nama Sparepart</label>
+                <input
+                  type="text"
+                  id="unifiedSparepartNama"
+                  class="form-control"
+                  placeholder="Contoh: Oli Mesin"
+                />
+              </div>
+              <div class="form-group">
+                <label for="unifiedSparepartStok"
+                  >Stok Awal (khusus sparepart baru)</label
+                >
+                <input
+                  type="number"
+                  id="unifiedSparepartStok"
+                  class="form-control"
+                  min="0"
+                  placeholder="0"
+                />
+              </div>
+              <div class="form-group">
+                <label for="unifiedSparepartHarga">Harga Satuan</label>
+                <input
+                  type="number"
+                  id="unifiedSparepartHarga"
+                  class="form-control"
+                  min="0"
+                  placeholder="0"
+                />
+              </div>
+              <div class="form-group">
+                <label for="unifiedSparepartJumlah">Jumlah Dipakai</label>
+                <input
+                  type="number"
+                  id="unifiedSparepartJumlah"
+                  class="form-control"
+                  min="1"
+                  placeholder="0"
+                />
+              </div>
+              <div class="form-group">
+                <label>Total Tagihan (Jasa + Sparepart)</label>
+                <output id="unifiedTotalPreview" class="total-preview"
+                  >Rp0</output
+                >
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button
+              type="button"
+              class="btn btn-secondary"
+              data-close-modal="unifiedModal"
+            >
+              Batal
+            </button>
+            <button type="submit" class="btn btn-primary">
+              Simpan ke Semua Data
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
     <script src="script.js"></script>
   </body>

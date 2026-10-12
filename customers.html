@@ -1,0 +1,275 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <title>Workshop Pro - Customers</title>
+
+    <link rel="stylesheet" href="style.css" />
+  </head>
+
+  <body>
+    <!-- TOPBAR -->
+    <header class="topbar">
+      <div class="brand">
+        <h1>Workshop Pro</h1>
+      </div>
+
+      <div class="admin">Admin</div>
+    </header>
+
+    <!-- LAYOUT -->
+    <div class="layout">
+      <!-- SIDEBAR -->
+      <aside class="sidebar">
+        <nav class="nav">
+          <a href="dashboard.html" class="nav-link"> Dashboard </a>
+
+          <a href="customers.html" class="nav-link active"> Customers </a>
+
+          <a href="kendaraan.html" class="nav-link"> Kendaraan </a>
+
+          <a href="service.html" class="nav-link"> Service </a>
+
+          <a href="riwayat.html" class="nav-link"> Riwayat </a>
+
+          <a href="mekanik.html" class="nav-link"> Mekanik </a>
+
+          <a href="sparepart.html" class="nav-link"> Sparepart </a>
+
+          <a href="pengaturan.html" class="nav-link"> Pengaturan </a>
+        </nav>
+      </aside>
+
+      <!-- MAIN -->
+      <main class="main">
+        <!-- PAGE HEADER -->
+        <div class="page-header">
+          <div>
+            <h2>Customers</h2>
+
+            <p>Kelola data pelanggan Workshop Pro.</p>
+          </div>
+        </div>
+
+        <!-- STATISTIK -->
+        <section class="stats-grid kendaraan-stats">
+          <div class="stat-card">
+            <span class="stat-number" id="totalCustomers"> 0 </span>
+            <span class="stat-label"> Total Customers </span>
+          </div>
+
+          <div class="stat-card">
+            <span class="stat-number" id="customersWithVehicle"> 0 </span>
+            <span class="stat-label"> Punya Kendaraan </span>
+          </div>
+
+          <div class="stat-card">
+            <span class="stat-number" id="customersWithoutVehicle"> 0 </span>
+            <span class="stat-label"> Belum Punya Kendaraan </span>
+          </div>
+
+          <div class="stat-card">
+            <span class="stat-number" id="totalCustomerVehicles"> 0 </span>
+            <span class="stat-label"> Total Kendaraan </span>
+          </div>
+        </section>
+
+        <!-- DATA CUSTOMERS -->
+        <section class="panel vehicle-panel">
+          <div class="panel-header">
+            <div>
+              <h3>Daftar Customers</h3>
+
+              <p>Data pelanggan yang terdaftar di Workshop Pro.</p>
+            </div>
+
+            <div class="vehicle-toolbar">
+              <div class="search-box">
+                <input
+                  type="text"
+                  id="searchCustomer"
+                  placeholder="Cari pelanggan..."
+                />
+              </div>
+
+              <button
+                type="button"
+                class="btn btn-primary"
+                id="btnTambahCustomer"
+              >
+                + Tambah Customer
+              </button>
+            </div>
+          </div>
+
+          <!-- TABLE -->
+          <div class="table-container">
+            <table>
+              <thead>
+                <tr>
+                  <th>No</th>
+                  <th>Nama</th>
+                  <th>No. HP</th>
+                  <th>Email</th>
+                  <th>Alamat</th>
+                  <th>Kendaraan</th>
+                  <th>Aksi</th>
+                </tr>
+              </thead>
+
+              <tbody id="customerTable"></tbody>
+            </table>
+          </div>
+
+          <!-- FOOTER TABLE -->
+          <div class="table-footer">
+            <span id="customerInfo"></span>
+            <div class="pagination" id="customerPagination"></div>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <!-- MODAL TAMBAH / EDIT -->
+    <div class="modal-overlay" id="customerModal">
+      <div class="modal">
+        <div class="modal-header">
+          <div>
+            <h3 id="customerModalTitle">Tambah Customer</h3>
+
+            <p>Masukkan informasi pelanggan.</p>
+          </div>
+
+          <button
+            type="button"
+            class="modal-close"
+            data-close-modal="customerModal"
+          >
+            ×
+          </button>
+        </div>
+
+        <form id="customerForm">
+          <input type="hidden" id="customerId" />
+
+          <div class="modal-body">
+            <div class="form-grid">
+              <!-- NAMA -->
+              <div class="form-group form-full">
+                <label for="customerNama"> Nama Pelanggan </label>
+
+                <input
+                  type="text"
+                  id="customerNama"
+                  class="form-control"
+                  placeholder="Contoh: Andi"
+                  required
+                />
+              </div>
+
+              <!-- NO HP -->
+              <div class="form-group">
+                <label for="customerTelepon"> No. HP </label>
+
+                <input
+                  type="tel"
+                  id="customerTelepon"
+                  class="form-control"
+                  placeholder="Contoh: 081234567890"
+                  required
+                />
+              </div>
+
+              <!-- EMAIL -->
+              <div class="form-group">
+                <label for="customerEmail"> Email </label>
+
+                <input
+                  type="email"
+                  id="customerEmail"
+                  class="form-control"
+                  placeholder="Contoh: andi@email.com"
+                />
+              </div>
+
+              <!-- ALAMAT -->
+              <div class="form-group form-full">
+                <label for="customerAlamat"> Alamat </label>
+
+                <textarea
+                  id="customerAlamat"
+                  class="form-control"
+                  rows="3"
+                  placeholder="Alamat pelanggan"
+                ></textarea>
+              </div>
+
+              <!-- CATATAN -->
+              <div class="form-group form-full">
+                <label for="customerCatatan"> Catatan </label>
+
+                <textarea
+                  id="customerCatatan"
+                  class="form-control"
+                  rows="3"
+                  placeholder="Catatan tambahan"
+                ></textarea>
+              </div>
+            </div>
+          </div>
+
+          <div class="modal-footer">
+            <button
+              type="button"
+              class="btn btn-secondary"
+              data-close-modal="customerModal"
+            >
+              Batal
+            </button>
+
+            <button type="submit" class="btn btn-primary">Simpan</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- MODAL DETAIL -->
+    <div class="modal-overlay" id="customerDetailModal">
+      <div class="modal">
+        <div class="modal-header">
+          <div>
+            <h3>Detail Customer</h3>
+
+            <p>Informasi lengkap pelanggan.</p>
+          </div>
+
+          <button
+            type="button"
+            class="modal-close"
+            data-close-modal="customerDetailModal"
+          >
+            ×
+          </button>
+        </div>
+
+        <div class="modal-body">
+          <div class="detail-grid" id="customerDetailContent"></div>
+        </div>
+
+        <div class="modal-footer">
+          <button
+            type="button"
+            class="btn btn-secondary"
+            data-close-modal="customerDetailModal"
+          >
+            Tutup
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <script src="script.js"></script>
+  </body>
+</html>
