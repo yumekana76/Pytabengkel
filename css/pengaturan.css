@@ -1,0 +1,28 @@
+.setting {
+  display: grid;
+  gap: 14px;
+  max-width: 720px;
+}
+.setting-btn {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 18px 20px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  box-shadow: 0 10px 26px rgba(38, 83, 151, 0.055);
+}
+.setting-btn .btn {
+  flex-shrink: 0;
+  min-width: 160px;
+}
+.setting-description {
+  color: var(--secondary);
+  font-size: 13px;
+  line-height: 1.6;
+}
+@media (max-width: 700px) {
+  .setting-btn { flex-direction: column; align-items: stretch; }
+  .setting-btn .btn { width: 100%; }
+}

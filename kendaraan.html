@@ -3,107 +3,146 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-
-    <title>Workshop Pro - Kendaraan</title>
-
-    <link rel="stylesheet" href="style.css" />
+    <title>Pytagotech Bengkel - Kendaraan</title>
+    <link 
+      rel="stylesheet" 
+      href="css/global.css" />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
+    />
+    <link 
+      rel="stylesheet" 
+      href="css/kendaraan.css" />
   </head>
-
   <body>
-    <!-- TOPBAR -->
     <header class="topbar">
+      <button
+        type="button"
+        class="burger"
+        id="burgerBtn"
+        aria-label="Buka menu"
+        aria-expanded="false"
+        aria-controls="sidebar"
+      >
+        <i class="fa-solid fa-bars" aria-hidden="true"></i>
+      </button>
       <div class="brand">
-        <h1>Workshop Pro</h1>
+        <h1>Pytagotech Bengkel</h1>
       </div>
-
-      <div class="admin">Admin</div>
     </header>
-
-    <!-- LAYOUT -->
     <div class="layout">
-      <!-- SIDEBAR -->
-      <aside class="sidebar">
+      <aside class="sidebar" id="sidebar">
         <nav class="nav">
-          <a href="dashboard.html" class="nav-link"> Dashboard </a>
-
-          <a href="customers.html" class="nav-link"> Customers </a>
-
-          <a href="kendaraan.html" class="nav-link active"> Kendaraan </a>
-
-          <a href="service.html" class="nav-link"> Service </a>
-
-          <a href="riwayat.html" class="nav-link"> Riwayat </a>
-
-          <a href="mekanik.html" class="nav-link"> Mekanik </a>
-
-          <a href="sparepart.html" class="nav-link"> Sparepart </a>
-
-          <a href="pengaturan.html" class="nav-link"> Pengaturan </a>
+          <a href="dashboard.html" class="nav-link"
+            ><i class="fa-solid fa-gauge nav-icon" aria-hidden="true"></i>
+            Dashboard
+          </a>
+          <a href="customers.html" class="nav-link"
+            ><i class="fa-solid fa-users nav-icon" aria-hidden="true"></i>
+            Customers
+          </a>
+          <a href="kendaraan.html" class="nav-link active"
+            ><i class="fa-solid fa-car nav-icon" aria-hidden="true"></i>
+            Kendaraan
+          </a>
+          <a href="service.html" class="nav-link"
+            ><i
+              class="fa-solid fa-screwdriver-wrench nav-icon"
+              aria-hidden="true"
+            ></i>
+            Service
+          </a>
+          <a href="riwayat.html" class="nav-link"
+            ><i
+              class="fa-solid fa-clock-rotate-left nav-icon"
+              aria-hidden="true"
+            ></i>
+            Riwayat
+          </a>
+          <a href="keuangan.html" class="nav-link"
+            ><i class="fa-solid fa-wallet nav-icon" aria-hidden="true"></i>
+            Keuangan
+          </a>
+          <a href="mekanik.html" class="nav-link"
+            ><i class="fa-solid fa-user-gear nav-icon" aria-hidden="true"></i>
+            Mekanik
+          </a>
+          <a href="sparepart.html" class="nav-link"
+            ><i class="fa-solid fa-gears nav-icon" aria-hidden="true"></i>
+            Sparepart
+          </a>
+          <a href="pengaturan.html" class="nav-link"
+            ><i class="fa-solid fa-gear nav-icon" aria-hidden="true"></i>
+            Pengaturan
+          </a>
         </nav>
       </aside>
-
-      <!-- MAIN -->
       <main class="main">
-        <!-- PAGE HEADER -->
         <div class="page-header">
           <div>
             <h2>Kendaraan</h2>
-
             <p>
               Kelola data kendaraan pelanggan yang sedang melakukan service.
             </p>
           </div>
         </div>
-
-        <!-- STATISTIK -->
-        <section class="stats-grid kendaraan-stats">
+        <section class="stats-grid">
           <div class="stat-card">
-            <span class="stat-number" id="totalKendaraan"> 0 </span>
-
+            <i class="fa-solid fa-car-side stat-icon" aria-hidden="true"></i
+            ><span class="stat-number" id="totalKendaraan"> 0 </span>
             <span class="stat-label"> Total Kendaraan </span>
           </div>
-
           <div class="stat-card">
-            <span class="stat-number" id="totalMenunggu"> 0 </span>
-
+            <i
+              class="fa-solid fa-hourglass-half stat-icon"
+              aria-hidden="true"
+            ></i
+            ><span class="stat-number" id="totalMenunggu"> 0 </span>
             <span class="stat-label"> Menunggu </span>
           </div>
-
           <div class="stat-card">
-            <span class="stat-number" id="totalDikerjakan"> 0 </span>
-
+            <i class="fa-solid fa-wrench stat-icon" aria-hidden="true"></i
+            ><span class="stat-number" id="totalDikerjakan"> 0 </span>
             <span class="stat-label"> Dikerjakan </span>
           </div>
-
           <div class="stat-card">
-            <span class="stat-number" id="totalQC"> 0 </span>
-
+            <i
+              class="fa-solid fa-clipboard-check stat-icon"
+              aria-hidden="true"
+            ></i
+            ><span class="stat-number" id="totalQC"> 0 </span>
             <span class="stat-label"> Quality Check </span>
           </div>
-
           <div class="stat-card">
-            <span class="stat-number" id="totalSelesai"> 0 </span>
-
+            <i class="fa-solid fa-circle-check stat-icon" aria-hidden="true"></i
+            ><span class="stat-number" id="totalSelesai"> 0 </span>
             <span class="stat-label"> Selesai </span>
           </div>
-
           <div class="stat-card">
-            <span class="stat-number money" id="totalPendapatan"> Rp0 </span>
-
+            <i class="fa-solid fa-sack-dollar stat-icon" aria-hidden="true"></i
+            ><span class="stat-number money" id="totalPendapatan"> Rp0 </span>
             <span class="stat-label"> Pendapatan Service Selesai </span>
           </div>
         </section>
-
-        <!-- DATA KENDARAAN -->
         <section class="panel vehicle-panel">
           <div class="panel-header">
             <div>
               <h3>Daftar Kendaraan</h3>
-
-              <p>Data kendaraan yang terdaftar di Workshop Pro.</p>
+              <p>Data kendaraan yang terdaftar di Pytagotech Bengkel.</p>
             </div>
-
             <div class="vehicle-toolbar">
+              <select
+                id="filterStatus"
+                class="form-control filter-select"
+                aria-label="Filter status"
+              >
+                <option value="">Semua Status</option>
+                <option value="Menunggu">Menunggu</option>
+                <option value="Dikerjakan">Dikerjakan</option>
+                <option value="Quality Check">Quality Check</option>
+                <option value="Selesai">Selesai</option>
+              </select>
               <div class="search-box">
                 <input
                   type="text"
@@ -111,45 +150,36 @@
                   placeholder="Cari kendaraan..."
                 />
               </div>
-
               <button
                 type="button"
                 class="btn btn-primary"
                 id="btnTambahKendaraan"
               >
-                + Tambah Kendaraan
+                <i class="fa-solid fa-plus" aria-hidden="true"></i> Tambah
+                Kendaraan
               </button>
             </div>
           </div>
-
-          <!-- TABLE -->
           <div class="table-container">
             <table>
               <thead>
                 <tr>
                   <th>No</th>
-
                   <th>No. Polisi</th>
-
                   <th>Jenis</th>
-
                   <th>Merk</th>
-
                   <th>Pelanggan</th>
-
                   <th>Keluhan</th>
-
+                  <th>Biaya Jasa</th>
+                  <th>Total Tagihan</th>
+                  <th>Tanggal</th>
                   <th>Status</th>
-
                   <th>Aksi</th>
                 </tr>
               </thead>
-
               <tbody id="kendaraanTable"></tbody>
             </table>
           </div>
-
-          <!-- FOOTER TABLE -->
           <div class="table-footer">
             <span id="kendaraanInfo"></span>
             <div class="pagination" id="kendaraanPagination"></div>
@@ -157,17 +187,13 @@
         </section>
       </main>
     </div>
-
-    <!-- MODAL TAMBAH / EDIT -->
     <div class="modal-overlay" id="vehicleModal">
       <div class="modal">
         <div class="modal-header">
           <div>
             <h3 id="vehicleModalTitle">Tambah Kendaraan</h3>
-
             <p>Masukkan informasi kendaraan.</p>
           </div>
-
           <button
             type="button"
             class="modal-close"
@@ -176,16 +202,12 @@
             ×
           </button>
         </div>
-
         <form id="vehicleForm">
           <input type="hidden" id="vehicleId" />
-
           <div class="modal-body">
             <div class="form-grid">
-              <!-- NO POLISI -->
               <div class="form-group">
                 <label for="vehiclePolisi"> No. Polisi </label>
-
                 <input
                   type="text"
                   id="vehiclePolisi"
@@ -194,14 +216,12 @@
                   required
                 />
               </div>
-
               <div class="form-group">
                 <label for="vehicleCustomerId">Pelanggan Terdaftar</label>
                 <select id="vehicleCustomerId" class="form-control">
                   <option value="">Tambah pelanggan baru</option>
                 </select>
               </div>
-
               <div class="form-group">
                 <label for="vehiclePelanggan">Nama Pelanggan</label>
                 <input
@@ -212,7 +232,6 @@
                   required
                 />
               </div>
-
               <div class="form-group">
                 <label for="vehicleCustomerTelepon">No. HP Pelanggan</label>
                 <input
@@ -222,7 +241,6 @@
                   placeholder="08xxxxxxxxxx"
                 />
               </div>
-
               <div class="form-group">
                 <label for="vehicleCustomerEmail">Email Pelanggan</label>
                 <input
@@ -232,7 +250,6 @@
                   placeholder="email@contoh.com"
                 />
               </div>
-
               <div class="form-group form-full">
                 <label for="vehicleCustomerAlamat">Alamat Pelanggan</label>
                 <input
@@ -242,22 +259,15 @@
                   placeholder="Alamat pelanggan"
                 />
               </div>
-
-              <!-- JENIS -->
               <div class="form-group">
                 <label for="vehicleJenis"> Jenis </label>
-
                 <select id="vehicleJenis" class="form-control">
                   <option value="Mobil">Mobil</option>
-
                   <option value="Motor">Motor</option>
                 </select>
               </div>
-
-              <!-- MERK -->
               <div class="form-group">
                 <label for="vehicleMerk"> Merk </label>
-
                 <input
                   type="text"
                   id="vehicleMerk"
@@ -266,11 +276,8 @@
                   required
                 />
               </div>
-
-              <!-- KELUHAN -->
               <div class="form-group form-full">
                 <label for="vehicleKeluhan"> Keluhan </label>
-
                 <input
                   type="text"
                   id="vehicleKeluhan"
@@ -279,43 +286,25 @@
                   required
                 />
               </div>
-
-              <!-- STATUS -->
               <div class="form-group">
                 <label for="vehicleStatus"> Status </label>
-
                 <select id="vehicleStatus" class="form-control">
                   <option value="Menunggu">Menunggu</option>
-
                   <option value="Dikerjakan">Dikerjakan</option>
-
                   <option value="Quality Check">Quality Check</option>
-
                   <option value="Selesai">Selesai</option>
                 </select>
               </div>
-
-              <!-- ESTIMASI -->
               <div class="form-group">
-                <label for="vehicleEstimasi"> Estimasi Awal Biaya </label>
-
-                <input
-                  type="number"
-                  id="vehicleEstimasi"
-                  class="form-control"
-                  placeholder="350000"
-                  min="0"
-                  required
-                />
+                <label for="vehicleTanggal">Tanggal Service</label>
+                <input type="date" id="vehicleTanggal" class="form-control" />
               </div>
-
               <div class="form-group">
                 <label for="vehicleMekanikId">Mekanik Terdaftar</label>
                 <select id="vehicleMekanikId" class="form-control">
                   <option value="">Tambah mekanik baru</option>
                 </select>
               </div>
-
               <div class="form-group">
                 <label for="vehicleMekanikNama">Nama Mekanik</label>
                 <input
@@ -325,7 +314,6 @@
                   placeholder="Nama mekanik"
                 />
               </div>
-
               <div class="form-group">
                 <label for="vehicleMekanikSpesialisasi"
                   >Spesialisasi Mekanik</label
@@ -337,7 +325,6 @@
                   placeholder="Contoh: Mesin"
                 />
               </div>
-
               <div class="form-group">
                 <label for="vehicleBiayaJasa">Biaya Jasa</label>
                 <input
@@ -348,62 +335,26 @@
                   placeholder="0"
                 />
               </div>
-
               <div class="form-group form-full">
-                <div class="form-section-title">Sparepart (opsional)</div>
+                <div class="form-section-title">
+                  Sparepart (opsional, bisa lebih dari satu)
+                </div>
               </div>
-              <div class="form-group">
-                <label for="vehicleSparepartId">Sparepart Terdaftar</label>
-                <select id="vehicleSparepartId" class="form-control">
-                  <option value="">Tambah sparepart baru</option>
-                </select>
-              </div>
-
-              <div class="form-group">
-                <label for="vehicleSparepartNama">Nama Sparepart</label>
-                <input
-                  type="text"
-                  id="vehicleSparepartNama"
-                  class="form-control"
-                  placeholder="Contoh: Oli Mesin"
-                />
-              </div>
-
-              <div class="form-group">
-                <label for="vehicleSparepartStok">Stok Awal</label>
-                <input
-                  type="number"
-                  id="vehicleSparepartStok"
-                  class="form-control"
-                  min="0"
-                  placeholder="0"
-                />
-              </div>
-
-              <div class="form-group">
-                <label for="vehicleSparepartHarga">Harga Satuan</label>
-                <input
-                  type="number"
-                  id="vehicleSparepartHarga"
-                  class="form-control"
-                  min="0"
-                  placeholder="0"
-                />
-              </div>
-
-              <div class="form-group">
-                <label for="vehicleSparepartJumlah">Jumlah Dipakai</label>
-                <input
-                  type="number"
-                  id="vehicleSparepartJumlah"
-                  class="form-control"
-                  min="1"
-                  placeholder="0"
-                />
+              <div class="form-group form-full">
+                <div class="form-label-action">
+                  <label>Sparepart yang Dipakai</label
+                  ><button
+                    type="button"
+                    class="action-btn"
+                    id="btnTambahVehicleSparepart"
+                  >
+                    + Tambah Sparepart
+                  </button>
+                </div>
+                <div id="vehicleSparepartList" class="service-part-list"></div>
               </div>
             </div>
           </div>
-
           <div class="modal-footer">
             <button
               type="button"
@@ -412,23 +363,18 @@
             >
               Batal
             </button>
-
             <button type="submit" class="btn btn-primary">Simpan</button>
           </div>
         </form>
       </div>
     </div>
-
-    <!-- MODAL DETAIL -->
     <div class="modal-overlay" id="vehicleDetailModal">
       <div class="modal">
         <div class="modal-header">
           <div>
             <h3>Detail Kendaraan</h3>
-
             <p>Informasi lengkap kendaraan.</p>
           </div>
-
           <button
             type="button"
             class="modal-close"
@@ -437,11 +383,9 @@
             ×
           </button>
         </div>
-
         <div class="modal-body">
           <div class="detail-grid" id="vehicleDetailContent"></div>
         </div>
-
         <div class="modal-footer">
           <button
             type="button"
@@ -453,8 +397,7 @@
         </div>
       </div>
     </div>
-
-    <script src="script.js"></script>
+    <script src="js/global.js"></script>
+    <script src="js/kendaraan.js"></script>
   </body>
 </html>
-```

@@ -94,6 +94,15 @@ body {
   border-radius: 8px;
   font-size: 14px;
   transition: 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.nav-icon {
+  width: 18px;
+  flex-shrink: 0;
+  text-align: center;
 }
 .nav-link:hover {
   background: #eff6ff;
@@ -141,6 +150,18 @@ body {
   padding: 20px;
   min-width: 0;
   transition: 0.2s;
+  position: relative;
+  overflow: hidden;
+}
+
+.stat-icon {
+  position: absolute;
+  top: 12px;
+  right: 14px;
+  color: var(--primary);
+  font-size: 26px;
+  opacity: 0.16;
+  pointer-events: none;
 }
 .stat-card:hover {
   transform: translateY(-2px);
@@ -381,9 +402,6 @@ tbody tr:last-child td {
   }
 }
 @media (max-width: 700px) {
-  .sidebar {
-    display: none;
-  }
   .main {
     padding: 18px;
   }
@@ -394,7 +412,7 @@ tbody tr:last-child td {
     flex-direction: column;
   }
   .panel-header {
-    align-items: flex-start;
+    align-items: stretch;
     flex-direction: column;
   }
   .search-box {
@@ -416,9 +434,7 @@ tbody tr:last-child td {
   }
 }
 
-/* =========================================
-   KENDARAAN - TOOLBAR
-========================================= */
+/* KENDARAAN - TOOLBAR */
 
 .vehicle-toolbar {
   display: flex;
@@ -426,9 +442,7 @@ tbody tr:last-child td {
   gap: 10px;
 }
 
-/* =========================================
-   BUTTON
-========================================= */
+/* BUTTON */
 
 .btn {
   border: none;
@@ -438,6 +452,10 @@ tbody tr:last-child td {
   font-weight: 600;
   cursor: pointer;
   transition: 0.2s;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
 }
 
 .btn-primary {
@@ -468,9 +486,7 @@ tbody tr:last-child td {
   background: #fecaca;
 }
 
-/* =========================================
-   ACTION BUTTON
-========================================= */
+/* ACTION BUTTON */
 
 .action-buttons {
   display: flex;
@@ -501,9 +517,7 @@ tbody tr:last-child td {
   background: #fef2f2;
 }
 
-/* =========================================
-   TABLE FOOTER
-========================================= */
+/* TABLE FOOTER */
 
 .table-footer {
   display: flex;
@@ -516,9 +530,7 @@ tbody tr:last-child td {
   font-size: 12px;
 }
 
-/* =========================================
-   PAGINATION
-========================================= */
+/* PAGINATION */
 
 .pagination {
   display: flex;
@@ -549,9 +561,7 @@ tbody tr:last-child td {
   color: white;
 }
 
-/* =========================================
-   MODAL
-========================================= */
+/* MODAL */
 
 .modal-overlay {
   position: fixed;
@@ -623,9 +633,7 @@ tbody tr:last-child td {
   border-top: 1px solid var(--border);
 }
 
-/* =========================================
-   FORM
-========================================= */
+/* FORM */
 
 .form-grid {
   display: grid;
@@ -664,9 +672,7 @@ tbody tr:last-child td {
   box-shadow: 0 0 0 3px #dbeafe;
 }
 
-/* =========================================
-   DETAIL
-========================================= */
+/* DETAIL */
 
 .detail-grid {
   display: grid;
@@ -697,9 +703,7 @@ tbody tr:last-child td {
   font-weight: 600;
 }
 
-/* =========================================
-   RESPONSIVE KENDARAAN
-========================================= */
+/* RESPONSIVE KENDARAAN */
 
 @media (max-width: 700px) {
   .vehicle-toolbar {
@@ -729,9 +733,7 @@ tbody tr:last-child td {
   }
 }
 
-/* =========================
-   PAGINATION
-========================= */
+/* PAGINATION */
 
 .table-footer {
   display: flex;
@@ -806,19 +808,7 @@ tbody tr:last-child td {
   }
 }
 
-/* =========================================
-   VISUAL REFINEMENT — WORKSHOP DASHBOARD
-========================================= */
-
-/* :root {
-  --primary: #1264e8;
-  --primary-dark: #0d4fbd;
-  --background: #f5f8ff;
-  --surface: #ffffff;
-  --text: #142b52;
-  --secondary: #6980a4;
-  --border: #e1eaf7;
-} */
+/* VISUAL REFINEMENT — WORKSHOP DASHBOARD */
 
 body {
   font-family:
@@ -870,7 +860,7 @@ body {
 }
 
 .sidebar::before {
-  content: "Workshop\A Management System";
+  content: "Pytagotech\A Bengkel";
   white-space: pre-line;
   display: block;
   padding: 14px 25px 22px;
@@ -992,6 +982,33 @@ th {
   gap: 8px;
   align-items: center;
 }
+.part-row-box {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px;
+  background: #f8fafc;
+  display: grid;
+  gap: 10px;
+}
+.part-row-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+}
+.part-row-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.part-row-grid .form-group {
+  min-width: 0;
+}
+@media (max-width: 700px) {
+  .part-row-grid {
+    grid-template-columns: 1fr;
+  }
+}
 .form-label-action {
   display: flex;
   align-items: center;
@@ -1013,24 +1030,18 @@ th {
 
 @media (max-width: 900px) {
   .sidebar {
-    width: 74px;
+    width: 190px;
   }
   .sidebar::before {
-    content: "W";
-    padding: 18px 26px;
+    font-size: 15px;
+    padding: 14px 20px 18px;
   }
   .nav {
-    padding: 8px;
+    padding: 8px 10px;
   }
   .nav-link {
-    overflow: hidden;
-    padding: 12px;
-    text-indent: -1px;
-    font-size: 0;
-    min-height: 42px;
-  }
-  .nav-link::first-letter {
-    font-size: 16px;
+    font-size: 13px;
+    padding: 11px 12px;
   }
 }
 
@@ -1041,9 +1052,6 @@ th {
   }
   .layout {
     min-height: calc(100vh - 62px);
-  }
-  .sidebar {
-    display: none;
   }
   .main {
     padding: 20px 16px;
@@ -1071,10 +1079,7 @@ th {
   }
 }
 
-/* =========================================
-   DASHBOARD: input terpadu + status service anti-tembus
-   Halaman lain tidak diubah.
-========================================= */
+/* DASHBOARD: input data + status service */
 
 .dashboard-header {
   display: flex;
@@ -1129,9 +1134,7 @@ th {
   padding: 8px 12px;
 }
 
-/* =========================================
-   PENGATURAN
-========================================= */
+/* PENGATURAN */
 
 .setting {
   display: grid;
@@ -1170,3 +1173,224 @@ th {
     width: 100%;
   }
 }
+
+/* fitur: filter tabel + catatan kunci + grafik */
+.filter-select {
+  width: auto;
+  min-width: 160px;
+}
+.lock-note {
+  padding: 12px 14px;
+  border-radius: 8px;
+  background: #fef3c7;
+  border: 1px solid #fcd34a;
+  color: #92400e;
+  font-size: 13px;
+  line-height: 1.6;
+  margin-bottom: 16px;
+}
+.form-error {
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #991b1b;
+  font-size: 13px;
+  line-height: 1.6;
+  margin-bottom: 16px;
+}
+.form-error[hidden] {
+  display: none;
+}
+.page-notice {
+  padding: 12px 14px;
+  border-radius: 10px;
+  font-size: 13px;
+  line-height: 1.6;
+  margin: 0;
+  border: 1px solid var(--border);
+  background: #f8fafc;
+  color: var(--text);
+  position: fixed;
+  top: 84px;
+  right: 20px;
+  z-index: 2000;
+  max-width: min(360px, calc(100vw - 40px));
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.16);
+}
+.page-notice[hidden] {
+  display: none;
+}
+.page-notice.error {
+  background: #fef2f2;
+  border-color: #fecaca;
+  color: #991b1b;
+}
+.page-notice.success {
+  background: #f0fdf4;
+  border-color: #bbf7d0;
+  color: #166534;
+}
+.action-btn.armed {
+  border-color: var(--danger);
+  color: var(--danger);
+  background: #fef2f2;
+  font-weight: 700;
+}
+@media (max-width: 700px) {
+  .filter-select {
+    width: 100%;
+    min-width: 0;
+  }
+}
+/* Sidebar burger */
+.burger {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: transparent;
+  color: inherit;
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+}
+.burger:hover {
+  background: rgba(127, 140, 160, 0.15);
+}
+.sidebar-overlay {
+  display: none;
+}
+@media (max-width: 700px) {
+  .burger {
+    display: inline-flex;
+  }
+  .topbar {
+    justify-content: flex-start;
+    gap: 12px;
+  }
+  .topbar .admin {
+    margin-left: auto;
+  }
+  .sidebar {
+    display: block;
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100vh;
+    height: 100dvh;
+    width: 260px;
+    z-index: 1001;
+    transform: translateX(-105%);
+    transition: transform 0.25s ease;
+    box-shadow: 10px 0 28px rgba(21, 91, 211, 0.18);
+  }
+  body.sidebar-open {
+    overflow: hidden;
+  }
+  body.sidebar-open .sidebar {
+    transform: none;
+  }
+  body.sidebar-open .sidebar-overlay {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    background: rgba(15, 23, 42, 0.45);
+    border: none;
+    padding: 0;
+    cursor: pointer;
+  }
+}
+.panel-header {
+  flex-wrap: wrap;
+  min-width: 0;
+}
+.panel-header > div:first-child {
+  min-width: 0;
+  flex: 1 1 220px;
+}
+.vehicle-toolbar {
+  flex-wrap: wrap;
+  min-width: 0;
+  max-width: 100%;
+}
+.vehicle-toolbar .btn {
+  white-space: nowrap;
+  max-width: 100%;
+}
+.topbar {
+  min-width: 0;
+}
+.topbar .brand {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+.topbar .brand h1 {
+  font-size: clamp(16px, 4vw, 21px);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.topbar .admin {
+  flex-shrink: 0;
+}
+.table-container {
+  -webkit-overflow-scrolling: touch;
+}
+.table-container table {
+  min-width: 640px;
+}
+.row-select {
+  min-width: 120px;
+  max-width: 100%;
+  padding: 6px 8px;
+  font-size: 12px;
+}
+a.action-btn {
+  text-decoration: none;
+  display: inline-flex;
+}
+.modal-footer {
+  flex-wrap: wrap;
+}
+@media (max-width: 700px) {
+  .vehicle-toolbar {
+    width: 100%;
+  }
+  .vehicle-toolbar .filter-select,
+  .vehicle-toolbar .search-box,
+  .vehicle-toolbar .btn,
+  .panel-header > .filter-select,
+  .panel-header > .search-box {
+    width: 100%;
+  }
+  .panel-header a {
+    align-self: flex-start;
+  }
+  .modal {
+    max-height: 92vh;
+  }
+  .modal-footer .btn {
+    flex: 1 1 140px;
+  }
+}
+@media (max-width: 450px) {
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
+  .main {
+    padding: 12px;
+  }
+  .page-header h2 {
+    font-size: 22px;
+  }
+  .table-container table {
+    min-width: 560px;
+  }
+}
+

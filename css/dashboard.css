@@ -1,0 +1,136 @@
+/* --- Header dashboard: judul di kiri, tombol input di kanan --- */
+.dashboard-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+/* Grid 2 panel utama dashboard */
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  margin-bottom: 20px;
+}
+.dashboard-grid {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+}
+
+/* Panel Status Service */
+.service-status {
+  display: flex;
+  align-items: center;
+  gap: 35px;
+  padding: 25px;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+.progress-wrapper {
+  flex-shrink: 0;
+  min-width: 0;
+  margin-inline: auto;
+}
+.progress-circle {
+  width: 160px;
+  height: 160px;
+  border-radius: 50%;
+  background: conic-gradient(
+    var(--working) 0% 30%,
+    var(--qc) 30% 50%,
+    var(--done) 50% 75%,
+    var(--waiting) 75% 100%
+  );
+  display: grid;
+  place-items: center;
+  position: relative;
+  box-shadow: 0 10px 24px rgba(24, 89, 197, 0.12);
+}
+.progress-circle::before {
+  content: "";
+  position: absolute;
+  width: 115px;
+  height: 115px;
+  background: white;
+  border-radius: 50%;
+}
+.progress-circle::before {
+  background: var(--surface);
+}
+.progress-inner {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.progress-inner strong {
+  font-size: 30px;
+}
+.progress-inner span {
+  color: var(--secondary);
+  font-size: 13px;
+}
+.status-list {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  flex: 1 1 220px;
+  min-width: 0;
+}
+.status-item {
+  display: grid;
+  grid-template-columns: 10px 1fr auto;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  grid-template-columns: 10px minmax(0, 1fr) auto;
+  min-width: 0;
+  overflow: hidden;
+  padding: 8px 10px;
+  border: 1px solid #e6edf8;
+  border-radius: 10px;
+}
+.status-item strong {
+  font-size: 14px;
+}
+.status-item span:nth-child(2) {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.status-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+}
+.status-dot.waiting { background: var(--waiting); }
+.status-dot.working { background: var(--working); }
+.status-dot.qc { background: var(--qc); }
+.status-dot.done { background: var(--done); }
+
+/* Modal Input Data */
+.modal-wide {
+  max-width: 780px;
+}
+.form-section-title {
+  font-size: 13px;
+  font-weight: 750;
+  color: var(--primary-dark);
+  background: #edf5ff;
+  border: 1px solid #d8e8ff;
+  border-radius: 8px;
+  padding: 8px 12px;
+}
+
+@media (max-width: 900px) {
+  .dashboard-grid { grid-template-columns: 1fr; }
+}
+@media (max-width: 700px) {
+  .dashboard-grid { grid-template-columns: 1fr; }
+  .service-status { gap: 18px; padding: 18px; flex-direction: column; }
+  .progress-circle { width: 126px; height: 126px; }
+  .progress-circle::before { width: 91px; height: 91px; }
+}

@@ -3,25 +3,65 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Workshop Pro - Riwayat</title>
-    <link rel="stylesheet" href="style.css" />
+    <title>Pytagotech Bengkel - Riwayat</title>
+    <link rel="stylesheet" href="css/global.css" />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
+    />
+    <link rel="stylesheet" href="css/riwayat.css" />
   </head>
   <body>
     <header class="topbar">
-      <div class="brand"><h1>Workshop Pro</h1></div>
-      <div class="admin">Admin</div>
+      <button
+        type="button"
+        class="burger"
+        id="burgerBtn"
+        aria-label="Buka menu"
+        aria-expanded="false"
+        aria-controls="sidebar"
+      >
+        <i class="fa-solid fa-bars" aria-hidden="true"></i>
+      </button>
+      <div class="brand"><h1>Pytagotech Bengkel</h1></div>
     </header>
     <div class="layout">
-      <aside class="sidebar">
+      <aside class="sidebar" id="sidebar">
         <nav class="nav">
-          <a href="dashboard.html" class="nav-link">Dashboard</a
-          ><a href="customers.html" class="nav-link">Customers</a
-          ><a href="kendaraan.html" class="nav-link">Kendaraan</a
-          ><a href="service.html" class="nav-link">Service</a
-          ><a href="riwayat.html" class="nav-link active">Riwayat</a
-          ><a href="mekanik.html" class="nav-link">Mekanik</a
-          ><a href="sparepart.html" class="nav-link">Sparepart</a
-          ><a href="pengaturan.html" class="nav-link">Pengaturan</a>
+          <a href="dashboard.html" class="nav-link"
+            ><i class="fa-solid fa-gauge nav-icon" aria-hidden="true"></i>
+            Dashboard </a
+          ><a href="customers.html" class="nav-link"
+            ><i class="fa-solid fa-users nav-icon" aria-hidden="true"></i>
+            Customers </a
+          ><a href="kendaraan.html" class="nav-link"
+            ><i class="fa-solid fa-car nav-icon" aria-hidden="true"></i>
+            Kendaraan </a
+          ><a href="service.html" class="nav-link"
+            ><i
+              class="fa-solid fa-screwdriver-wrench nav-icon"
+              aria-hidden="true"
+            ></i>
+            Service </a
+          ><a href="riwayat.html" class="nav-link active"
+            ><i
+              class="fa-solid fa-clock-rotate-left nav-icon"
+              aria-hidden="true"
+            ></i>
+            Riwayat </a
+          ><a href="keuangan.html" class="nav-link"
+            ><i class="fa-solid fa-wallet nav-icon" aria-hidden="true"></i>
+            Keuangan </a
+          ><a href="mekanik.html" class="nav-link"
+            ><i class="fa-solid fa-user-gear nav-icon" aria-hidden="true"></i>
+            Mekanik </a
+          ><a href="sparepart.html" class="nav-link"
+            ><i class="fa-solid fa-gears nav-icon" aria-hidden="true"></i>
+            Sparepart </a
+          ><a href="pengaturan.html" class="nav-link"
+            ><i class="fa-solid fa-gear nav-icon" aria-hidden="true"></i>
+            Pengaturan
+          </a>
         </nav>
       </aside>
       <main class="main">
@@ -31,15 +71,21 @@
         </div>
         <section class="stats-grid">
           <div class="stat-card">
-            <span class="stat-number" id="totalRiwayat">0</span
+            <i
+              class="fa-solid fa-clock-rotate-left stat-icon"
+              aria-hidden="true"
+            ></i
+            ><span class="stat-number" id="totalRiwayat">0</span
             ><span class="stat-label">Service Selesai</span>
           </div>
           <div class="stat-card">
-            <span class="stat-number money" id="pendapatanSelesai">Rp0</span
+            <i class="fa-solid fa-sack-dollar stat-icon" aria-hidden="true"></i
+            ><span class="stat-number money" id="pendapatanSelesai">Rp0</span
             ><span class="stat-label">Pendapatan Service Selesai</span>
           </div>
           <div class="stat-card">
-            <span class="stat-number" id="pelangganSelesai">0</span
+            <i class="fa-solid fa-user-check stat-icon" aria-hidden="true"></i
+            ><span class="stat-number" id="pelangganSelesai">0</span
             ><span class="stat-label">Pelanggan Terlayani</span>
           </div>
         </section>
@@ -52,12 +98,20 @@
                 selesai.
               </p>
             </div>
-            <div class="search-box">
+            <div class="vehicle-toolbar">
               <input
-                type="search"
-                id="searchRiwayat"
-                placeholder="Cari riwayat..."
+                type="month"
+                id="filterBulanRiwayat"
+                class="form-control filter-select"
+                aria-label="Filter bulan"
               />
+              <div class="search-box">
+                <input
+                  type="search"
+                  id="searchRiwayat"
+                  placeholder="Cari riwayat..."
+                />
+              </div>
             </div>
           </div>
           <div class="table-container">
@@ -80,6 +134,7 @@
         </section>
       </main>
     </div>
-    <script src="script.js"></script>
+    <script src="js/global.js"></script>
+    <script src="js/riwayat.js"></script>
   </body>
 </html>
