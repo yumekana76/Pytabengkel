@@ -1,298 +1,801 @@
-* {
-        margin: 0;
-        padding: 0;
-        box-sizing: border-box;
-      }
-      body {
-        font-family: Arial, Helvetica, sans-serif;
-        min-height: 100vh;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        background: #f4f6f8;
-        color: #1f2937;
-      }
-      .login-container {
-        width: 100%;
-        max-width: 1100px;
-        min-height: 650px;
-        margin: 20px;
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        background: #ffffff;
-        border-radius: 20px;
-        overflow: hidden;
-        box-shadow: 0 15px 40px rgba(0, 0, 0, 0.08);
-      }
+/* =========================================
+   HALAMAN LOGIN & DAFTAR (ADMIN & CUSTOMER)
+   ========================================= */
 
-      /* LEFT */
-      
-      .login-info {
-        position: relative;
-        padding: 50px;
-        display: flex;
-        flex-direction: column;
-        justify-content: space-between;
-        background: #111827;
-        color: white;
-      }
-      .brand {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        font-size: 22px;
-        font-weight: 700;
-      }
-      .brand-icon {
-        width: 42px;
-        height: 42px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        border-radius: 10px;
-        background: #2563eb;
-        font-size: 20px;
-      }
-      .info-content {
-        max-width: 420px;
-      }
-      .info-content h1 {
-        font-size: 42px;
-        line-height: 1.15;
-        margin-bottom: 20px;
-      }
-      .info-content p {
-        color: #d1d5db;
-        line-height: 1.7;
-        font-size: 16px;
-      }
-      .features {
-        display: grid;
-        gap: 16px;
-        margin-top: 35px;
-      }
-      .feature {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        color: #e5e7eb;
-        font-size: 14px;
-      }
-      .feature-icon {
-        width: 30px;
-        height: 30px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        border-radius: 8px;
-        background: #1d4ed8;
-      }
-      .copyright {
-        color: #9ca3af;
-        font-size: 12px;
-      }
-      
-      /* RIGHT */
-      
-      .login-form-container {
-        padding: 50px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-      }
-      .login-form {
-        width: 100%;
-        max-width: 400px;
-      }
-      .login-header {
-        margin-bottom: 35px;
-      }
-      .login-header h2 {
-        font-size: 30px;
-        margin-bottom: 10px;
-      }
-      .login-header p {
-        color: #6b7280;
-        font-size: 14px;
-      }
-      .form-group {
-        margin-bottom: 20px;
-      }
-      .form-group label {
-        display: block;
-        margin-bottom: 8px;
-        font-size: 14px;
-        font-weight: 600;
-      }
-      .input-wrapper {
-        position: relative;
-      }
-      .input-wrapper input {
-        width: 100%;
-        height: 48px;
-        padding: 0 45px 0 15px;
-        border: 1px solid #d1d5db;
-        border-radius: 10px;
-        outline: none;
-        font-size: 14px;
-        transition: 0.2s;
-      }
-      .input-wrapper input:focus {
-        border-color: #2563eb;
-        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
-      }
-      .input-icon {
-        position: absolute;
-        right: 15px;
-        top: 50%;
-        transform: translateY(-50%);
-        color: #6b7280;
-      }
-      .password-toggle {
-        position: absolute;
-        right: 14px;
-        top: 50%;
-        transform: translateY(-50%);
-        border: none;
-        background: transparent;
-        cursor: pointer;
-        color: #6b7280;
-        font-size: 16px;
-      }
-      .password-toggle:hover {
-        color: #2563eb;
-      }
-      .form-options {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 25px;
-        font-size: 13px;
-      }
-      .remember {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        cursor: pointer;
-      }
-      .remember input {
-        width: 15px;
-        height: 15px;
-        accent-color: #2563eb;
-      }
-      .forgot-password {
-        color: #2563eb;
-        text-decoration: none;
-        font-weight: 600;
-      }
-      .forgot-password:hover {
-        text-decoration: underline;
-      }
-      .login-button {
-        width: 100%;
-        height: 48px;
-        border: none;
-        border-radius: 10px;
-        background: #2563eb;
-        color: white;
-        font-size: 15px;
-        font-weight: 600;
-        cursor: pointer;
-        transition: 0.2s;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 10px;
-      }
-      .brand-icon i {
-        font-size: 20px;
-      }
-      .feature-icon i {
-        font-size: 13px;
-      }
-      .password-eye {
-        font-size: 16px;
-      }
-      .login-button:hover {
-        background: #1d4ed8;
-      }
-      .login-button:disabled {
-        opacity: 0.7;
-        cursor: not-allowed;
-      }
-      .divider {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        margin: 28px 0;
-        color: #9ca3af;
-        font-size: 12px;
-      }
-      .divider::before,
-      .divider::after {
-        content: "";
-        height: 1px;
-        flex: 1;
-        background: #e5e7eb;
-      }
-      .demo-login {
-        padding: 15px;
-        border-radius: 10px;
-        background: #f3f4f6;
-        color: #4b5563;
-        font-size: 12px;
-        line-height: 1.6;
-      }
-      .demo-login strong {
-        color: #111827;
-      }
-      .error-message,
-      .success-message {
-        display: none;
-        padding: 12px 14px;
-        margin-bottom: 20px;
-        border-radius: 8px;
-        font-size: 13px;
-      }
-      .error-message {
-        background: #fee2e2;
-        color: #b91c1c;
-      }
-      .success-message {
-        background: #dcfce7;
-        color: #15803d;
-      }
-      .error-message.show,
-      .success-message.show {
-        display: block;
-      }
-      @media (max-width: 800px) {
-        .login-container {
-          grid-template-columns: 1fr;
-          max-width: 500px;
-        }
-        .login-info {
-          display: none;
-        }
-        .login-form-container {
-          padding: 40px 30px;
-          min-height: 600px;
-        }
-      }
-      @media (max-width: 400px) {
-        .login-container {
-          margin: 10px;
-          border-radius: 15px;
-        }
-        .login-form-container {
-          padding: 30px 20px;
-        }
-        .login-header h2 {
-          font-size: 26px;
-        }
-        .form-options {
-          align-items: flex-start;
-          flex-direction: column;
-          gap: 12px;
-        }
-      }
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+:root {
+  color-scheme: light;
+
+  /* ===== SPACING SCALE (sama dengan css/global.css) ===== */
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 12px;
+  --space-lg: 16px;
+  --space-xl: 20px;
+  --space-2xl: 24px;
+  --space-3xl: 30px;
+
+  --primary: #2563eb;
+  --primary-dark: #1d4ed8;
+  --primary-soft: #eff6ff;
+
+  --background: #f4f6f8;
+  --surface: #ffffff;
+  --surface-2: #f3f4f6;
+
+  --text: #1f2937;
+  --heading: #111827;
+  --secondary: #6b7280;
+  --muted: #9ca3af;
+
+  --border: #d1d5db;
+  --border-soft: #e5e7eb;
+
+  --brand-panel: #111827;
+  --brand-panel-2: #1f2937;
+
+  --danger-bg: #fee2e2;
+  --danger-soft-bg: #fef2f2;
+  --danger-border: #fecaca;
+  --danger-text: #b91c1c;
+  --success-bg: #dcfce7;
+  --success-border: #bbf7d0;
+  --success-text: #15803d;
+
+  --focus-ring: rgba(37, 99, 235, 0.1);
+  --shadow: 0 15px 40px rgba(0, 0, 0, 0.08);
+  --shadow-sm: 0 10px 26px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 12px 30px rgba(0, 0, 0, 0.16);
+}
+
+[data-theme="dark"] {
+  color-scheme: dark;
+
+  --primary: #3b82f6;
+  --primary-dark: #93c5fd;
+  --primary-soft: rgba(59, 130, 246, 0.16);
+
+  --background: #0b1220;
+  --surface: #111a2b;
+  --surface-2: #162034;
+
+  --text: #dbe4f0;
+  --heading: #f1f5f9;
+  --secondary: #98a7bf;
+  --muted: #7d8ca5;
+
+  --border: #2b3854;
+  --border-soft: #24314c;
+
+  --brand-panel: #0d1626;
+  --brand-panel-2: #16233d;
+
+  --danger-bg: rgba(220, 38, 38, 0.22);
+  --danger-soft-bg: rgba(220, 38, 38, 0.14);
+  --danger-border: rgba(220, 38, 38, 0.35);
+  --danger-text: #fca5a5;
+  --success-bg: rgba(22, 163, 74, 0.2);
+  --success-border: rgba(22, 163, 74, 0.35);
+  --success-text: #86efac;
+
+  --shadow-sm: 0 10px 26px rgba(0, 0, 0, 0.35);
+  --shadow-md: 0 12px 30px rgba(0, 0, 0, 0.45);
+
+  --focus-ring: rgba(96, 165, 250, 0.22);
+  --shadow: 0 18px 46px rgba(0, 0, 0, 0.5);
+}
+
+html,
+body {
+  width: 100%;
+  min-height: 100%;
+}
+
+body {
+  font-family:
+    Inter,
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+  min-height: 100vh;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  background: var(--background);
+  color: var(--text);
+  padding: 20px;
+  overflow-x: hidden;
+  transition:
+    background-color 0.25s ease,
+    color 0.25s ease;
+}
+
+/* Fokus keyboard tetap terlihat */
+:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+.theme-toggle {
+  position: fixed;
+  top: 18px;
+  right: 18px;
+  width: 42px;
+  height: 42px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  color: var(--secondary);
+  font-size: 16px;
+  cursor: pointer;
+  z-index: 50;
+  transition: 0.2s;
+}
+
+.theme-toggle:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+  background: var(--primary-soft);
+}
+
+.theme-toggle .icon-moon,
+[data-theme="dark"] .theme-toggle .icon-sun {
+  display: none;
+}
+
+[data-theme="dark"] .theme-toggle .icon-moon {
+  display: inline-block;
+}
+
+.login-container {
+  width: 100%;
+  max-width: 1100px;
+  min-height: 650px;
+  margin: auto; /*centering aman, tidak terpotong saat layar pendek */
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  background: var(--surface);
+  border: 1px solid var(--border-soft);
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow: var(--shadow);
+}
+
+/* LEFT */
+
+.login-info {
+  position: relative;
+  padding: var(--space-3xl);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  background: linear-gradient(160deg, var(--brand-panel), var(--brand-panel-2));
+  color: #fff;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.brand-icon {
+  width: 42px;
+  height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  background: var(--primary);
+  font-size: 20px;
+}
+
+.info-content {
+  max-width: 420px;
+}
+
+.info-content h1 {
+  font-size: 42px;
+  line-height: 1.15;
+  margin-bottom: 20px;
+}
+
+.info-content p {
+  color: #d1d5db;
+  line-height: 1.7;
+  font-size: 16px;
+}
+
+.features {
+  display: grid;
+  gap: 16px;
+  margin-top: 35px;
+}
+
+.feature {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: #e5e7eb;
+  font-size: 14px;
+}
+
+.feature-icon {
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  background: #1d4ed8;
+  flex-shrink: 0;
+}
+
+.copyright {
+  color: #9ca3af;
+  font-size: 12px;
+}
+
+/* RIGHT */
+
+.login-form-container {
+  padding: var(--space-3xl);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.login-form {
+  width: 100%;
+  max-width: 400px;
+}
+
+/* Pembungkus form login + form reset password (bukan form bersarang) */
+.login-form-wrap {
+  width: 100%;
+  max-width: 400px;
+}
+
+.login-header {
+  margin-bottom: var(--space-3xl);
+}
+
+.login-header h2 {
+  font-size: 30px;
+  margin-bottom: 10px;
+  color: var(--heading);
+}
+
+.login-header p {
+  color: var(--secondary);
+  font-size: 14px;
+}
+
+.form-group {
+  margin-bottom: var(--space-xl);
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.input-wrapper {
+  position: relative;
+}
+
+.input-wrapper input {
+  width: 100%;
+  height: 48px;
+  padding: 0 45px 0 15px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  outline: none;
+  font-size: 14px;
+  background: var(--surface);
+  color: var(--text);
+  font-family: inherit;
+  transition: 0.2s;
+}
+
+.input-wrapper input::placeholder {
+  color: var(--muted);
+}
+
+.input-wrapper input:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--focus-ring);
+}
+
+.input-icon {
+  position: absolute;
+  right: 15px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--secondary);
+  pointer-events: none;
+}
+
+.password-toggle {
+  position: absolute;
+  right: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  color: var(--secondary);
+  font-size: 16px;
+  padding: 4px;
+}
+
+.password-toggle:hover {
+  color: var(--primary);
+}
+
+.form-options {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--space-2xl);
+  font-size: 13px;
+}
+
+.remember {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.remember input {
+  width: 15px;
+  height: 15px;
+  accent-color: var(--primary);
+}
+
+.forgot-password {
+  color: var(--primary);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.forgot-password:hover {
+  text-decoration: underline;
+}
+
+.login-button {
+  width: 100%;
+  height: 48px;
+  border: none;
+  border-radius: 10px;
+  background: var(--primary);
+  color: #fff;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  font-family: inherit;
+}
+
+.login-button:hover {
+  background: var(--primary-dark);
+  color: #fff;
+}
+
+.login-button:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.brand-icon i {
+  font-size: 20px;
+}
+
+.feature-icon i {
+  font-size: 13px;
+}
+
+.password-eye {
+  font-size: 16px;
+}
+
+/* =========================================
+   NOTIFIKASI (gaya sama dengan dashboard)
+   Mengambang di kanan atas, tidak menggeser layout.
+   ========================================= */
+
+.page-notice {
+  position: fixed;
+  /* Di bawah, supaya tidak menutupi tombol tema di kanan atas. */
+  bottom: 24px;
+  right: 24px;
+  z-index: 2000;
+  max-width: min(360px, calc(100vw - 48px));
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 13px;
+  line-height: 1.6;
+  box-shadow: var(--shadow-md);
+  animation: noticeIn 0.25s ease;
+}
+
+.page-notice[hidden] {
+  display: none;
+}
+
+.page-notice.error {
+  background: var(--danger-soft-bg);
+  border-color: var(--danger-border);
+  color: var(--danger-text);
+}
+
+.page-notice.success {
+  background: var(--success-bg);
+  border-color: var(--success-border);
+  color: var(--success-text);
+}
+
+@keyframes noticeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (max-width: 700px) {
+  .page-notice {
+    bottom: 16px;
+    right: 16px;
+    left: 16px;
+    max-width: none;
+  }
+}
+
+/* =========================================
+   AKUN DEMO (hanya mode lokal)
+   ========================================= */
+
+.demo-login {
+  margin-top: var(--space-xl);
+  padding: 14px 16px;
+  border: 1px dashed var(--border);
+  border-radius: 12px;
+  background: var(--surface-2);
+}
+
+.demo-login[hidden] {
+  display: none;
+}
+
+.demo-head {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--secondary);
+  margin-bottom: 10px;
+}
+
+.demo-head i {
+  color: var(--primary);
+}
+
+.demo-head strong {
+  color: var(--text);
+  font-size: 13px;
+}
+
+.demo-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 4px 0;
+  font-size: 12px;
+  color: var(--secondary);
+}
+
+.demo-row code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  color: var(--primary);
+  font-size: 12px;
+  overflow-wrap: anywhere;
+  text-align: right;
+}
+
+.demo-fill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  margin-top: 10px;
+  padding: 8px 12px;
+  border: 1px dashed var(--border);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--secondary);
+  font-size: 11px;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.demo-fill:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+  background: var(--primary-soft);
+}
+
+/* =========================================
+   FORM ATUR ULANG PASSWORD
+   Tampilan sama dengan halaman pendaftaran.
+   ========================================= */
+
+.reset-box {
+  margin-top: 22px;
+  padding: 22px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+}
+
+.reset-box[hidden] {
+  display: none;
+}
+
+.reset-box .login-header {
+  margin-bottom: 18px;
+}
+
+.reset-box .form-group {
+  margin-bottom: 14px;
+}
+
+.reset-box .login-button {
+  height: 46px;
+  font-size: 14px;
+  margin-top: 4px;
+}
+
+.reset-box .auth-links {
+  margin-top: 14px;
+}
+
+/* =========================================
+   PEMILIH ROLE (ADMIN / CUSTOMER)
+   ========================================= */
+
+.role-switch {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  padding: 5px;
+  margin-bottom: var(--space-2xl);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface-2);
+}
+
+.role-tab {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 11px 10px;
+  border: none;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--secondary);
+  font-size: 13px;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+  transition: 0.2s;
+  min-width: 0;
+}
+
+.role-tab i {
+  font-size: 13px;
+  flex-shrink: 0;
+}
+
+.role-tab:hover {
+  color: var(--text);
+}
+
+.role-tab.active {
+  background: var(--surface);
+  color: var(--primary);
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
+}
+
+[data-theme="dark"] .role-tab.active {
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+}
+
+/* Panel yang hanya tampil untuk role tertentu */
+.role-only {
+  display: none;
+}
+
+.role-only.visible {
+  display: block;
+}
+
+/* Badge mode koneksi (Supabase / lokal) */
+
+.mode-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin-bottom: 16px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--secondary);
+}
+
+.mode-badge::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.mode-badge.online {
+  background: rgba(34, 197, 94, 0.12);
+  border-color: rgba(34, 197, 94, 0.4);
+  color: #15803d;
+}
+
+[data-theme="dark"] .mode-badge.online {
+  color: #86efac;
+}
+
+.mode-badge.offline {
+  background: rgba(245, 158, 11, 0.12);
+  border-color: rgba(245, 158, 11, 0.4);
+  color: #b45309;
+}
+
+[data-theme="dark"] .mode-badge.offline {
+  color: #fcd34d;
+}
+
+/* Link antar halaman login / daftar */
+
+.auth-links {
+  margin-top: var(--space-2xl);
+  text-align: center;
+  font-size: 13px;
+  color: var(--secondary);
+  line-height: 1.8;
+}
+
+.auth-links a {
+  color: var(--primary);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.auth-links a:hover {
+  text-decoration: underline;
+}
+
+.auth-role {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin-bottom: var(--space-2xl);
+  padding: 6px var(--space-md);
+  border-radius: 999px;
+  background: var(--primary-soft);
+  color: var(--primary);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+@media (max-width: 800px) {
+  .login-container {
+    grid-template-columns: 1fr;
+    max-width: 500px;
+    min-height: 0;
+  }
+  .login-info {
+    display: none;
+  }
+  .login-form-container {
+    padding: 32px 26px;
+    min-height: 0;
+  }
+  .login-form-wrap {
+    max-width: 100%;
+  }
+}
+
+@media (max-width: 460px) {
+  body {
+    padding: 12px;
+  }
+  .login-container {
+    margin: auto;
+    border-radius: 16px;
+  }
+  .login-form-container {
+    padding: 24px 18px;
+  }
+  .login-header h2 {
+    font-size: 24px;
+  }
+  .login-header {
+    margin-bottom: 26px;
+  }
+  .form-options {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .role-tab {
+    font-size: 12px;
+    padding: 10px 6px;
+  }
+  .role-tab i {
+    display: none;
+  }
+  .theme-toggle {
+    top: 10px;
+    right: 10px;
+    width: 38px;
+    height: 38px;
+  }
+}
+
+/* Layar pendek (mis. ponsel landscape) */
+@media (max-height: 560px) and (max-width: 800px) {
+  .login-form-container {
+    padding: 20px 18px;
+  }
+  .login-header {
+    margin-bottom: 18px;
+  }
+  .login-header p,
+  .mode-badge {
+    display: none;
+  }
+}

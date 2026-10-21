@@ -1,148 +1,4 @@
-/* DATA DEFAULT */
-
-const defaultKendaraan = [];
-
-const defaultMekanik = [];
-
-/* LOCAL STORAGE KENDARAAN */
-
-function getKendaraan() {
-  const data = localStorage.getItem("workshop_kendaraan");
-
-  let kendaraan;
-
-  if (!data) {
-    kendaraan = [...defaultKendaraan];
-  } else {
-    try {
-      kendaraan = JSON.parse(data);
-
-      if (!Array.isArray(kendaraan)) {
-        kendaraan = [...defaultKendaraan];
-      }
-    } catch (error) {
-      console.error("Data kendaraan rusak:", error);
-      kendaraan = [...defaultKendaraan];
-    }
-  }
-
-  const customersData = localStorage.getItem("workshop_customers");
-
-  if (customersData) {
-    try {
-      const customers = JSON.parse(customersData);
-
-      if (Array.isArray(customers)) {
-        let changed = false;
-
-        kendaraan = kendaraan.map((vehicle) => {
-          if (vehicle.pelangganId) {
-            const customer = customers.find(
-              (customer) => Number(customer.id) === Number(vehicle.pelangganId),
-            );
-
-            if (customer) {
-              if (vehicle.pelanggan !== customer.nama) {
-                vehicle.pelanggan = customer.nama;
-                changed = true;
-              }
-            }
-
-            return vehicle;
-          }
-
-          const customer = customers.find(
-            (customer) =>
-              String(customer.nama || "").toLowerCase() ===
-              String(vehicle.pelanggan || "").toLowerCase(),
-          );
-
-          if (customer) {
-            vehicle.pelangganId = customer.id;
-            vehicle.pelanggan = customer.nama;
-            changed = true;
-          }
-
-          return vehicle;
-        });
-
-        if (changed) {
-          localStorage.setItem("workshop_kendaraan", JSON.stringify(kendaraan));
-        }
-      }
-    } catch (error) {
-      console.error("Gagal menghubungkan kendaraan dengan customer:", error);
-    }
-  }
-
-  if (!data) {
-    localStorage.setItem("workshop_kendaraan", JSON.stringify(kendaraan));
-  }
-
-  return kendaraan;
-}
-
-function saveKendaraan(data) {
-  localStorage.setItem("workshop_kendaraan", JSON.stringify(data));
-}
-
-/* LOCAL STORAGE MEKANIK */
-
-function getMekanik() {
-  const data = localStorage.getItem("workshop_mekanik");
-
-  if (!data) {
-    localStorage.setItem("workshop_mekanik", JSON.stringify(defaultMekanik));
-
-    return [...defaultMekanik];
-  }
-
-  try {
-    const mekanik = JSON.parse(data);
-
-    if (Array.isArray(mekanik)) {
-      return mekanik;
-    }
-  } catch (error) {
-    console.error("Data mekanik rusak:", error);
-  }
-
-  localStorage.setItem("workshop_mekanik", JSON.stringify(defaultMekanik));
-
-  return [...defaultMekanik];
-}
-
-function saveMekanik(data) {
-  localStorage.setItem("workshop_mekanik", JSON.stringify(data));
-}
-
-/* SPAREPART DAN BIAYA SERVICE */
-
-const defaultSparepart = [];
-
-function getSparepart() {
-  const data = localStorage.getItem("workshop_sparepart");
-
-  if (!data) {
-    localStorage.setItem(
-      "workshop_sparepart",
-      JSON.stringify(defaultSparepart),
-    );
-    return [];
-  }
-
-  try {
-    const sparepart = JSON.parse(data);
-    return Array.isArray(sparepart) ? sparepart : [];
-  } catch (error) {
-    console.error("Data sparepart rusak:", error);
-    return [];
-  }
-}
-
-function saveSparepart(sparepart) {
-  localStorage.setItem("workshop_sparepart", JSON.stringify(sparepart));
-}
+/* BIAYA SERVICE */
 
 function getServiceTotal(service) {
   const biayaJasa = Number(service.biayaJasa) || 0;
@@ -153,56 +9,6 @@ function getServiceTotal(service) {
   );
   return biayaJasa + totalSparepart;
 }
-
-/* CUSTOMER */
-
-const defaultCustomers = [
-    {
-        "id": 6,
-        "nama": "budi",
-        "telepon": "08239389048",
-        "email": "budisetiawan@gmail.com",
-        "alamat": "karlos",
-        "catatan": "apa",
-        "registeredAt": "2026-10-11T11:47:31.650Z"
-    }];
-
-/* GET CUSTOMER */
-
-function getCustomers() {
-  const data = localStorage.getItem("workshop_customers");
-
-  if (!data) {
-    localStorage.setItem(
-      "workshop_customers",
-      JSON.stringify(defaultCustomers),
-    );
-
-    return [...defaultCustomers];
-  }
-
-  try {
-    const customers = JSON.parse(data);
-
-    if (Array.isArray(customers)) {
-      return customers;
-    }
-  } catch (error) {
-    console.error("Data customer rusak:", error);
-  }
-
-  localStorage.setItem("workshop_customers", JSON.stringify(defaultCustomers));
-
-  return [...defaultCustomers];
-}
-
-/* SAVE CUSTOMER */
-
-function saveCustomers(customers) {
-  localStorage.setItem("workshop_customers", JSON.stringify(customers));
-}
-
- /* JUMLAH KENDARAAN CUSTOMER */
 
 function getCustomerVehicleCount(customerId) {
   const kendaraan = getKendaraan();
@@ -271,6 +77,7 @@ function openModal(id) {
 
   if (modal) {
     modal.classList.add("show");
+    document.body.classList.add("modal-open");
   }
 }
 
@@ -279,18 +86,566 @@ function closeModal(id) {
 
   if (modal) {
     modal.classList.remove("show");
+
+    /* Halaman hanya dibuka lagi kalau masih ada modal terbuka. */
+    if (!document.querySelector(".modal-overlay.show")) {
+      document.body.classList.remove("modal-open");
+    }
   }
+}
+
+/* =========================================
+   DETAIL SERVICE (RIWAYAT & KEUANGAN)
+   Dipakai bersama oleh portal admin & customer
+   supaya isi detail, stepper status, dan invoice
+   selalu tampil sama di semua halaman.
+   ========================================= */
+
+var SERVICE_STATUS_STEPS = [
+  "Menunggu",
+  "Dikerjakan",
+  "Quality Check",
+  "Selesai",
+];
+
+/* Stepper progress service (sudah / sedang / belum). */
+function buildServiceSteps(status) {
+  const currentIndex = SERVICE_STATUS_STEPS.indexOf(status);
+
+  return SERVICE_STATUS_STEPS.map((step, index) => {
+    let className = "status-step";
+
+    if (currentIndex >= 0 && index < currentIndex) {
+      className += " done";
+    } else if (index === currentIndex) {
+      className += " current";
+    }
+
+    const icon = className.includes("done")
+      ? '<i class="fa-solid fa-check" aria-hidden="true"></i>'
+      : String(index + 1);
+
+    return `
+      <div class="${className}">
+        <span class="step-dot">${icon}</span>
+        <span class="step-label">${escapeHTML(step)}</span>
+      </div>
+    `;
+  }).join("");
+}
+
+/* Item yang ditagihkan: biaya jasa + sparepart. */
+function getServiceItems(service) {
+  const items = [];
+  const biayaJasa = Number(service.biayaJasa) || 0;
+
+  if (biayaJasa > 0) {
+    items.push({ nama: "Biaya Jasa", harga: biayaJasa, jumlah: 1 });
+  }
+
+  (service.spareparts || []).forEach((part) => {
+    items.push({
+      nama: part.nama || "Sparepart",
+      harga: Number(part.harga) || 0,
+      jumlah: Number(part.jumlah) || 0,
+    });
+  });
+
+  return items;
+}
+
+/* Tandai pembayaran sebuah service menjadi Lunas.
+   Dipakai admin (bukan customer) sebelum struk dicetak. */
+function setServicePaid(id) {
+  const kendaraan = getKendaraan();
+  const index = kendaraan.findIndex((item) => Number(item.id) === Number(id));
+
+  if (index === -1) return false;
+  if ((kendaraan[index].pembayaran || "Belum Lunas") === "Lunas") return false;
+
+  kendaraan[index] = { ...kendaraan[index], pembayaran: "Lunas" };
+
+  saveKendaraan(kendaraan);
+
+  return true;
+}
+
+/* Ringkasan biaya service (dipakai di detail transaksi). */
+function getServiceRingkasan(service) {
+  const items = getServiceItems(service);
+  const biayaJasa = Number(service.biayaJasa) || 0;
+  const subtotalSparepart = items
+    .filter((item) => item.nama !== "Biaya Jasa")
+    .reduce((sum, item) => sum + item.harga * item.jumlah, 0);
+  const total = getServiceTotal(service);
+  const lunas = (service.pembayaran || "Belum Lunas") === "Lunas";
+
+  return {
+    biayaJasa,
+    subtotalSparepart,
+    jumlahSparepart: items.filter((item) => item.nama !== "Biaya Jasa").length,
+    total,
+    lunas,
+    sisa: lunas ? 0 : total,
+  };
+}
+
+/* Kartu data service untuk modal detail. */
+function buildServiceDetailGrid(service, options = {}) {
+  const customer = service.pelangganId
+    ? getCustomerById(service.pelangganId)
+    : null;
+
+  const mekanik = getMekanik().find(
+    (item) => Number(item.id) === Number(service.mekanikId),
+  );
+
+  const pembayaran = service.pembayaran || "Belum Lunas";
+  const customerLabel = options.customerLabel || "Pelanggan";
+
+  const item = (label, value, full = false) => `
+    <div class="detail-item${full ? " full" : ""}">
+      <span class="detail-label">${escapeHTML(label)}</span>
+      <span class="detail-value">${value}</span>
+    </div>
+  `;
+
+  const parts = [];
+
+  parts.push(item("ID Service", escapeHTML(getKode("kendaraan", service))));
+  parts.push(
+    item("Tanggal Service", escapeHTML(service.tanggalService || "-")),
+  );
+  parts.push(item("No. Polisi", escapeHTML(service.polisi || "-")));
+  parts.push(
+    item(
+      "Merk / Jenis",
+      `${escapeHTML(service.merk || "-")} — ${escapeHTML(service.jenis || "-")}`,
+    ),
+  );
+  parts.push(
+    item(
+      customerLabel,
+      escapeHTML(service.pelanggan || customer?.nama || "-"),
+    ),
+  );
+
+  if (options.showCustomerContact !== false) {
+    parts.push(
+      item("No. HP Pelanggan", escapeHTML(customer?.telepon || "-")),
+    );
+  }
+
+  parts.push(
+    item(
+      "Mekanik",
+      escapeHTML(
+        mekanik?.nama || service.mekanik || "Belum ditugaskan",
+      ),
+    ),
+  );
+
+  if (options.showMechanicContact !== false) {
+    parts.push(
+      item("No. HP Mekanik", escapeHTML(mekanik?.telepon || "-")),
+    );
+  }
+
+  parts.push(item("Keluhan", escapeHTML(service.keluhan || "-"), true));
+
+  parts.push(
+    item(
+      "Status Service",
+      `<span class="badge ${getStatusClass(service.status)}">${escapeHTML(
+        service.status || "-",
+      )}</span>`,
+    ),
+  );
+
+  parts.push(
+    item(
+      "Status Pembayaran",
+      `<span class="badge ${pembayaran === "Lunas" ? "done" : "waiting"}">${escapeHTML(
+        pembayaran,
+      )}</span>`,
+    ),
+  );
+
+  /* Item tambahan (mis. rincian transaksi di halaman Keuangan). */
+  (options.extraItems || []).forEach((extra) => {
+    if (!extra) return;
+    parts.push(
+      item(
+        extra.label,
+        extra.value,
+        extra.full === true,
+      ),
+    );
+  });
+
+  return parts.join("");
+}
+
+/* Blok rincian tagihan (dipakai di modal detail). */
+function buildServiceInvoice(service) {
+  const pembayaran = service.pembayaran || "Belum Lunas";
+  const items = getServiceItems(service);
+  const ringkasan = getServiceRingkasan(service);
+
+  const rows = items.length
+    ? items
+        .map(
+          (item) => `
+            <tr>
+              <td>${escapeHTML(item.nama)}</td>
+              <td class="num">${formatRupiah(item.harga)}</td>
+              <td class="num">${escapeHTML(item.jumlah)}</td>
+              <td class="num">${formatRupiah(item.harga * item.jumlah)}</td>
+            </tr>
+          `,
+        )
+        .join("")
+    : '<tr><td colspan="4" class="empty">Tidak ada item tagihan.</td></tr>';
+
+  return `
+    <div class="invoice-head">
+      <div>
+        <div class="invoice-title">Rincian Tagihan</div>
+        <div class="invoice-meta">
+          ${escapeHTML(getKode("kendaraan", service))} ·
+          ${escapeHTML(service.polisi || "-")} ·
+          ${escapeHTML(service.tanggalService || "-")}
+        </div>
+      </div>
+      <span class="badge ${pembayaran === "Lunas" ? "done" : "waiting"}">
+        ${escapeHTML(pembayaran)}
+      </span>
+    </div>
+    <div class="invoice-body">
+      <table class="invoice-table">
+        <thead>
+          <tr>
+            <th>Item</th>
+            <th class="num">Harga</th>
+            <th class="num">Qty</th>
+            <th class="num">Subtotal</th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>
+      <div class="invoice-row">
+        <span>Biaya Jasa</span>
+        <span>${formatRupiah(ringkasan.biayaJasa)}</span>
+      </div>
+      <div class="invoice-row">
+        <span>Subtotal Sparepart (${ringkasan.jumlahSparepart} item)</span>
+        <span>${formatRupiah(ringkasan.subtotalSparepart)}</span>
+      </div>
+      <div class="invoice-row total">
+        <span>Total Tagihan</span>
+        <span>${formatRupiah(ringkasan.total)}</span>
+      </div>
+      ${
+        ringkasan.lunas
+          ? ""
+          : `<div class="invoice-row">
+              <span>Sisa Tagihan</span>
+              <span>${formatRupiah(ringkasan.sisa)}</span>
+            </div>`
+      }
+    </div>
+  `;
+}
+
+/* =========================================
+   RIWAYAT OVERHAUL PER KENDARAAN
+   Semua service yang pernah dilakukan pada
+   plat kendaraan yang sama.
+   ========================================= */
+
+function getServiceOverhaul(service) {
+  const plat = String(service.polisi || "").toUpperCase();
+
+  return getKendaraan()
+    .filter((item) => String(item.polisi || "").toUpperCase() === plat)
+    .sort(
+      (a, b) =>
+        String(b.tanggalService || "").localeCompare(
+          String(a.tanggalService || ""),
+        ) || Number(b.id) - Number(a.id),
+    );
+}
+
+function buildServiceOverhaul(service) {
+  const rows = getServiceOverhaul(service);
+
+  if (!rows.length) {
+    return '<p class="form-hint">Belum ada riwayat service untuk kendaraan ini.</p>';
+  }
+
+  return `
+    <div class="overhaul-list">
+      ${rows
+        .map(
+          (item) => `
+            <div class="overhaul-item">
+              <div class="overhaul-head">
+                <strong>${escapeHTML(item.tanggalService || "-")}</strong>
+                <span class="badge ${getStatusClass(item.status)}">${escapeHTML(
+                  item.status || "-",
+                )}</span>
+              </div>
+              <div class="overhaul-body">
+                <span>${escapeHTML(item.keluhan || "-")}</span>
+                <span>
+                  ${escapeHTML(getMekanikNama(item.mekanikId))} ·
+                  ${formatRupiah(getServiceTotal(item))}
+                </span>
+              </div>
+            </div>
+          `,
+        )
+        .join("")}
+    </div>
+  `;
+}
+
+/* =========================================
+   CETAK INVOICE
+   ========================================= */
+
+/* Area print tersembunyi di layar, hanya tampil saat dicetak. */
+function ensurePrintArea() {
+  let area = document.getElementById("printArea");
+
+  if (!area) {
+    area = document.createElement("div");
+    area.id = "printArea";
+    area.className = "print-area";
+    area.setAttribute("aria-hidden", "true");
+    document.body.appendChild(area);
+  }
+
+  return area;
+}
+
+/* Dokumen struk / resi siap cetak (gaya thermal printer). */
+function buildPrintInvoice(service) {
+  const info = getBengkelInfoLengkap();
+  const customer = service.pelangganId
+    ? getCustomerById(service.pelangganId)
+    : null;
+  const mekanik = getMekanik().find(
+    (item) => Number(item.id) === Number(service.mekanikId),
+  );
+  const items = getServiceItems(service);
+  const pembayaran = service.pembayaran || "Belum Lunas";
+  const total = getServiceTotal(service);
+  const kode = getKode("kendaraan", service);
+
+  const rows = items.length
+    ? items
+        .map(
+          (item) => `
+            <div class="struk-item">
+              <span class="struk-item-nama">${escapeHTML(item.nama)}</span>
+              <span class="struk-item-sub">
+                ${escapeHTML(item.jumlah)} x ${formatRupiah(item.harga)}
+              </span>
+              <span class="struk-item-total">${formatRupiah(
+                item.harga * item.jumlah,
+              )}</span>
+            </div>
+          `,
+        )
+        .join("")
+    : '<div class="struk-item"><span>Tidak ada item tagihan.</span></div>';
+
+  const baris = (label, value) => `
+    <div class="struk-row">
+      <span>${escapeHTML(label)}</span>
+      <span>${value}</span>
+    </div>
+  `;
+
+  return `
+    <div class="struk">
+      <div class="struk-head">
+        <div class="struk-nama">${escapeHTML(info.nama)}</div>
+        ${info.alamat ? `<div>${escapeHTML(info.alamat)}</div>` : ""}
+        ${info.kontak ? `<div>Telp. ${escapeHTML(info.kontak)}</div>` : ""}
+        ${info.email ? `<div>${escapeHTML(info.email)}</div>` : ""}
+        ${
+          info.hariBuka || info.jamBuka
+            ? `<div>Buka: ${escapeHTML(
+                [info.hariBuka, info.jamBuka].filter(Boolean).join(" "),
+              )}</div>`
+            : ""
+        }
+        <div class="struk-judul">KUITANSI SERVICE</div>
+      </div>
+
+      <div class="struk-separator"></div>
+
+      ${baris("No. Struk", escapeHTML(kode))}
+      ${baris("Tanggal", escapeHTML(service.tanggalService || "-"))}
+      ${baris("Pelanggan", escapeHTML(customer?.nama || service.pelanggan || "-"))}
+      ${baris("No. Telp", escapeHTML(customer?.telepon || "-"))}
+      ${baris("Kendaraan", escapeHTML(service.polisi || "-"))}
+      ${baris("Mekanik", escapeHTML(mekanik?.nama || service.mekanik || "-"))}
+
+      <div class="struk-separator"></div>
+
+      ${rows}
+
+      <div class="struk-separator"></div>
+
+      ${baris("Total Tagihan", `<strong>${formatRupiah(total)}</strong>`)}
+      ${baris("Status Bayar", escapeHTML(pembayaran))}
+
+      <div class="struk-footer">
+        <div>Terima kasih telah-li 🤝</div>
+        <div>Barang yang sudah dibeli tidak dapat ditukar</div>
+        <div>Dicetak: ${escapeHTML(new Date().toLocaleString("id-ID"))}</div>
+      </div>
+    </div>
+  `;
+}
+
+/* Cetak dokumen HTML apa pun lewat area print. */
+function printHtmlDocument(html) {
+  const area = ensurePrintArea();
+
+  area.innerHTML = html;
+
+  document.body.classList.add("printing");
+
+  let done = false;
+
+  const cleanup = () => {
+    if (done) return;
+    done = true;
+    document.body.classList.remove("printing");
+    window.removeEventListener("afterprint", cleanup);
+  };
+
+  window.addEventListener("afterprint", cleanup);
+
+  window.print();
+
+  window.setTimeout(cleanup, 1500);
+}
+
+/* Cetak invoice service ke printer.
+   Hanya service berstatus "Selesai" yang boleh dicetak. */
+function printServiceInvoice(service) {
+  if (!service) {
+    return;
+  }
+
+  /* Struk hanya boleh dicetak oleh admin bengkel. */
+  if (!dbIsAdmin()) {
+    showPageNotice(
+      "Struk invoice hanya bisa dicetak oleh admin bengkel.",
+      "error",
+    );
+    return;
+  }
+
+  if (service.status !== "Selesai") {
+    showPageNotice(
+      "Invoice hanya bisa dicetak setelah service berstatus Selesai.",
+      "error",
+    );
+    return;
+  }
+
+  printHtmlDocument(buildPrintInvoice(service));
 }
 
 /* DASHBOARD */
 
+/* Id baru.
+   Memakai basis timestamp supaya id tetap unik walau ada dua browser
+   yang menambah data pada saat bersamaan (aman untuk multi-user). */
+
+var idSequence = Math.floor(Math.random() * 1000);
+
 function nextNumericId(items) {
-  return items.length
-    ? Math.max(...items.map((item) => Number(item.id) || 0)) + 1
-    : 1;
+  const max = items.length
+    ? Math.max(...items.map((item) => Number(item.id) || 0))
+    : 0;
+
+  const base = Math.max(max + 1, Date.now() * 1000);
+
+  idSequence = (idSequence + 1) % 1000;
+
+  return base + idSequence;
 }
 
-/* HALAMAN SERVICE */
+/* =========================================
+   PENGURUTAN (SORTING)
+   =========================================
+   ID adalah primary key pada setiap tabel, jadi
+   selalu tersedia sebagai pengurutan default. */
+
+function compareBy(key, direction = "asc") {
+  const factor = direction === "desc" ? -1 : 1;
+
+  return function (a, b) {
+    /* ID ditampilkan sebagai kode (knd-001), jadi urutannya
+       mengikuti kode, bukan angka internal. */
+    if (key === "id" && a?.kode && b?.kode && a.kode !== b.kode) {
+      return (
+        String(a.kode).localeCompare(String(b.kode), "id", { numeric: true }) *
+        factor
+      );
+    }
+
+    const valueA = a?.[key];
+    const valueB = b?.[key];
+
+    if (valueA === valueB) {
+      return 0;
+    }
+
+    const emptyA = valueA === undefined || valueA === null || valueA === "";
+    const emptyB = valueB === undefined || valueB === null || valueB === "";
+
+    if (emptyA && emptyB) return 0;
+    if (emptyA) return 1;
+    if (emptyB) return -1;
+
+    if (typeof valueA === "number" && typeof valueB === "number") {
+      return (valueA - valueB) * factor;
+    }
+
+    return (
+      String(valueA).localeCompare(String(valueB), "id", { numeric: true }) *
+      factor
+    );
+  };
+}
+
+function sortRows(rows, sortKey, direction = "asc") {
+  if (!sortKey) {
+    return rows;
+  }
+
+  return [...rows].sort(compareBy(sortKey, direction));
+}
+
+/* Ambil nilai sorting dari dropdown (format: "field:arah") */
+function getSortValue(selectId) {
+  const raw = document.getElementById(selectId)?.value || "";
+  const [key, direction = "asc"] = raw.split(":");
+
+  return { key: key || null, direction };
+}
+
+/* =========================================
+   HALAMAN SERVICE
+   ========================================= */
 
 function getMekanikNama(mekanikId) {
   const mekanik = getMekanik().find(
@@ -300,7 +655,7 @@ function getMekanikNama(mekanikId) {
 }
 
 /* URUTAN STATUS & KUNCI DATA SELESAI */
-const STATUS_ORDER = {
+var STATUS_ORDER = {
   Menunggu: 0,
   Dikerjakan: 1,
   "Quality Check": 2,
@@ -308,8 +663,7 @@ const STATUS_ORDER = {
 };
 
 function compareStatusOrder(a, b) {
-  const order =
-    (STATUS_ORDER[a.status] ?? 99) - (STATUS_ORDER[b.status] ?? 99);
+  const order = (STATUS_ORDER[a.status] ?? 99) - (STATUS_ORDER[b.status] ?? 99);
   if (order !== 0) return order;
   return Number(b.id) - Number(a.id);
 }
@@ -400,8 +754,7 @@ function armConfirmButton(button, label = "Klik lagi untuk yakin") {
     window.clearTimeout(button._disarmTimer);
     button._disarmTimer = window.setTimeout(() => {
       button.dataset.armed = "false";
-      button.textContent =
-        button.dataset.originalLabel || button.textContent;
+      button.textContent = button.dataset.originalLabel || button.textContent;
       button.classList.remove("armed");
     }, 3000);
     return false;
@@ -436,6 +789,50 @@ function confirmUnlock(item, aksi = "mengubah", button = null) {
   return true;
 }
 
+/* =========================================
+   PAGINASI TABEL (UMUM)
+   Dipakai halaman Riwayat, Keuangan, Aktivitas,
+   dan halaman customer.
+   ========================================= */
+
+function renderTablePagination(containerId, currentPage, totalPages, onPage) {
+  const pagination = document.getElementById(containerId);
+
+  if (!pagination) {
+    return;
+  }
+
+  pagination.innerHTML = "";
+
+  if (totalPages <= 1) {
+    return;
+  }
+
+  const addButton = (label, page, active = false, disabled = false) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "page-btn";
+    button.textContent = label;
+    button.disabled = disabled;
+
+    if (active) {
+      button.classList.add("active");
+    }
+
+    button.addEventListener("click", () => onPage(page));
+
+    pagination.appendChild(button);
+  };
+
+  addButton("‹", currentPage - 1, false, currentPage === 1);
+
+  for (let page = 1; page <= totalPages; page++) {
+    addButton(String(page), page, page === currentPage);
+  }
+
+  addButton("›", currentPage + 1, false, currentPage === totalPages);
+}
+
 /* TABEL KENDARAAN */
 
 function renderKendaraan(search = "", page = 1) {
@@ -454,10 +851,13 @@ function renderKendaraan(search = "", page = 1) {
     document.getElementById("filterStatusDashboard")?.value ||
     "";
 
+  const sort = getSortValue("sortKendaraan");
+
   const hasil = kendaraan
     .filter((item) => {
       if (statusFilter && item.status !== statusFilter) return false;
       return [
+        item.kode,
         item.polisi,
         item.jenis,
         item.merk,
@@ -474,11 +874,18 @@ function renderKendaraan(search = "", page = 1) {
     })
     .sort(compareStatusOrder);
 
+  const hasilWithTotal = hasil.map((item) => ({
+    ...item,
+    total: getServiceTotal(item),
+  }));
+
+  const hasilSorted = sortRows(hasilWithTotal, sort.key, sort.direction);
+
   const isDashboard = !document.getElementById("btnTambahKendaraan");
 
   const perPage = isDashboard ? 5 : 10;
 
-  const totalPages = Math.max(1, Math.ceil(hasil.length / perPage));
+  const totalPages = Math.max(1, Math.ceil(hasilSorted.length / perPage));
 
   if (page < 1) {
     page = 1;
@@ -492,12 +899,12 @@ function renderKendaraan(search = "", page = 1) {
 
   const endIndex = startIndex + perPage;
 
-  const dataHalaman = hasil.slice(startIndex, endIndex);
+  const dataHalaman = hasilSorted.slice(startIndex, endIndex);
 
   table.innerHTML = "";
 
-  if (hasil.length === 0) {
-    const colspan = isDashboard ? 12 : 11;
+  if (hasilSorted.length === 0) {
+    const colspan = isDashboard ? 13 : 12;
 
     table.innerHTML = `
       <tr>
@@ -531,6 +938,10 @@ function renderKendaraan(search = "", page = 1) {
 
             <td>
               ${nomor}
+            </td>
+
+            <td>
+              <span class="cell-id">${escapeHTML(getKode("kendaraan", item))}</span>
             </td>
 
             <td>
@@ -585,7 +996,7 @@ function renderKendaraan(search = "", page = 1) {
               <button
                 type="button"
                 class="action-btn"
-                onclick="openDashboardEdit(${item.id}, this)"
+                data-dashboard-edit="${item.id}"
                 title="Ubah status & mekanik"
               >
                 Ubah
@@ -600,6 +1011,10 @@ function renderKendaraan(search = "", page = 1) {
 
             <td>
               ${nomor}
+            </td>
+
+            <td>
+              <span class="cell-id">${escapeHTML(getKode("kendaraan", item))}</span>
             </td>
 
             <td>
@@ -655,11 +1070,7 @@ function renderKendaraan(search = "", page = 1) {
                 <button
                   type="button"
                   class="action-btn"
-                  onclick="
-                    showKendaraanDetail(
-                      ${item.id}
-                    )
-                  "
+                  data-kendaraan-detail="${item.id}"
                 >
                   Detail
                 </button>
@@ -667,11 +1078,7 @@ function renderKendaraan(search = "", page = 1) {
                 <button
                   type="button"
                   class="action-btn"
-                  onclick="
-                    editKendaraan(
-                      ${item.id}, this
-                    )
-                  "
+                  data-kendaraan-edit="${item.id}"
                 >
                   Edit
                 </button>
@@ -679,11 +1086,7 @@ function renderKendaraan(search = "", page = 1) {
                 <button
                   type="button"
                   class="action-btn danger"
-                  onclick="
-                    deleteKendaraan(
-                      ${item.id}, this
-                    )
-                  "
+                  data-kendaraan-delete="${item.id}"
                 >
                   Hapus
                 </button>
@@ -701,9 +1104,34 @@ function renderKendaraan(search = "", page = 1) {
     "kendaraanInfo",
     `Menampilkan ${startIndex + 1}-${Math.min(
       endIndex,
-      hasil.length,
-    )} dari ${hasil.length} kendaraan`,
+      hasilSorted.length,
+    )} dari ${hasilSorted.length} kendaraan`,
   );
+
+  /* Listener tombol aksi (tanpa inline onclick -> CSP friendly) */
+  table.querySelectorAll("[data-dashboard-edit]").forEach((button) => {
+    button.addEventListener("click", () =>
+      openDashboardEdit(button.dataset.dashboardEdit, button),
+    );
+  });
+
+  table.querySelectorAll("[data-kendaraan-detail]").forEach((button) => {
+    button.addEventListener("click", () =>
+      showKendaraanDetail(button.dataset.kendaraanDetail),
+    );
+  });
+
+  table.querySelectorAll("[data-kendaraan-edit]").forEach((button) => {
+    button.addEventListener("click", () =>
+      editKendaraan(button.dataset.kendaraanEdit, button),
+    );
+  });
+
+  table.querySelectorAll("[data-kendaraan-delete]").forEach((button) => {
+    button.addEventListener("click", () =>
+      deleteKendaraan(button.dataset.kendaraanDelete, button),
+    );
+  });
 
   renderKendaraanPagination(page, totalPages, search);
 }
@@ -792,12 +1220,14 @@ function initSidebar() {
     document.body.classList.remove("sidebar-open");
     burger.setAttribute("aria-expanded", "false");
     burger.setAttribute("aria-label", "Buka menu");
+    burger.setAttribute("title", "Buka menu");
   }
 
   function openSidebar() {
     document.body.classList.add("sidebar-open");
     burger.setAttribute("aria-expanded", "true");
     burger.setAttribute("aria-label", "Tutup menu");
+    burger.setAttribute("title", "Tutup menu");
   }
 
   let overlay = document.getElementById("sidebarOverlay");
@@ -841,7 +1271,114 @@ function initSidebar() {
   }
 }
 
-document.addEventListener("DOMContentLoaded", function () {
+/* TOPBAR: NAMA PENGGUNA, TOMBOL TEMA, LOGOUT */
+
+function initTopbar() {
+  const userChip = document.getElementById("userChip");
+  const userName = document.getElementById("userChipName");
+  const logoutButton = document.getElementById("btnLogout");
+
+  if (userChip && userName) {
+    const profile = getCurrentProfile();
+    const nama =
+      profile?.nama ||
+      sessionStorage.getItem("workshopUserName") ||
+      sessionStorage.getItem("workshopCustomerName") ||
+      "";
+
+    if (nama) {
+      userName.textContent = nama;
+      userChip.hidden = false;
+    }
+  }
+
+  if (logoutButton) {
+    logoutButton.addEventListener("click", async function () {
+      if (typeof Auth !== "undefined") {
+        await Auth.signOut();
+      }
+
+      sessionStorage.removeItem("workshopLoggedIn");
+      sessionStorage.removeItem("workshopUserName");
+      sessionStorage.removeItem("workshopCustomerSession");
+      sessionStorage.removeItem("workshopCustomerName");
+
+      window.location.href =
+        logoutButton.dataset.logoutTarget || "../index.html";
+    });
+  }
+}
+
+/* =========================================
+   SKELETON LOADING
+   ========================================= */
+
+function showSkeleton() {
+  if (document.getElementById("appSkeleton")) {
+    return;
+  }
+
+  const skeleton = document.createElement("div");
+  skeleton.id = "appSkeleton";
+  skeleton.className = "skeleton";
+  skeleton.setAttribute("role", "status");
+  skeleton.setAttribute("aria-live", "polite");
+  skeleton.innerHTML = `
+    <div class="skeleton-inner">
+      <div class="skeleton-bar title"></div>
+      <div class="skeleton-bar medium"></div>
+      <div class="skeleton-bar short"></div>
+      <p class="skeleton-text">Memuat data…</p>
+    </div>
+  `;
+
+  document.body.appendChild(skeleton);
+}
+
+function hideSkeleton() {
+  const skeleton = document.getElementById("appSkeleton");
+
+  if (skeleton) {
+    skeleton.classList.add("hidden");
+    window.setTimeout(() => skeleton.remove(), 300);
+  }
+}
+
+/* =========================================
+   BOOT SEQUENCE
+   ========================================= */
+
+document.addEventListener("DOMContentLoaded", async function () {
+  if (typeof initTheme === "function") initTheme();
+
+  showSkeleton();
+
+  /* 1. Muat data (Supabase atau localStorage) */
+  if (typeof dbInit === "function") {
+    await dbInit();
+  }
+
+  /* 2. Cek sesi login sesuai role halaman ini */
+  const role = window.__APP_ROLE;
+
+  if (role === "admin" && typeof requireAdminAuth === "function") {
+    const allowed = await requireAdminAuth();
+    if (!allowed) {
+      hideSkeleton();
+      return;
+    }
+  }
+
+  if (role === "customer" && typeof requireCustomerAuth === "function") {
+    const allowed = await requireCustomerAuth();
+    if (!allowed) {
+      hideSkeleton();
+      return;
+    }
+  }
+
+  /* 3. Tampilan umum */
+  initTopbar();
   initSidebar();
   document.querySelectorAll("[data-close-modal]").forEach(function (button) {
     if (button.dataset.globalBound) return;
@@ -858,7 +1395,22 @@ document.addEventListener("DOMContentLoaded", function () {
     });
   });
 
-  if (document.getElementById("btnInputTerpadu") && typeof initDashboardInput === "function") {
+  /* Tekan ESC = tutup modal yang paling atas. */
+  document.addEventListener("keydown", function (event) {
+    if (event.key !== "Escape") return;
+
+    const terbuka = [...document.querySelectorAll(".modal-overlay.show")];
+
+    if (terbuka.length) {
+      closeModal(terbuka[terbuka.length - 1].id);
+    }
+  });
+
+  /* 4. Halaman aktif */
+  if (
+    document.getElementById("btnInputTerpadu") &&
+    typeof initDashboardInput === "function"
+  ) {
     updateDashboard();
     if (typeof renderMekanik === "function") renderMekanik();
     initDashboardInput();
@@ -871,4 +1423,7 @@ document.addEventListener("DOMContentLoaded", function () {
   if (typeof initSparepartPage === "function") initSparepartPage();
   if (typeof initPengaturanPage === "function") initPengaturanPage();
   if (typeof initKeuanganPage === "function") initKeuanganPage();
+  if (typeof initActivityPage === "function") initActivityPage();
+
+  hideSkeleton();
 });

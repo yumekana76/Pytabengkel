@@ -1,0 +1,228 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; font-src 'self' https://cdnjs.cloudflare.com; img-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+    />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Login | Pytagotech Bengkel</title>
+    <link rel="stylesheet" href="../css/login.css" />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
+    />
+    <script src="../js/theme.js"></script>
+    <script src="../js/config.js"></script>
+    <script src="../js/vendor/supabase.min.js"></script>
+    <script src="../js/supabase.js"></script>
+    <script>
+      applyThemeBeforePaint();
+    </script>
+  </head>
+  <body>
+    <button
+      type="button"
+      class="theme-toggle"
+      data-theme-toggle
+      aria-label="Aktifkan mode gelap"
+      aria-pressed="false"
+      title="Ganti tema terang / gelap"
+    >
+      <i class="fa-solid fa-sun icon-sun" aria-hidden="true"></i>
+      <i class="fa-solid fa-moon icon-moon" aria-hidden="true"></i>
+    </button>
+
+    <main class="login-container">
+      <section class="login-info">
+        <div class="brand">
+          <div class="brand-icon">
+            <i class="fa-solid fa-screwdriver-wrench" aria-hidden="true"></i>
+          </div>
+          <span>Pytagotech Bengkel</span>
+        </div>
+        <div class="info-content">
+          <h1 id="heroTitle">Kelola Bengkel Lebih Mudah.</h1>
+          <p id="heroText">
+            Kelola customer, kendaraan, service, mekanik, dan riwayat pekerjaan dalam satu sistem.
+          </p>
+          <div class="features" id="heroFeatures">
+            <div class="feature">
+              <span class="feature-icon"><i class="fa-solid fa-check" aria-hidden="true"></i></span>
+              <span>Kelola data customer dan kendaraan</span>
+            </div>
+            <div class="feature">
+              <span class="feature-icon"><i class="fa-solid fa-check" aria-hidden="true"></i></span>
+              <span>Pantau status service kendaraan</span>
+            </div>
+            <div class="feature">
+              <span class="feature-icon"><i class="fa-solid fa-check" aria-hidden="true"></i></span>
+              <span>Simpan riwayat service dengan mudah</span>
+            </div>
+          </div>
+        </div>
+        <div class="copyright">© 2026 Pytagotech Bengkel</div>
+      </section>
+
+      <section class="login-form-container">
+        <div class="login-form-wrap">
+          <div class="role-switch" role="tablist" aria-label="Pilih portal">
+            <button
+              type="button"
+              class="role-tab active"
+              data-role="admin"
+              role="tab"
+              aria-selected="true"
+            >
+              <i class="fa-solid fa-user-shield" aria-hidden="true"></i>
+              Administrator
+            </button>
+            <button
+              type="button"
+              class="role-tab"
+              data-role="customer"
+              role="tab"
+              aria-selected="false"
+            >
+              <i class="fa-solid fa-user" aria-hidden="true"></i>
+              Customer
+            </button>
+          </div>
+
+          <form class="login-form" id="loginForm">
+            <div class="login-header">
+              <span class="mode-badge offline" id="modeBadge">Mode lokal</span>
+              <h2 id="loginTitle">Selamat Datang</h2>
+              <p id="loginSubtitle">Masuk ke akun Pytagotech Bengkel.</p>
+            </div>
+
+            <div class="form-group">
+              <label for="email"> Email </label>
+              <div class="input-wrapper">
+                <input
+                  type="email"
+                  id="email"
+                  name="email"
+                  placeholder="nama@email.com"
+                  autocomplete="email"
+                  required
+                />
+                <span class="input-icon"
+                  ><i class="fa-solid fa-envelope" aria-hidden="true"></i
+                ></span>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="password"> Password </label>
+              <div class="input-wrapper">
+                <input
+                  type="password"
+                  id="password"
+                  name="password"
+                  placeholder="Masukkan password"
+                  autocomplete="current-password"
+                  required
+                />
+                <button
+                  type="button"
+                  class="password-toggle"
+                  id="passwordToggle"
+                  aria-label="Tampilkan password"
+                >
+                  <i class="fa-solid fa-eye password-eye" aria-hidden="true"></i>
+                </button>
+              </div>
+            </div>
+
+            <div class="form-options">
+              <label class="remember">
+                <input type="checkbox" id="rememberMe" />
+                <span>Ingat saya</span>
+              </label>
+              <a href="#" class="forgot-password" id="forgotPassword"> Lupa password? </a>
+            </div>
+
+            <button type="submit" class="login-button" id="loginButton">
+              <i class="fa-solid fa-right-to-bracket" aria-hidden="true"></i><span>Masuk</span>
+            </button>
+
+            <div class="role-only" id="customerOnly">
+              <div class="auth-links" style="margin-top: 14px">
+                <button type="button" class="btn btn-ghost" id="btnLoginLink" style="width: 100%">
+                  <i class="fa-solid fa-paper-plane" aria-hidden="true"></i>
+                  Kirim Link Login ke Email
+                </button>
+              </div>
+            </div>
+
+            <div class="auth-links role-only" id="customerLinks">
+              <div>
+                Belum punya akun?
+                <a href="customers-page/register.html">Daftar sekarang</a>
+              </div>
+            </div>
+          </form>
+
+          <!-- Form reset password (gaya sama dengan halaman daftar).
+               Hanya dipakai di MODE LOKAL. Di production, reset
+               dilakukan lewat tautan email. -->
+          <div class="reset-box" id="resetBox" hidden>
+            <div class="login-header" style="margin-bottom: 18px">
+              <h2>Atur Ulang Password</h2>
+              <p>Isi email terdaftar lalu pilih password baru Anda.</p>
+            </div>
+            <form id="resetForm">
+              <div class="form-group">
+                <label for="resetEmail"> Email Terdaftar </label>
+                <div class="input-wrapper">
+                  <input
+                    type="email"
+                    id="resetEmail"
+                    name="resetEmail"
+                    placeholder="nama@email.com"
+                    autocomplete="email"
+                    required
+                  />
+                  <span class="input-icon"
+                    ><i class="fa-solid fa-envelope" aria-hidden="true"></i
+                  ></span>
+                </div>
+              </div>
+              <div class="form-group">
+                <label for="resetPassword"> Password Baru </label>
+                <div class="input-wrapper">
+                  <input
+                    type="password"
+                    id="resetPassword"
+                    name="resetPassword"
+                    placeholder="Minimal 6 karakter"
+                    autocomplete="new-password"
+                    required
+                  />
+                  <span class="input-icon"
+                    ><i class="fa-solid fa-lock" aria-hidden="true"></i
+                  ></span>
+                </div>
+              </div>
+              <button type="submit" class="login-button">
+                <i class="fa-solid fa-key" aria-hidden="true"></i>
+                <span>Simpan Password Baru</span>
+              </button>
+              <div class="auth-links">
+                <div>
+                  <a href="#" id="resetBack">Kembali ke halaman masuk</a>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <script src="../js/db.js"></script>
+    <script src="../js/auth.js"></script>
+    <script src="../js/login.js"></script>
+  </body>
+</html>

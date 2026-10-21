@@ -1,0 +1,26 @@
+/* Halaman Sparepart — gaya khusus */
+
+.stok-meter {
+  width: 90px;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--surface-3);
+  overflow: hidden;
+  display: inline-block;
+  vertical-align: middle;
+}
+
+.stok-meter span {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--done);
+}
+
+.stok-meter.low span {
+  background: var(--waiting);
+}
+
+.stok-meter.empty span {
+  background: var(--danger);
+}

@@ -71,7 +71,7 @@ function renderMekanik() {
     return;
   }
 
-  const MEKANIK_STATUS = ["Aktif", "Izin", "Tidak Aktif"];
+  const MEKANIK_STATUS = ["Aktif", "Izin"];
   const statusFilter =
     document.getElementById("filterMekanikDashboard")?.value || "";
 
@@ -163,7 +163,7 @@ function renderMekanik() {
 }
 
 function updateMekanikStatus(id, status) {
-  const allowed = ["Aktif", "Izin", "Tidak Aktif"];
+  const allowed = ["Aktif", "Izin"];
   if (!allowed.includes(status)) return;
   const mekanik = getMekanik();
   const index = mekanik.findIndex((item) => Number(item.id) === Number(id));
@@ -220,15 +220,19 @@ function populateUnifiedRelations() {
     getCustomers()
       .map(
         (item) =>
-          `<option value="${item.id}">#${item.id} — ${escapeHTML(item.nama)}</option>`,
+          `<option value="${item.id}">${escapeHTML(
+            getKode("customers", item),
+          )} — ${escapeHTML(item.nama)}</option>`,
       )
       .join("");
   mekanikSelect.innerHTML =
     '<option value="">-- Buat mekanik baru --</option>' +
-    getMekanik()
+    getMekanikAktif()
       .map(
         (item) =>
-          `<option value="${item.id}">#${item.id} — ${escapeHTML(item.nama)}</option>`,
+          `<option value="${item.id}">${escapeHTML(
+            getKode("mekanik", item),
+          )} — ${escapeHTML(item.nama)}</option>`,
       )
       .join("");
   refreshUnifiedVehicles(customerSelect.value || "");
@@ -275,7 +279,9 @@ function unifiedSparepartOptions(selectedId = "") {
     getSparepart()
       .map(
         (item) =>
-          `<option value="${item.id}"${Number(item.id) === Number(selectedId) ? " selected" : ""}>#${item.id} — ${escapeHTML(item.nama)} (stok: ${item.stok})</option>`,
+          `<option value="${item.id}"${Number(item.id) === Number(selectedId) ? " selected" : ""}>${escapeHTML(
+          getKode("sparepart", item),
+        )} — ${escapeHTML(item.nama)} (stok: ${item.stok})</option>`,
       )
       .join("")
   );
@@ -323,7 +329,9 @@ function addUnifiedSparepartRow(selectedId = "", jumlah = "", preset = {}) {
     updateUnifiedTotalPreview();
   });
   row
-    .querySelectorAll("[data-part-nama], [data-part-stok], [data-part-harga], [data-part-jumlah]")
+    .querySelectorAll(
+      "[data-part-nama], [data-part-stok], [data-part-harga], [data-part-jumlah]",
+    )
     .forEach((input) =>
       input.addEventListener("input", updateUnifiedTotalPreview),
     );
@@ -342,8 +350,7 @@ function updateUnifiedTotalPreview() {
   document
     .querySelectorAll("#unifiedSparepartList .part-row-box")
     .forEach((row) => {
-      const harga =
-        Number(row.querySelector("[data-part-harga]")?.value) || 0;
+      const harga = Number(row.querySelector("[data-part-harga]")?.value) || 0;
       const jumlah =
         Number(row.querySelector("[data-part-jumlah]")?.value) || 0;
       totalSparepart += harga * jumlah;
@@ -391,10 +398,7 @@ function saveUnifiedForm(event) {
   if (!customer) {
     const telepon = value("unifiedCustomerTelepon");
     if (!telepon) {
-      showFormError(
-        "unifiedForm",
-        "No. HP wajib diisi untuk customer baru.",
-      );
+      showFormError("unifiedForm", "No. HP wajib diisi untuk customer baru.");
       return;
     }
     customer = {
@@ -459,9 +463,7 @@ function saveUnifiedForm(event) {
     const resolved = [];
     for (const pakai of pemakaian) {
       let sparepart = pakai.partId
-        ? sparepartData.find(
-            (item) => Number(item.id) === Number(pakai.partId),
-          )
+        ? sparepartData.find((item) => Number(item.id) === Number(pakai.partId))
         : null;
       if (!sparepart) {
         if (
@@ -561,7 +563,18 @@ function openDashboardEdit(id, button = null) {
   document.getElementById("dashEditStatus").value = item.status;
 
   const mekanikSelect = document.getElementById("dashEditMekanik");
-  mekanikSelect.innerHTML = getMekanik()
+  /* Mekanik berstatus Izin tidak bisa dipilih, kecuali mekanik
+     yang sedang dipakai service ini (supaya tidak hilang). */
+  const pilihanMekanik = getMekanikAktif();
+  const mekanikSekarang = getMekanik().find(
+    (mekanik) => Number(mekanik.id) === Number(item.mekanikId),
+  );
+
+  if (mekanikSekarang && !pilihanMekanik.includes(mekanikSekarang)) {
+    pilihanMekanik.unshift(mekanikSekarang);
+  }
+
+  mekanikSelect.innerHTML = pilihanMekanik
     .map(
       (mekanik) =>
         `<option value="${mekanik.id}" ${Number(mekanik.id) === Number(item.mekanikId) ? "selected" : ""}>${escapeHTML(mekanik.nama)} — ${escapeHTML(mekanik.status)}</option>`,

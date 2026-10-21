@@ -5,11 +5,14 @@ function initPengaturanPage() {
   if (infoButton) {
     infoButton.addEventListener("click", () => {
       clearFormError("infoForm");
-      const current = JSON.parse(localStorage.getItem("workshop_info") || "{}");
+      const current = getBengkelInfoLengkap();
       document.getElementById("infoNama").value =
         current.nama || "Pytagotech Bengkel";
       document.getElementById("infoAlamat").value = current.alamat || "";
       document.getElementById("infoKontak").value = current.kontak || "";
+      document.getElementById("infoEmail").value = current.email || "";
+      document.getElementById("infoHariBuka").value = current.hariBuka || "";
+      document.getElementById("infoJamBuka").value = current.jamBuka || "";
       openModal("infoModal");
     });
   }
@@ -24,14 +27,14 @@ function initPengaturanPage() {
         showFormError("infoForm", "Nama bengkel wajib diisi.");
         return;
       }
-      localStorage.setItem(
-        "workshop_info",
-        JSON.stringify({
-          nama,
-          alamat: document.getElementById("infoAlamat").value.trim(),
-          kontak: document.getElementById("infoKontak").value.trim(),
-        }),
-      );
+      saveWorkshopInfo({
+        nama,
+        alamat: document.getElementById("infoAlamat").value.trim(),
+        kontak: document.getElementById("infoKontak").value.trim(),
+        email: document.getElementById("infoEmail").value.trim(),
+        hariBuka: document.getElementById("infoHariBuka").value.trim(),
+        jamBuka: document.getElementById("infoJamBuka").value.trim(),
+      });
       closeModal("infoModal");
       showPageNotice("Informasi bengkel disimpan.", "success");
     });
@@ -42,8 +45,9 @@ function initPengaturanPage() {
     backupButton.addEventListener("click", () => {
       const backup = {
         exportedAt: new Date().toISOString(),
-        info: JSON.parse(localStorage.getItem("workshop_info") || "{}"),
+        info: getBengkelInfoLengkap(),
         customers: getCustomers(),
+        customerAccounts: getCustomerAccounts(),
         kendaraan: getKendaraan(),
         mekanik: getMekanik(),
         sparepart: getSparepart(),
@@ -72,12 +76,16 @@ function initPengaturanPage() {
         try {
           const data = JSON.parse(reader.result);
           if (Array.isArray(data.customers)) saveCustomers(data.customers);
+          if (Array.isArray(data.customerAccounts))
+            saveCustomerAccounts(data.customerAccounts);
           if (Array.isArray(data.kendaraan)) saveKendaraan(data.kendaraan);
           if (Array.isArray(data.mekanik)) saveMekanik(data.mekanik);
           if (Array.isArray(data.sparepart)) saveSparepart(data.sparepart);
-          if (data.info)
-            localStorage.setItem("workshop_info", JSON.stringify(data.info));
-          showPageNotice("Restore data berhasil. Membuka dashboard…", "success");
+          if (data.info) saveWorkshopInfo(data.info);
+          showPageNotice(
+            "Restore data berhasil. Membuka dashboard…",
+            "success",
+          );
           window.setTimeout(() => {
             window.location.href = "dashboard.html";
           }, 800);
@@ -96,19 +104,21 @@ function initPengaturanPage() {
     openModal("resetModal");
   });
 
-  document
-    .getElementById("btnConfirmReset")
-    ?.addEventListener("click", () => {
-      [
-        "workshop_customers",
-        "workshop_kendaraan",
-        "workshop_mekanik",
-        "workshop_sparepart",
-      ].forEach((key) => localStorage.setItem(key, "[]"));
-      closeModal("resetModal");
-      showPageNotice("Data harian berhasil dikosongkan. Membuka dashboard…", "success");
-      window.setTimeout(() => {
-        window.location.href = "dashboard.html";
-      }, 800);
-    });
+  document.getElementById("btnConfirmReset")?.addEventListener("click", () => {
+    [
+      "workshop_customers",
+      "workshop_customer_accounts",
+      "workshop_kendaraan",
+      "workshop_mekanik",
+      "workshop_sparepart",
+    ].forEach((key) => localStorage.setItem(key, "[]"));
+    closeModal("resetModal");
+    showPageNotice(
+      "Data harian berhasil dikosongkan. Membuka dashboard…",
+      "success",
+    );
+    window.setTimeout(() => {
+      window.location.href = "dashboard.html";
+    }, 800);
+  });
 }

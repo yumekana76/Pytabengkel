@@ -1,0 +1,16 @@
+# Kredensial production — JANGAN pernah di-commit
+js/config.prod.js
+.env
+.env.*
+
+# Backup data bengkel
+*.backup.json
+workshop-backup.json
+
+# OS
+.DS_Store
+Thumbs.db
+*.log
+
+# Node
+README.md

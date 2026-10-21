@@ -2,14 +2,26 @@
 <html lang="id">
   <head>
     <meta charset="UTF-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; font-src 'self' https://cdnjs.cloudflare.com; img-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+    />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Pytagotech Bengkel - Service</title>
-    <link rel="stylesheet" href="css/global.css" />
+    <link rel="stylesheet" href="../../css/global.css" />
     <link
       rel="stylesheet"
       href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
     />
-    <link rel="stylesheet" href="css/service.css" />
+    <link rel="stylesheet" href="../../css/service.css" />
+    <script src="../../js/theme.js"></script>
+    <script src="../../js/config.js"></script>
+    <script src="../../js/vendor/supabase.min.js"></script>
+    <script src="../../js/supabase.js"></script>
+    <script>
+      applyThemeBeforePaint();
+      window.__APP_ROLE = "admin";
+    </script>
   </head>
   <body>
     <header class="topbar">
@@ -22,8 +34,38 @@
         aria-controls="sidebar"
       >
         <i class="fa-solid fa-bars" aria-hidden="true"></i>
+        <i class="fa-solid fa-times icon-close" aria-hidden="true"></i>
       </button>
-      <div class="brand"><h1>Pytagotech Bengkel</h1></div>
+      <div class="brand">
+        <h1>Pytagotech Bengkel</h1>
+      </div>
+      <div class="topbar-actions">
+        <button
+          type="button"
+          class="icon-btn theme-toggle"
+          data-theme-toggle
+          aria-label="Aktifkan mode gelap"
+          aria-pressed="false"
+          title="Ganti tema terang / gelap"
+        >
+          <i class="fa-solid fa-sun icon-sun" aria-hidden="true"></i>
+          <i class="fa-solid fa-moon icon-moon" aria-hidden="true"></i>
+        </button>
+        <div class="admin" id="userChip" hidden>
+          <i class="fa-solid fa-user-shield" aria-hidden="true"></i>
+          <span id="userChipName">Administrator</span>
+        </div>
+        <button
+          type="button"
+          class="icon-btn logout-btn"
+          id="btnLogout"
+          data-logout-target="../index.html?role=admin"
+          aria-label="Keluar"
+          title="Keluar"
+        >
+          <i class="fa-solid fa-right-from-bracket" aria-hidden="true"></i>
+        </button>
+      </div>
     </header>
     <div class="layout">
       <aside class="sidebar" id="sidebar">
@@ -41,17 +83,11 @@
             Kendaraan
           </a>
           <a href="service.html" class="nav-link active"
-            ><i
-              class="fa-solid fa-screwdriver-wrench nav-icon"
-              aria-hidden="true"
-            ></i>
+            ><i class="fa-solid fa-screwdriver-wrench nav-icon" aria-hidden="true"></i>
             Service
           </a>
           <a href="riwayat.html" class="nav-link"
-            ><i
-              class="fa-solid fa-clock-rotate-left nav-icon"
-              aria-hidden="true"
-            ></i>
+            ><i class="fa-solid fa-clock-rotate-left nav-icon" aria-hidden="true"></i>
             Riwayat
           </a>
           <a href="keuangan.html" class="nav-link"
@@ -66,7 +102,10 @@
             ><i class="fa-solid fa-gears nav-icon" aria-hidden="true"></i>
             Sparepart
           </a>
-          <a href="pengaturan.html" class="nav-link"
+          <a href="aktivitas.html" class="nav-link"
+            ><i class="fa-solid fa-clock-rotate-left nav-icon" aria-hidden="true"></i> Aktivitas
+          </a
+          ><a href="pengaturan.html" class="nav-link"
             ><i class="fa-solid fa-gear nav-icon" aria-hidden="true"></i>
             Pengaturan
           </a>
@@ -79,18 +118,12 @@
         </div>
         <section class="stats-grid">
           <div class="stat-card">
-            <i
-              class="fa-solid fa-clipboard-list stat-icon"
-              aria-hidden="true"
-            ></i
+            <i class="fa-solid fa-clipboard-list stat-icon" aria-hidden="true"></i
             ><span class="stat-number" id="totalService">0</span
             ><span class="stat-label">Total Service</span>
           </div>
           <div class="stat-card">
-            <i
-              class="fa-solid fa-hourglass-half stat-icon"
-              aria-hidden="true"
-            ></i
+            <i class="fa-solid fa-hourglass-half stat-icon" aria-hidden="true"></i
             ><span class="stat-number" id="serviceMenunggu">0</span
             ><span class="stat-label">Menunggu</span>
           </div>
@@ -123,20 +156,23 @@
                 <option value="Quality Check">Quality Check</option>
                 <option value="Selesai">Selesai</option>
               </select>
-              <div class="search-box">
-                <input
-                  type="search"
-                  id="searchService"
-                  placeholder="Cari service..."
-                />
-              </div>
-              <button
-                type="button"
-                class="btn btn-primary"
-                id="btnProsesService"
+              <select
+                id="sortService"
+                class="form-control filter-select"
+                aria-label="Urutkan service"
               >
-                <i class="fa-solid fa-plus" aria-hidden="true"></i> Proses
-                Service
+                <option value="id:asc">Urutkan: ID</option>
+                <option value="tanggalService:desc">Tanggal terbaru</option>
+                <option value="tanggalService:asc">Tanggal terlama</option>
+                <option value="polisi:asc">No. Polisi</option>
+                <option value="pelanggan:asc">Pelanggan</option>
+                <option value="total:desc">Total tertinggi</option>
+              </select>
+              <div class="search-box">
+                <input type="search" id="searchService" placeholder="Cari service..." />
+              </div>
+              <button type="button" class="btn btn-primary" id="btnProsesService">
+                <i class="fa-solid fa-plus" aria-hidden="true"></i> Proses Service
               </button>
             </div>
           </div>
@@ -145,11 +181,13 @@
               <thead>
                 <tr>
                   <th>No</th>
+                  <th class="cell-id-col">ID</th>
                   <th>No. Polisi</th>
                   <th>Pelanggan</th>
                   <th>Keluhan</th>
                   <th>Mekanik</th>
                   <th>Status</th>
+                  <th>Pembayaran</th>
                   <th>Total</th>
                   <th>Tanggal</th>
                   <th>Aksi</th>
@@ -183,19 +221,11 @@
             <div class="form-grid">
               <div class="form-group form-full">
                 <label for="serviceVehicle">Kendaraan</label
-                ><select
-                  id="serviceVehicle"
-                  class="form-control"
-                  required
-                ></select>
+                ><select id="serviceVehicle" class="form-control" required></select>
               </div>
               <div class="form-group">
                 <label for="serviceMekanik">Mekanik</label
-                ><select
-                  id="serviceMekanik"
-                  class="form-control"
-                  required
-                ></select>
+                ><select id="serviceMekanik" class="form-control" required></select>
               </div>
               <div class="form-group">
                 <label for="serviceStatus">Status</label
@@ -208,12 +238,7 @@
               </div>
               <div class="form-group form-full">
                 <label for="serviceTanggal">Tanggal Service</label
-                ><input
-                  type="date"
-                  id="serviceTanggal"
-                  class="form-control"
-                  required
-                />
+                ><input type="date" id="serviceTanggal" class="form-control" required />
               </div>
               <div class="form-group">
                 <label for="serviceBiayaJasa">Biaya Jasa</label
@@ -227,21 +252,21 @@
                 />
               </div>
               <div class="form-group">
+                <label for="servicePembayaran">Status Pembayaran</label
+                ><select id="servicePembayaran" class="form-control">
+                  <option value="Belum Lunas">Belum Lunas</option>
+                  <option value="Lunas">Lunas</option>
+                </select>
+              </div>
+              <div class="form-group">
                 <label for="serviceTotalPreview">Total Tagihan</label
-                ><output id="serviceTotalPreview" class="total-preview"
-                  >Rp0</output
-                >
+                ><output id="serviceTotalPreview" class="total-preview">Rp0</output>
               </div>
               <div class="form-group form-full">
                 <div class="form-label-action">
                   <label>Sparepart yang Dipakai</label
-                  ><button
-                    type="button"
-                    class="action-btn"
-                    id="btnTambahServiceSparepart"
-                  >
-                    <i class="fa-solid fa-plus" aria-hidden="true"></i> Tambah
-                    Sparepart
+                  ><button type="button" class="action-btn" id="btnTambahServiceSparepart">
+                    <i class="fa-solid fa-plus" aria-hidden="true"></i> Tambah Sparepart
                   </button>
                 </div>
                 <div id="serviceSparepartList" class="service-part-list"></div>
@@ -249,18 +274,24 @@
             </div>
           </div>
           <div class="modal-footer">
-            <button
+            <button type="button" class="btn btn-secondary" data-close-modal="serviceModal">
+              Batal</button
+            ><button
               type="button"
               class="btn btn-secondary"
-              data-close-modal="serviceModal"
+              id="btnCetakStrukService"
+              hidden
             >
-              Batal</button
+              <i class="fa-solid fa-print" aria-hidden="true"></i> Cetak Struk
+            </button
             ><button type="submit" class="btn btn-primary">Simpan</button>
           </div>
         </form>
       </div>
     </div>
-    <script src="js/global.js"></script>
-    <script src="js/service.js"></script>
+    <script src="../../js/db.js"></script>
+    <script src="../../js/auth.js"></script>
+    <script src="../../js/global.js"></script>
+    <script src="../../js/service.js"></script>
   </body>
 </html>

@@ -1,0 +1,39 @@
+/* Halaman Riwayat Service — gaya khusus */
+
+.riwayat-list {
+  display: grid;
+  gap: 12px;
+}
+
+.riwayat-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface-2);
+}
+
+.riwayat-item-main {
+  min-width: 0;
+}
+
+.riwayat-item-title {
+  font-weight: 700;
+  font-size: 14px;
+  margin-bottom: 3px;
+}
+
+.riwayat-item-meta {
+  color: var(--secondary);
+  font-size: 12px;
+}
+
+@media (max-width: 700px) {
+  .riwayat-item {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}

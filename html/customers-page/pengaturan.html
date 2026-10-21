@@ -1,0 +1,200 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; font-src 'self' https://cdnjs.cloudflare.com; img-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+    />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Pengaturan | Pytagotech Bengkel</title>
+    <link rel="stylesheet" href="../../css/global.css" />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
+    />
+    <link rel="stylesheet" href="../../css/customer.css" />
+    <script src="../../js/theme.js"></script>
+    <script src="../../js/config.js"></script>
+    <script src="../../js/vendor/supabase.min.js"></script>
+    <script src="../../js/supabase.js"></script>
+    <script>
+      applyThemeBeforePaint();
+      window.__APP_ROLE = "customer";
+    </script>
+  </head>
+  <body>
+    <header class="topbar">
+      <button
+        type="button"
+        class="burger"
+        id="burgerBtn"
+        aria-label="Buka menu"
+        aria-expanded="false"
+        aria-controls="sidebar"
+      >
+        <i class="fa-solid fa-bars" aria-hidden="true"></i>
+        <i class="fa-solid fa-times icon-close" aria-hidden="true"></i>
+      </button>
+      <div class="brand">
+        <h1>Pytagotech Bengkel</h1>
+      </div>
+      <div class="topbar-actions">
+        <button
+          type="button"
+          class="icon-btn theme-toggle"
+          data-theme-toggle
+          aria-label="Aktifkan mode gelap"
+          aria-pressed="false"
+          title="Ganti tema terang / gelap"
+        >
+          <i class="fa-solid fa-sun icon-sun" aria-hidden="true"></i>
+          <i class="fa-solid fa-moon icon-moon" aria-hidden="true"></i>
+        </button>
+        <div class="admin" id="userChip" hidden>
+          <i class="fa-solid fa-user" aria-hidden="true"></i>
+          <span id="userChipName">Customer</span>
+        </div>
+        <button
+          type="button"
+          class="icon-btn logout-btn"
+          id="btnLogout"
+          data-logout-target="../index.html?role=customer"
+          aria-label="Keluar"
+          title="Keluar"
+        >
+          <i class="fa-solid fa-right-from-bracket" aria-hidden="true"></i>
+        </button>
+      </div>
+    </header>
+    <div class="layout">
+      <aside class="sidebar" id="sidebar">
+        <nav class="nav">
+          <a href="dashboard.html" class="nav-link">
+            <i class="fa-solid fa-gauge nav-icon" aria-hidden="true"></i>
+            <span>Dashboard</span>
+          </a>
+          <a href="kendaraan.html" class="nav-link">
+            <i class="fa-solid fa-car nav-icon" aria-hidden="true"></i>
+            <span>Kendaraan Saya</span>
+          </a>
+          <a href="service.html" class="nav-link">
+            <i class="fa-solid fa-screwdriver-wrench nav-icon" aria-hidden="true"></i>
+            <span>Service Saya</span>
+          </a>
+          <a href="riwayat.html" class="nav-link">
+            <i class="fa-solid fa-clock-rotate-left nav-icon" aria-hidden="true"></i>
+            <span>Riwayat Service</span>
+          </a>
+          <a href="keuangan.html" class="nav-link">
+            <i class="fa-solid fa-wallet nav-icon" aria-hidden="true"></i>
+            <span>Keuangan</span>
+          </a>
+          <div class="nav-separator"></div>
+          <a href="profil.html" class="nav-link">
+            <i class="fa-solid fa-user nav-icon" aria-hidden="true"></i>
+            <span>Profil Saya</span>
+          </a>
+          <a href="pengaturan.html" class="nav-link active">
+            <i class="fa-solid fa-gear nav-icon" aria-hidden="true"></i>
+            <span>Pengaturan</span>
+          </a>
+        </nav>
+      </aside>
+      <main class="main">
+        <div class="page-header">
+          <h2>Pengaturan</h2>
+          <p>Atur tampilan aplikasi dan akun customer Anda.</p>
+        </div>
+
+        <section class="panel vehicle-panel">
+          <div class="panel-header">
+            <div>
+              <h3>Tampilan</h3>
+              <p>Pilih tema yang nyaman untuk mata Anda.</p>
+            </div>
+          </div>
+          <div class="panel-body">
+            <div class="theme-options" id="themeOptions">
+              <label class="theme-option" data-theme-value="light">
+                <input type="radio" name="themeChoice" value="light" />
+                <span class="theme-option-icon"
+                  ><i class="fa-solid fa-sun" aria-hidden="true"></i
+                ></span>
+                <span class="theme-option-text">
+                  <strong>Terang</strong>
+                  <span>Tampilan bawaan</span>
+                </span>
+              </label>
+              <label class="theme-option" data-theme-value="dark">
+                <input type="radio" name="themeChoice" value="dark" />
+                <span class="theme-option-icon"
+                  ><i class="fa-solid fa-moon" aria-hidden="true"></i
+                ></span>
+                <span class="theme-option-text">
+                  <strong>Gelap</strong>
+                  <span>Nyaman di mata</span>
+                </span>
+              </label>
+              <label class="theme-option" data-theme-value="system">
+                <input type="radio" name="themeChoice" value="system" />
+                <span class="theme-option-icon"
+                  ><i class="fa-solid fa-desktop" aria-hidden="true"></i
+                ></span>
+                <span class="theme-option-text">
+                  <strong>Ikuti Sistem</strong>
+                  <span>Otomatis sesuai perangkat</span>
+                </span>
+              </label>
+            </div>
+          </div>
+        </section>
+
+        <section class="panel vehicle-panel">
+          <div class="panel-header">
+            <div>
+              <h3>Informasi Akun</h3>
+              <p>Detail akun yang sedang digunakan.</p>
+            </div>
+          </div>
+          <div class="panel-body">
+            <div class="detail-grid" id="accountInfo"></div>
+          </div>
+        </section>
+
+        <section class="panel vehicle-panel">
+          <div class="panel-header">
+            <div>
+              <h3>Keamanan</h3>
+              <p>Kelola sesi login Anda.</p>
+            </div>
+          </div>
+          <div class="panel-body">
+            <div class="setting-btn">
+              <button type="button" class="btn btn-secondary" id="btnRefreshData">
+                <i class="fa-solid fa-rotate" aria-hidden="true"></i> Muat Ulang Data
+              </button>
+              <span class="setting-description"
+                >Tarik data terbaru dari data bengkel (kendaraan, service, dan tagihan).</span
+              >
+            </div>
+            <div class="setting-btn" style="margin-top: 14px">
+              <button type="button" class="btn btn-danger" id="btnLogoutPage">
+                <i class="fa-solid fa-right-from-bracket" aria-hidden="true"></i>
+                Keluar dari Akun
+              </button>
+              <span class="setting-description"
+                >Akhiri sesi login dan kembali ke halaman login customer.</span
+              >
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+    <script src="../../js/db.js"></script>
+    <script src="../../js/customer-auth.js"></script>
+    <script src="../../js/global.js"></script>
+
+    <script src="../../js/customer-app.js"></script>
+  </body>
+</html>

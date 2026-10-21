@@ -52,11 +52,8 @@
   position: absolute;
   width: 115px;
   height: 115px;
-  background: white;
-  border-radius: 50%;
-}
-.progress-circle::before {
   background: var(--surface);
+  border-radius: 50%;
 }
 .progress-inner {
   position: relative;
@@ -90,7 +87,7 @@
   min-width: 0;
   overflow: hidden;
   padding: 8px 10px;
-  border: 1px solid #e6edf8;
+  border: 1px solid var(--border-soft);
   border-radius: 10px;
 }
 .status-item strong {
@@ -106,10 +103,18 @@
   height: 9px;
   border-radius: 50%;
 }
-.status-dot.waiting { background: var(--waiting); }
-.status-dot.working { background: var(--working); }
-.status-dot.qc { background: var(--qc); }
-.status-dot.done { background: var(--done); }
+.status-dot.waiting {
+  background: var(--waiting);
+}
+.status-dot.working {
+  background: var(--working);
+}
+.status-dot.qc {
+  background: var(--qc);
+}
+.status-dot.done {
+  background: var(--done);
+}
 
 /* Modal Input Data */
 .modal-wide {
@@ -118,19 +123,33 @@
 .form-section-title {
   font-size: 13px;
   font-weight: 750;
-  color: var(--primary-dark);
-  background: #edf5ff;
-  border: 1px solid #d8e8ff;
+  color: var(--primary-text);
+  background: var(--primary-soft-strong);
+  border: 1px solid var(--primary-border);
   border-radius: 8px;
   padding: 8px 12px;
 }
 
 @media (max-width: 900px) {
-  .dashboard-grid { grid-template-columns: 1fr; }
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+  }
 }
 @media (max-width: 700px) {
-  .dashboard-grid { grid-template-columns: 1fr; }
-  .service-status { gap: 18px; padding: 18px; flex-direction: column; }
-  .progress-circle { width: 126px; height: 126px; }
-  .progress-circle::before { width: 91px; height: 91px; }
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+  }
+  .service-status {
+    gap: 18px;
+    padding: 18px;
+    flex-direction: column;
+  }
+  .progress-circle {
+    width: 126px;
+    height: 126px;
+  }
+  .progress-circle::before {
+    width: 91px;
+    height: 91px;
+  }
 }

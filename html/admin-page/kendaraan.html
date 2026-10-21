@@ -2,18 +2,26 @@
 <html lang="id">
   <head>
     <meta charset="UTF-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; font-src 'self' https://cdnjs.cloudflare.com; img-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+    />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Pytagotech Bengkel - Kendaraan</title>
-    <link 
-      rel="stylesheet" 
-      href="css/global.css" />
+    <link rel="stylesheet" href="../../css/global.css" />
     <link
       rel="stylesheet"
       href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
     />
-    <link 
-      rel="stylesheet" 
-      href="css/kendaraan.css" />
+    <link rel="stylesheet" href="../../css/kendaraan.css" />
+    <script src="../../js/theme.js"></script>
+    <script src="../../js/config.js"></script>
+    <script src="../../js/vendor/supabase.min.js"></script>
+    <script src="../../js/supabase.js"></script>
+    <script>
+      applyThemeBeforePaint();
+      window.__APP_ROLE = "admin";
+    </script>
   </head>
   <body>
     <header class="topbar">
@@ -26,9 +34,37 @@
         aria-controls="sidebar"
       >
         <i class="fa-solid fa-bars" aria-hidden="true"></i>
+        <i class="fa-solid fa-times icon-close" aria-hidden="true"></i>
       </button>
       <div class="brand">
         <h1>Pytagotech Bengkel</h1>
+      </div>
+      <div class="topbar-actions">
+        <button
+          type="button"
+          class="icon-btn theme-toggle"
+          data-theme-toggle
+          aria-label="Aktifkan mode gelap"
+          aria-pressed="false"
+          title="Ganti tema terang / gelap"
+        >
+          <i class="fa-solid fa-sun icon-sun" aria-hidden="true"></i>
+          <i class="fa-solid fa-moon icon-moon" aria-hidden="true"></i>
+        </button>
+        <div class="admin" id="userChip" hidden>
+          <i class="fa-solid fa-user-shield" aria-hidden="true"></i>
+          <span id="userChipName">Administrator</span>
+        </div>
+        <button
+          type="button"
+          class="icon-btn logout-btn"
+          id="btnLogout"
+          data-logout-target="../index.html?role=admin"
+          aria-label="Keluar"
+          title="Keluar"
+        >
+          <i class="fa-solid fa-right-from-bracket" aria-hidden="true"></i>
+        </button>
       </div>
     </header>
     <div class="layout">
@@ -47,17 +83,11 @@
             Kendaraan
           </a>
           <a href="service.html" class="nav-link"
-            ><i
-              class="fa-solid fa-screwdriver-wrench nav-icon"
-              aria-hidden="true"
-            ></i>
+            ><i class="fa-solid fa-screwdriver-wrench nav-icon" aria-hidden="true"></i>
             Service
           </a>
           <a href="riwayat.html" class="nav-link"
-            ><i
-              class="fa-solid fa-clock-rotate-left nav-icon"
-              aria-hidden="true"
-            ></i>
+            ><i class="fa-solid fa-clock-rotate-left nav-icon" aria-hidden="true"></i>
             Riwayat
           </a>
           <a href="keuangan.html" class="nav-link"
@@ -72,6 +102,9 @@
             ><i class="fa-solid fa-gears nav-icon" aria-hidden="true"></i>
             Sparepart
           </a>
+          <a href="aktivitas.html" class="nav-link"
+            ><i class="fa-solid fa-clock-rotate-left nav-icon" aria-hidden="true"></i> Aktivitas
+          </a>
           <a href="pengaturan.html" class="nav-link"
             ><i class="fa-solid fa-gear nav-icon" aria-hidden="true"></i>
             Pengaturan
@@ -82,9 +115,7 @@
         <div class="page-header">
           <div>
             <h2>Kendaraan</h2>
-            <p>
-              Kelola data kendaraan pelanggan yang sedang melakukan service.
-            </p>
+            <p>Kelola data kendaraan pelanggan yang sedang melakukan service.</p>
           </div>
         </div>
         <section class="stats-grid">
@@ -94,10 +125,7 @@
             <span class="stat-label"> Total Kendaraan </span>
           </div>
           <div class="stat-card">
-            <i
-              class="fa-solid fa-hourglass-half stat-icon"
-              aria-hidden="true"
-            ></i
+            <i class="fa-solid fa-hourglass-half stat-icon" aria-hidden="true"></i
             ><span class="stat-number" id="totalMenunggu"> 0 </span>
             <span class="stat-label"> Menunggu </span>
           </div>
@@ -107,10 +135,7 @@
             <span class="stat-label"> Dikerjakan </span>
           </div>
           <div class="stat-card">
-            <i
-              class="fa-solid fa-clipboard-check stat-icon"
-              aria-hidden="true"
-            ></i
+            <i class="fa-solid fa-clipboard-check stat-icon" aria-hidden="true"></i
             ><span class="stat-number" id="totalQC"> 0 </span>
             <span class="stat-label"> Quality Check </span>
           </div>
@@ -143,20 +168,23 @@
                 <option value="Quality Check">Quality Check</option>
                 <option value="Selesai">Selesai</option>
               </select>
-              <div class="search-box">
-                <input
-                  type="text"
-                  id="searchKendaraan"
-                  placeholder="Cari kendaraan..."
-                />
-              </div>
-              <button
-                type="button"
-                class="btn btn-primary"
-                id="btnTambahKendaraan"
+              <select
+                id="sortKendaraan"
+                class="form-control filter-select"
+                aria-label="Urutkan kendaraan"
               >
-                <i class="fa-solid fa-plus" aria-hidden="true"></i> Tambah
-                Kendaraan
+                <option value="id:asc">Urutkan: ID</option>
+                <option value="tanggalService:desc">Tanggal terbaru</option>
+                <option value="tanggalService:asc">Tanggal terlama</option>
+                <option value="polisi:asc">No. Polisi</option>
+                <option value="pelanggan:asc">Pelanggan</option>
+                <option value="total:desc">Total tertinggi</option>
+              </select>
+              <div class="search-box">
+                <input type="text" id="searchKendaraan" placeholder="Cari kendaraan..." />
+              </div>
+              <button type="button" class="btn btn-primary" id="btnTambahKendaraan">
+                <i class="fa-solid fa-plus" aria-hidden="true"></i> Tambah Kendaraan
               </button>
             </div>
           </div>
@@ -165,6 +193,7 @@
               <thead>
                 <tr>
                   <th>No</th>
+                  <th class="cell-id-col">ID</th>
                   <th>No. Polisi</th>
                   <th>Jenis</th>
                   <th>Merk</th>
@@ -194,13 +223,7 @@
             <h3 id="vehicleModalTitle">Tambah Kendaraan</h3>
             <p>Masukkan informasi kendaraan.</p>
           </div>
-          <button
-            type="button"
-            class="modal-close"
-            data-close-modal="vehicleModal"
-          >
-            ×
-          </button>
+          <button type="button" class="modal-close" data-close-modal="vehicleModal">×</button>
         </div>
         <form id="vehicleForm">
           <input type="hidden" id="vehicleId" />
@@ -315,14 +338,21 @@
                 />
               </div>
               <div class="form-group">
-                <label for="vehicleMekanikSpesialisasi"
-                  >Spesialisasi Mekanik</label
-                >
+                <label for="vehicleMekanikSpesialisasi">Spesialisasi Mekanik</label>
                 <input
                   type="text"
                   id="vehicleMekanikSpesialisasi"
                   class="form-control"
                   placeholder="Contoh: Mesin"
+                />
+              </div>
+              <div class="form-group">
+                <label for="vehicleMekanikTelepon">No. HP Mekanik</label>
+                <input
+                  type="tel"
+                  id="vehicleMekanikTelepon"
+                  class="form-control"
+                  placeholder="08xxxxxxxxxx"
                 />
               </div>
               <div class="form-group">
@@ -335,32 +365,10 @@
                   placeholder="0"
                 />
               </div>
-              <div class="form-group form-full">
-                <div class="form-section-title">
-                  Sparepart (opsional, bisa lebih dari satu)
-                </div>
-              </div>
-              <div class="form-group form-full">
-                <div class="form-label-action">
-                  <label>Sparepart yang Dipakai</label
-                  ><button
-                    type="button"
-                    class="action-btn"
-                    id="btnTambahVehicleSparepart"
-                  >
-                    + Tambah Sparepart
-                  </button>
-                </div>
-                <div id="vehicleSparepartList" class="service-part-list"></div>
-              </div>
             </div>
           </div>
           <div class="modal-footer">
-            <button
-              type="button"
-              class="btn btn-secondary"
-              data-close-modal="vehicleModal"
-            >
+            <button type="button" class="btn btn-secondary" data-close-modal="vehicleModal">
               Batal
             </button>
             <button type="submit" class="btn btn-primary">Simpan</button>
@@ -375,29 +383,21 @@
             <h3>Detail Kendaraan</h3>
             <p>Informasi lengkap kendaraan.</p>
           </div>
-          <button
-            type="button"
-            class="modal-close"
-            data-close-modal="vehicleDetailModal"
-          >
-            ×
-          </button>
+          <button type="button" class="modal-close" data-close-modal="vehicleDetailModal">×</button>
         </div>
         <div class="modal-body">
           <div class="detail-grid" id="vehicleDetailContent"></div>
         </div>
         <div class="modal-footer">
-          <button
-            type="button"
-            class="btn btn-secondary"
-            data-close-modal="vehicleDetailModal"
-          >
+          <button type="button" class="btn btn-secondary" data-close-modal="vehicleDetailModal">
             Tutup
           </button>
         </div>
       </div>
     </div>
-    <script src="js/global.js"></script>
-    <script src="js/kendaraan.js"></script>
+    <script src="../../js/db.js"></script>
+    <script src="../../js/auth.js"></script>
+    <script src="../../js/global.js"></script>
+    <script src="../../js/kendaraan.js"></script>
   </body>
 </html>
