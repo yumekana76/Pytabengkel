@@ -4,6 +4,14 @@
     {
       "source": "/",
       "destination": "/html/index.html"
+    },
+    {
+      "source": "/admin-page/:path*",
+      "destination": "/html/admin-page/:path*"
+    },
+    {
+      "source": "/customers-page/:path*",
+      "destination": "/html/customers-page/:path*"
     }
   ]
 }
