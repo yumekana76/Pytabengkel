@@ -1423,7 +1423,6 @@ document.addEventListener("DOMContentLoaded", async function () {
   if (typeof initSparepartPage === "function") initSparepartPage();
   if (typeof initPengaturanPage === "function") initPengaturanPage();
   if (typeof initKeuanganPage === "function") initKeuanganPage();
-  if (typeof initActivityPage === "function") initActivityPage();
 
   hideSkeleton();
 });

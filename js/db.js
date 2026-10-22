@@ -33,197 +33,6 @@ var DB = {
   queue: Promise.resolve(),
 };
 
-/* =====================================================================
-   DATA DEFAULT
-   Dipakai saat tabel Supabase masih kosong, dan pada mode lokal.
-   ===================================================================== */
-
-function todayISODate() {
-  return new Date().toISOString().slice(0, 10);
-}
-
-function daysAgoISO(days) {
-  const date = new Date();
-  date.setDate(date.getDate() - days);
-  return date.toISOString().slice(0, 10);
-}
-
-/* Data demo supaya halaman admin & customer tidak kosong
-   saat project ini dijalankan untuk pertama kali. */
-
-var defaultKendaraan = [
-  {
-    id: 1,
-    kode: "knd-001",
-    polisi: "B 1234 KZ",
-    jenis: "Mobil",
-    merk: "Toyota Avanza",
-    pelanggan: "Budi Setiawan",
-    pelangganId: 6,
-    keluhan: "Ganti oli + rem depan",
-    status: "Dikerjakan",
-    mekanikId: 1,
-    mekanik: "Andi Saputra",
-    tanggalService: todayISODate(),
-    biayaJasa: 150000,
-    spareparts: [
-      { sparepartId: 1, nama: "Oli Engine 5W-30", harga: 45000, jumlah: 4 },
-      { sparepartId: 2, nama: "Kampas Rem Depan", harga: 120000, jumlah: 1 },
-    ],
-    pembayaran: "Belum Lunas",
-  },
-  {
-    id: 2,
-    kode: "knd-002",
-    polisi: "B 5678 XYZ",
-    jenis: "Motor",
-    merk: "Honda Beat",
-    pelanggan: "Budi Setiawan",
-    pelangganId: 6,
-    keluhan: "Ganti ban depan + servis rutin",
-    status: "Selesai",
-    mekanikId: 2,
-    mekanik: "Siti Nurhaliza",
-    tanggalService: daysAgoISO(12),
-    biayaJasa: 75000,
-    spareparts: [
-      { sparepartId: 4, nama: "Ban 185/55 R14", harga: 650000, jumlah: 2 },
-    ],
-    pembayaran: "Lunas",
-  },
-  {
-    id: 3,
-    kode: "knd-003",
-    polisi: "B 9012 ULT",
-    jenis: "Mobil",
-    merk: "Honda Brio",
-    pelanggan: "Rina Puspita",
-    pelangganId: 7,
-    keluhan: "Kering AC + belt timing",
-    status: "Menunggu",
-    mekanikId: null,
-    mekanik: "",
-    tanggalService: todayISODate(),
-    biayaJasa: 200000,
-    spareparts: [],
-    pembayaran: "Belum Lunas",
-  },
-  {
-    id: 4,
-    kode: "knd-004",
-    polisi: "B 3456 JKT",
-    jenis: "Mobil",
-    merk: "Mitsubishi Xpander",
-    pelanggan: "Dimas Pratama",
-    pelangganId: 8,
-    keluhan: "Gantioli + tune up",
-    status: "Quality Check",
-    mekanikId: 1,
-    mekanik: "Andi Saputra",
-    tanggalService: todayISODate(),
-    biayaJasa: 120000,
-    spareparts: [
-      { sparepartId: 1, nama: "Oli Engine 5W-30", harga: 45000, jumlah: 3 },
-    ],
-    pembayaran: "Belum Lunas",
-  },
-];
-
-var defaultMekanik = [
-  {
-    id: 1,
-    kode: "mek-001",
-    nama: "Andi Saputra",
-    spesialisasi: "Mesin",
-    telepon: "081234567890",
-    status: "Aktif",
-  },
-  {
-    id: 2,
-    kode: "mek-002",
-    nama: "Siti Nurhaliza",
-    spesialisasi: "Kelistrikan",
-    telepon: "081298765432",
-    status: "Aktif",
-  },
-  {
-    id: 3,
-    kode: "mek-003",
-    nama: "Agus Salim",
-    spesialisasi: "Suspensi & Ban",
-    telepon: "081377778888",
-    status: "Izin",
-  },
-];
-
-var defaultSparepart = [
-  {
-    id: 1,
-    kode: "spp-001",
-    nama: "Oli Engine 5W-30",
-    kategori: "Oli & Cairan",
-    harga: 45000,
-    stok: 24,
-  },
-  {
-    id: 2,
-    kode: "spp-002",
-    nama: "Kampas Rem Depan",
-    kategori: "Rem",
-    harga: 120000,
-    stok: 12,
-  },
-  {
-    id: 3,
-    kode: "spp-003",
-    nama: "Busi Spark Plug",
-    kategori: "Mesin",
-    harga: 35000,
-    stok: 40,
-  },
-  {
-    id: 4,
-    kode: "spp-004",
-    nama: "Ban 185/55 R14",
-    kategori: "Ban",
-    harga: 650000,
-    stok: 8,
-  },
-];
-
-var defaultCustomers = [
-  {
-    id: 6,
-    kode: "cst-001",
-    nama: "Budi Setiawan",
-    telepon: "08239389048",
-    email: "budisetiawan@gmail.com",
-    alamat: "Jl. Karlos No. 12, Bandung",
-    catatan: "Mobilitas tinggi, rutin servis tiap 5.000 km.",
-    registeredAt: "2026-10-11T11:47:31.650Z",
-  },
-  {
-    id: 7,
-    kode: "cst-002",
-    nama: "Rina Puspita",
-    telepon: "081312345678",
-    email: "rina.puspita@email.com",
-    alamat: "Jl. Merdeka No. 45, Bekasi",
-    catatan: "Data contoh customer.",
-    registeredAt: "2026-10-12T09:15:00.000Z",
-  },
-  {
-    id: 8,
-    kode: "cst-003",
-    nama: "Dimas Pratama",
-    telepon: "081398765432",
-    email: "dimas.pratama@email.com",
-    alamat: "Jl. Sudirman No. 8, Jakarta",
-    catatan: "Perusahaan, butuh faktur.",
-    registeredAt: "2026-10-13T13:40:00.000Z",
-  },
-];
-
 /* ---------------------------------------------------------------------
    UTILITAS
    --------------------------------------------------------------------- */
@@ -444,15 +253,6 @@ async function dbInit() {
 
     DB.cache.logs = await dbLoadLogs();
 
-    /* Seed data contoh kalau tabel masih kosong. */
-    if (
-      !DB.cache.customers.length &&
-      !DB.cache.services.length &&
-      SUPABASE_SETTINGS.seedDemoData
-    ) {
-      await dbSeedDemoData();
-    }
-
     dbSyncKnown();
 
     /* Kode yang baru dibuat (data lama) disimpan ke server agar
@@ -513,42 +313,6 @@ function dbSyncKnown() {
   );
 }
 
-/* Data contoh untuk Supabase (dipakai juga oleh mode lokal). */
-async function dbSeedDemoData() {
-  dbLog("Mengisi data contoh ke Supabase...");
-
-  DB.cache.customers = defaultCustomers.map((item) => ({ ...item }));
-  DB.cache.services = defaultKendaraan.map((item) => ({ ...item }));
-  DB.cache.mechanics = defaultMekanik.map((item) => ({ ...item }));
-  DB.cache.spareparts = defaultSparepart.map((item) => ({ ...item }));
-  DB.cache.info = {
-    nama: "Pytagotech Bengkel",
-    alamat: "Jl. Merdeka No. 10, Bandung",
-    kontak: "0812-3456-7890",
-    email: "halo@pytagotech.co.id",
-    jamBuka: "08.00 - 17.00 WIB",
-    hariBuka: "Senin - Sabtu",
-  };
-
-  await Promise.all([
-    dbPushAll("customers", DB.cache.customers, customerToDb),
-    dbPushAll("services", DB.cache.services, serviceToDb),
-    dbPushAll("mechanics", DB.cache.mechanics, mekanikToDb),
-    dbPushAll("spareparts", DB.cache.spareparts, sparepartToDb),
-    dbPushAll("workshop_info", [{ id: 1, ...DB.cache.info }], (row) => ({
-      id: 1,
-      nama: row.nama || "",
-      alamat: row.alamat || "",
-      kontak: row.kontak || "",
-      email: row.email || "",
-      jam_buka: row.jamBuka || "",
-      hari_buka: row.hariBuka || "",
-    })),
-  ]);
-
-  dbSyncKnown();
-}
-
 /* Simpan kode yang belum ada di server (hasil backfill). */
 async function dbPushKodeIfNeeded(before, after, table, mapper) {
   const berubah = after.filter(
@@ -584,19 +348,19 @@ async function dbPushAll(table, rows, mapper) {
 
 function dbLoadFromLocal() {
   DB.cache.customers = ensureKode(
-    readLocalArray("workshop_customers", defaultCustomers),
+    readLocalArray("workshop_customers", []),
     "customers",
   );
   DB.cache.services = ensureKode(
-    readLocalArray("workshop_kendaraan", defaultKendaraan),
+    readLocalArray("workshop_kendaraan", []),
     "kendaraan",
   );
   DB.cache.mechanics = ensureKode(
-    readLocalArray("workshop_mekanik", defaultMekanik),
+    readLocalArray("workshop_mekanik", []),
     "mekanik",
   );
   DB.cache.spareparts = ensureKode(
-    readLocalArray("workshop_sparepart", defaultSparepart),
+    readLocalArray("workshop_sparepart", []),
     "sparepart",
   );
 
@@ -608,10 +372,10 @@ function dbLoadFromLocal() {
 
   /* Info bengkel default (bisa diubah admin di halaman Pengaturan). */
   DB.cache.info = {
-    nama: DB.cache.info.nama || "Pytagotech Bengkel",
+    nama: DB.cache.info.nama || "Pytabengkel",
     alamat: DB.cache.info.alamat || "Jl. Merdeka No. 10, Bandung",
     kontak: DB.cache.info.kontak || "0812-3456-7890",
-    email: DB.cache.info.email || "halo@pytagotech.co.id",
+    email: DB.cache.info.email || "halo@pytabengkel.co.id",
     jamBuka: DB.cache.info.jamBuka || "08.00 - 17.00 WIB",
     hariBuka: DB.cache.info.hariBuka || "Senin - Sabtu",
   };
@@ -654,12 +418,6 @@ function dbBuildDemoAccounts() {
     password: "customer123",
   };
 
-  const customer =
-    DB.cache.customers.find(
-      (item) =>
-        String(item.email || "").toLowerCase() === "budisetiawan@gmail.com",
-    ) || DB.cache.customers[0];
-
   return [
     {
       id: 1,
@@ -671,8 +429,8 @@ function dbBuildDemoAccounts() {
     },
     {
       id: 2,
-      customerId: customer ? Number(customer.id) : null,
-      nama: customer?.nama || "Customer",
+      customerId: null,
+      nama: "Customer",
       email: customerAccount.email,
       password: customerAccount.password,
       role: "customer",
@@ -768,7 +526,7 @@ function getBengkelInfoLengkap() {
   const info = getWorkshopInfo() || {};
 
   return {
-    nama: info.nama || "Pytagotech Bengkel",
+    nama: info.nama || "Pytabengkel",
     alamat: info.alamat || "",
     kontak: info.kontak || "",
     email: info.email || "",

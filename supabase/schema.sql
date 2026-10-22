@@ -1,5 +1,5 @@
 -- =====================================================================
---  PYTAGOTECH BENGKEL — SUPABASE SCHEMA
+--  PYTABENGKEL — SUPABASE SCHEMA
 --  Jalankan seluruh file ini di SQL Editor Supabase (Dashboard > SQL).
 --  Aman dijalankan berulang kali (semua perintah pakai IF NOT EXISTS).
 -- =====================================================================
@@ -23,7 +23,7 @@ end $$;
 -- Info bengkel (baris tunggal, id = 1)
 create table if not exists public.workshop_info (
   id          int primary key default 1 check (id = 1),
-  nama        text not null default 'Pytagotech Bengkel',
+  nama        text not null default 'Pytabengkel',
   alamat      text not null default '',
   kontak      text not null default '',
   email       text not null default '',
@@ -350,55 +350,14 @@ create policy "profiles delete admin" on public.profiles for delete
   using (public.is_admin());
 
 -- ---------------------------------------------------------------------
---  DATA CONTOH (opsional)
---  Jalankan blok ini kalau ingin data demo langsung di Supabase.
+--  INFO BENGKEL DEFAULT
+--  Hanya info toko (bisa diubah admin di halaman Pengaturan).
+--  Data customer / service / mekanik / sparepart TIDAK disertakan —
+--  masukkan lewat portal admin.
 -- ---------------------------------------------------------------------
 insert into public.workshop_info (id, nama, alamat, kontak, email, jam_buka, hari_buka)
-values (1, 'Pytagotech Bengkel', 'Jl. Merdeka No. 10, Bandung', '0812-3456-7890',
-        'halo@pytagotech.co.id', '08.00 - 17.00 WIB', 'Senin - Sabtu')
-on conflict (id) do nothing;
-
-insert into public.customers (id, kode, nama, telepon, email, alamat, catatan, registered_via)
-values
-  (6, 'cst-001', 'Budi Setiawan', '08239389048', 'budisetiawan@gmail.com', 'Jl. Karlos No. 12, Bandung', 'Mobilitas tinggi, rutin servis tiap 5.000 km.', 'admin'),
-  (7, 'cst-002', 'Rina Puspita', '081312345678', 'rina.puspita@email.com', 'Jl. Merdeka No. 45, Bekasi', 'Data contoh customer.', 'admin'),
-  (8, 'cst-003', 'Dimas Pratama', '081398765432', 'dimas.pratama@email.com', 'Jl. Sudirman No. 8, Jakarta', 'Perusahaan, butuh faktur.', 'admin')
-on conflict (id) do nothing;
-
-insert into public.mechanics (id, kode, nama, spesialisasi, telepon, status)
-values
-  (1, 'mek-001', 'Andi Saputra', 'Mesin', '081234567890', 'Aktif'),
-  (2, 'mek-002', 'Siti Nurhaliza', 'Kelistrikan', '081298765432', 'Aktif'),
-  (3, 'mek-003', 'Agus Salim', 'Suspensi & Ban', '081377778888', 'Izin')
-on conflict (id) do nothing;
-
-insert into public.spareparts (id, kode, nama, kategori, harga, stok)
-values
-  (1, 'spp-001', 'Oli Engine 5W-30', 'Oli & Cairan', 45000, 24),
-  (2, 'spp-002', 'Kampas Rem Depan', 'Rem', 120000, 12),
-  (3, 'spp-003', 'Busi Spark Plug', 'Mesin', 35000, 40),
-  (4, 'spp-004', 'Ban 185/55 R14', 'Ban', 650000, 8)
-on conflict (id) do nothing;
-
-insert into public.services (
-  id, kode, polisi, jenis, merk, customer_id, pelanggan, keluhan, status,
-  mechanic_id, mekanik, tanggal_service, biaya_jasa, spareparts, pembayaran, requested_by
-)
-values
-  (1, 'knd-001', 'B 1234 KZ', 'Mobil', 'Toyota Avanza', 6, 'Budi Setiawan', 'Ganti oli + rem depan', 'Dikerjakan',
-   1, 'Andi Saputra', current_date, 150000,
-   '[{"sparepartId":1,"nama":"Oli Engine 5W-30","harga":45000,"jumlah":4},{"sparepartId":2,"nama":"Kampas Rem Depan","harga":120000,"jumlah":1}]'::jsonb,
-   'Belum Lunas', 'admin'),
-  (2, 'knd-002', 'B 5678 XYZ', 'Motor', 'Honda Beat', 6, 'Budi Setiawan', 'Ganti ban depan + servis rutin', 'Selesai',
-   2, 'Siti Nurhaliza', current_date - 12, 75000,
-   '[{"sparepartId":4,"nama":"Ban 185/55 R14","harga":650000,"jumlah":2}]'::jsonb,
-   'Lunas', 'admin'),
-  (3, 'knd-003', 'B 9012 ULT', 'Mobil', 'Honda Brio', 7, 'Rina Puspita', 'Kering AC + belt timing', 'Menunggu',
-   null, '', current_date, 200000, '[]'::jsonb, 'Belum Lunas', 'admin'),
-  (4, 'knd-004', 'B 3456 JKT', 'Mobil', 'Mitsubishi Xpander', 8, 'Dimas Pratama', 'Gantioli + tune up', 'Quality Check',
-   1, 'Andi Saputra', current_date, 120000,
-   '[{"sparepartId":1,"nama":"Oli Engine 5W-30","harga":45000,"jumlah":3}]'::jsonb,
-   'Belum Lunas', 'admin')
+values (1, 'Pytabengkel', 'Jl. Merdeka No. 10, Bandung', '0812-3456-7890',
+        'halo@pytabengkel.co.id', '08.00 - 17.00 WIB', 'Senin - Sabtu')
 on conflict (id) do nothing;
 
 -- =====================================================================

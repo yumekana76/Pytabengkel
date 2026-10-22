@@ -62,8 +62,8 @@ function setRole(role) {
   setText(
     "loginSubtitle",
     isCustomer
-      ? "Gunakan email yang terdaftar di Pytagotech Bengkel."
-      : "Masuk ke akun Pytagotech Bengkel.",
+      ? "Gunakan email yang terdaftar di Pytabengkel."
+      : "Masuk ke akun Pytabengkel.",
   );
 
   setText(

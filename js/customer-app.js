@@ -102,7 +102,7 @@ function initCustomerDashboard() {
   setText("customerGreeting", `Halo, ${customer.nama}!`);
   setText(
     "customerSubGreeting",
-    "Berikut ringkasan kendaraan dan service Anda di Pytagotech Bengkel.",
+    "Berikut ringkasan kendaraan dan service Anda di Pytabengkel.",
   );
   setText("heroVehicleCount", `${vehicles.length} kendaraan`);
   setText("statKendaraan", vehicles.length);
@@ -161,7 +161,7 @@ function renderBengkelInfo() {
   const items = [
     {
       icon: "fa-solid fa-store",
-      title: info.nama || "Pytagotech Bengkel",
+      title: info.nama || "Pytabengkel",
       value: info.alamat || "Alamat bengkel belum diisi admin.",
     },
     {
@@ -853,11 +853,6 @@ function initCustomerHistory() {
   document
     .getElementById("sortRiwayat")
     ?.addEventListener("change", () => renderCustomerHistoryTable(1));
-
-  document
-    .getElementById("btnLunaskan")
-    ?.addEventListener("click", markInvoicePaid);
-
 }
 
 function renderCustomerHistoryTable(page = 1) {
@@ -993,8 +988,6 @@ function renderCustomerHistoryTable(page = 1) {
   );
 }
 
-var activeInvoiceId = null;
-
 /* Detail service: data lengkap, stepper status, dan rincian tagihan.
    Dipakai halaman Riwayat dan halaman Keuangan customer. */
 function showCustomerServiceDetail(id) {
@@ -1005,8 +998,6 @@ function showCustomerServiceDetail(id) {
   if (!item) {
     return;
   }
-
-  activeInvoiceId = item.id;
 
   const content = document.getElementById("riwayatDetailContent");
   const steps = document.getElementById("riwayatDetailSteps");
@@ -1035,56 +1026,7 @@ function showCustomerServiceDetail(id) {
     overhaul.innerHTML = buildServiceOverhaul(item);
   }
 
-  const lunasButton = document.getElementById("btnLunaskan");
-
-  if (lunasButton) {
-    lunasButton.hidden = (item.pembayaran || "Belum Lunas") === "Lunas";
-  }
-
   openModal("riwayatDetailModal");
-}
-
-function markInvoicePaid() {
-  if (!activeInvoiceId) {
-    return;
-  }
-
-  const kendaraan = getKendaraan();
-  const index = kendaraan.findIndex(
-    (item) => Number(item.id) === Number(activeInvoiceId),
-  );
-
-  if (index === -1) {
-    return;
-  }
-
-  kendaraan[index] = {
-    ...kendaraan[index],
-    pembayaran: "Lunas",
-  };
-
-  saveKendaraan(kendaraan);
-
-  const item = kendaraan.find(
-    (row) => Number(row.id) === Number(activeInvoiceId),
-  );
-
-  addLog(
-    "Bayar",
-    "Service",
-    `Tagihan ${item?.polisi || "-"} ditandai lunas oleh customer`,
-    getKode("kendaraan", item || {}),
-  );
-
-  closeModal("riwayatDetailModal");
-  showPageNotice("Tagihan ditandai lunas. Terima kasih!", "success");
-
-  renderCustomerHistoryTable();
-  renderCustomerServiceTable();
-
-  if (typeof renderCustomerFinanceTable === "function") {
-    renderCustomerFinanceTable();
-  }
 }
 
 /* =========================================
@@ -1143,11 +1085,6 @@ function initCustomerFinance() {
   document
     .getElementById("searchKeuangan")
     ?.addEventListener("input", () => renderCustomerFinanceTable(1));
-
-  document
-    .getElementById("btnLunaskan")
-    ?.addEventListener("click", markInvoicePaid);
-
 
   renderCustomerFinanceTable();
 }

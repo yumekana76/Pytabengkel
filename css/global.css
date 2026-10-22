@@ -1,5 +1,5 @@
 /* =========================================
-   PYTAGOTECH BENGKEL — GLOBAL STYLES
+   PYTABENGKEL — GLOBAL STYLES
    Mengandung design token, light & dark theme,
    dan komponen yang dipakai bersama oleh
    halaman admin maupun halaman customer.
@@ -377,8 +377,7 @@ a {
 }
 
 .sidebar::before {
-  content: "Pytagotech\A Bengkel";
-  white-space: pre-line;
+  content: "Pytabengkel";
   display: block;
   padding: 14px 25px 22px;
   color: #fff;

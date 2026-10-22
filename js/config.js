@@ -46,9 +46,6 @@ const SUPABASE_DEFAULTS = {
   adminRedirect: "dashboard.html",
   customerRedirect: "dashboard.html",
 
-  /* Isi data contoh ke Supabase saat tabel masih kosong. */
-  seedDemoData: true,
-
   /* Batas jumlah baris yang dimuat sekali dari server.
      Naikkan kalau data Anda masih sedikit. */
   maxRows: 5000,

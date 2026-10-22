@@ -257,57 +257,59 @@ function updateRiwayatStats() {
 
 function initRiwayatPage() {
   const table = document.getElementById("riwayatTable");
-  if (!table) return;
-  if (typeof renderRiwayatPage === "function") renderRiwayatPage();
-  if (typeof updateRiwayatStats === "function") updateRiwayatStats();
-  document
-    .getElementById("searchRiwayat")
-    .addEventListener(
-      "input",
-      (event) =>
-        typeof renderRiwayatPage === "function" &&
-        renderRiwayatPage(event.target.value),
-    );
-  document
-    .getElementById("filterBulanRiwayat")
-    ?.addEventListener(
-      "change",
-      (event) =>
-        typeof renderRiwayatPage === "function" &&
-        renderRiwayatPage(document.getElementById("searchRiwayat").value),
-    );
-  document
-    .getElementById("sortRiwayat")
-    ?.addEventListener(
-      "change",
-      () =>
-        typeof renderRiwayatPage === "function" &&
-        renderRiwayatPage(document.getElementById("searchRiwayat").value),
-    );
 
-  document
-    .getElementById("btnCetakRiwayat")
-    ?.addEventListener("click", printRiwayatDetail);
+  if (table) {
+    if (typeof renderRiwayatPage === "function") renderRiwayatPage();
+    if (typeof updateRiwayatStats === "function") updateRiwayatStats();
+    document
+      .getElementById("searchRiwayat")
+      .addEventListener(
+        "input",
+        (event) =>
+          typeof renderRiwayatPage === "function" &&
+          renderRiwayatPage(event.target.value),
+      );
+    document
+      .getElementById("filterBulanRiwayat")
+      ?.addEventListener(
+        "change",
+        (event) =>
+          typeof renderRiwayatPage === "function" &&
+          renderRiwayatPage(document.getElementById("searchRiwayat").value),
+      );
+    document
+      .getElementById("sortRiwayat")
+      ?.addEventListener(
+        "change",
+        () =>
+          typeof renderRiwayatPage === "function" &&
+          renderRiwayatPage(document.getElementById("searchRiwayat").value),
+      );
 
-  document
-    .getElementById("btnLunaskanRiwayat")
-    ?.addEventListener("click", tandaiRiwayatLunas);
+    document
+      .getElementById("btnCetakRiwayat")
+      ?.addEventListener("click", printRiwayatDetail);
 
-  /* Tab lunas / belum lunas */
-  document.querySelectorAll("#riwayatTabs .status-tab").forEach((tab) => {
-    tab.addEventListener("click", () => {
-      document.querySelectorAll("#riwayatTabs .status-tab").forEach((item) => {
-        item.classList.toggle("active", item === tab);
-        item.setAttribute("aria-selected", item === tab ? "true" : "false");
+    document
+      .getElementById("btnLunaskanRiwayat")
+      ?.addEventListener("click", tandaiRiwayatLunas);
+
+    /* Tab lunas / belum lunas */
+    document.querySelectorAll("#riwayatTabs .status-tab").forEach((tab) => {
+      tab.addEventListener("click", () => {
+        document.querySelectorAll("#riwayatTabs .status-tab").forEach((item) => {
+          item.classList.toggle("active", item === tab);
+          item.setAttribute("aria-selected", item === tab ? "true" : "false");
+        });
+
+        riwayatPaymentFilter = tab.dataset.bayar || "semua";
+
+        if (typeof renderRiwayatPage === "function") {
+          renderRiwayatPage(
+            document.getElementById("searchRiwayat")?.value || "",
+          );
+        }
       });
-
-      riwayatPaymentFilter = tab.dataset.bayar || "semua";
-
-      if (typeof renderRiwayatPage === "function") {
-        renderRiwayatPage(
-          document.getElementById("searchRiwayat")?.value || "",
-        );
-      }
     });
-  });
+  }
 }

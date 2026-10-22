@@ -7,7 +7,7 @@ function initPengaturanPage() {
       clearFormError("infoForm");
       const current = getBengkelInfoLengkap();
       document.getElementById("infoNama").value =
-        current.nama || "Pytagotech Bengkel";
+        current.nama || "Pytabengkel";
       document.getElementById("infoAlamat").value = current.alamat || "";
       document.getElementById("infoKontak").value = current.kontak || "";
       document.getElementById("infoEmail").value = current.email || "";

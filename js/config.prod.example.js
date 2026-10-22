@@ -23,8 +23,4 @@ window.SUPABASE_CONFIG_OVERRIDE = {
 
   /* Email yang otomatis jadi admin saat mendaftar. */
   adminEmail: "admin@workshop.com",
-
-  /* Isi data contoh ke Supabase saat tabel masih kosong.
-     Set false untuk production. */
-  seedDemoData: false,
 };
