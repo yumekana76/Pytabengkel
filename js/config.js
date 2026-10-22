@@ -27,8 +27,8 @@
 
 /* Konfigurasi dasar (diklawsifikasi, tidak diubah saat build) */
 const SUPABASE_DEFAULTS = {
-  url: "",
-  anonKey: "",
+  url: "https://ggmjihuasfcjxvuewryn.supabase.co",
+  anonKey: "sb_publishable_kx2HEvryTZWqtxDDiTtRsA_SMRsGEUH",
 
   /* Email yang otomatis mendapat role admin saat mendaftar. */
   adminEmail: "admin@workshop.com",
