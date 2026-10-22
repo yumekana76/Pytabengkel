@@ -1,0 +1,230 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; font-src 'self' https://cdnjs.cloudflare.com; img-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+    />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Riwayat Service | Pytabengkel</title>
+    <link rel="stylesheet" href="../../css/global.css" />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
+    />
+    <link rel="stylesheet" href="../../css/customer.css" />
+    <script src="../../js/theme.js"></script>
+    <script src="../../js/config.js"></script>
+    <script src="../../js/vendor/supabase.min.js"></script>
+    <script src="../../js/supabase.js"></script>
+    <script>
+      applyThemeBeforePaint();
+      window.__APP_ROLE = "customer";
+    </script>
+  </head>
+  <body>
+    <header class="topbar">
+      <button
+        type="button"
+        class="burger"
+        id="burgerBtn"
+        aria-label="Buka menu"
+        aria-expanded="false"
+        aria-controls="sidebar"
+      >
+        <i class="fa-solid fa-bars" aria-hidden="true"></i>
+        <i class="fa-solid fa-times icon-close" aria-hidden="true"></i>
+      </button>
+      <div class="brand">
+        <h1>Pytabengkel</h1>
+      </div>
+      <div class="topbar-actions">
+        <button
+          type="button"
+          class="icon-btn theme-toggle"
+          data-theme-toggle
+          aria-label="Aktifkan mode gelap"
+          aria-pressed="false"
+          title="Ganti tema terang / gelap"
+        >
+          <i class="fa-solid fa-sun icon-sun" aria-hidden="true"></i>
+          <i class="fa-solid fa-moon icon-moon" aria-hidden="true"></i>
+        </button>
+        <div class="admin" id="userChip" hidden>
+          <i class="fa-solid fa-user" aria-hidden="true"></i>
+          <span id="userChipName">Customer</span>
+        </div>
+        <button
+          type="button"
+          class="icon-btn logout-btn"
+          id="btnLogout"
+          data-logout-target="../index.html?role=customer"
+          aria-label="Keluar"
+          title="Keluar"
+        >
+          <i class="fa-solid fa-right-from-bracket" aria-hidden="true"></i>
+        </button>
+      </div>
+    </header>
+    <div class="layout">
+      <aside class="sidebar" id="sidebar">
+        <nav class="nav">
+          <a href="dashboard.html" class="nav-link">
+            <i class="fa-solid fa-gauge nav-icon" aria-hidden="true"></i>
+            <span>Dashboard</span>
+          </a>
+          <a href="kendaraan.html" class="nav-link">
+            <i class="fa-solid fa-car nav-icon" aria-hidden="true"></i>
+            <span>Kendaraan Saya</span>
+          </a>
+          <a href="service.html" class="nav-link">
+            <i class="fa-solid fa-screwdriver-wrench nav-icon" aria-hidden="true"></i>
+            <span>Service Saya</span>
+          </a>
+          <a href="riwayat.html" class="nav-link active">
+            <i class="fa-solid fa-clock-rotate-left nav-icon" aria-hidden="true"></i>
+            <span>Riwayat Service</span>
+          </a>
+          <a href="keuangan.html" class="nav-link">
+            <i class="fa-solid fa-wallet nav-icon" aria-hidden="true"></i>
+            <span>Keuangan</span>
+          </a>
+          <div class="nav-separator"></div>
+          <a href="profil.html" class="nav-link">
+            <i class="fa-solid fa-user nav-icon" aria-hidden="true"></i>
+            <span>Profil Saya</span>
+          </a>
+          <a href="pengaturan.html" class="nav-link">
+            <i class="fa-solid fa-gear nav-icon" aria-hidden="true"></i>
+            <span>Pengaturan</span>
+          </a>
+        </nav>
+      </aside>
+      <main class="main">
+        <div class="page-header">
+          <h2>Riwayat Service</h2>
+          <p>Semua service yang sudah selesai beserta tagihannya.</p>
+        </div>
+
+        <section class="stats-grid">
+          <div class="stat-card">
+            <i class="fa-solid fa-clock-rotate-left stat-icon" aria-hidden="true"></i>
+            <span class="stat-number" id="statRiwayat">0</span>
+            <span class="stat-label"> Service Selesai </span>
+          </div>
+          <div class="stat-card">
+            <i class="fa-solid fa-sack-dollar stat-icon" aria-hidden="true"></i>
+            <span class="stat-number money" id="statTotalBelanja">Rp0</span>
+            <span class="stat-label"> Total Pengeluaran </span>
+          </div>
+          <div class="stat-card">
+            <i class="fa-solid fa-file-invoice stat-icon" aria-hidden="true"></i>
+            <span class="stat-number money" id="statBelumLunas">Rp0</span>
+            <span class="stat-label"> Belum Lunas </span>
+          </div>
+          <div class="stat-card">
+            <i class="fa-solid fa-calendar-check stat-icon" aria-hidden="true"></i>
+            <span class="stat-number" id="statServiceTerakhir">-</span>
+            <span class="stat-label"> Service Terakhir </span>
+          </div>
+        </section>
+
+        <section class="panel vehicle-panel">
+          <div class="panel-header">
+            <div>
+              <h3>Daftar Riwayat</h3>
+              <p>Riwayat tercatat otomatis saat service berstatus selesai.</p>
+            </div>
+            <div class="vehicle-toolbar">
+              <select
+                id="filterRiwayatStatus"
+                class="form-control filter-select"
+                aria-label="Filter status pembayaran"
+              >
+                <option value="">Semua Tagihan</option>
+                <option value="Belum Lunas">Belum Lunas</option>
+                <option value="Lunas">Lunas</option>
+              </select>
+              <select
+                id="sortRiwayat"
+                class="form-control filter-select"
+                aria-label="Urutkan riwayat"
+              >
+                <option value="id:asc">Urutkan: ID</option>
+                <option value="tanggalService:desc">Terbaru</option>
+                <option value="tanggalService:asc">Terlama</option>
+                <option value="total:desc">Total tertinggi</option>
+              </select>
+              <div class="search-box">
+                <input type="search" id="searchRiwayat" placeholder="Cari riwayat..." />
+              </div>
+            </div>
+          </div>
+          <div class="table-container">
+            <table>
+              <thead>
+                <tr>
+                  <th>No</th>
+                  <th class="cell-id-col">ID</th>
+                  <th>Tanggal</th>
+                  <th>No. Polisi</th>
+                  <th>Keluhan</th>
+                  <th>Mekanik</th>
+                  <th>Total</th>
+                  <th>Pembayaran</th>
+                  <th>Aksi</th>
+                </tr>
+              </thead>
+              <tbody id="customerRiwayatTable"></tbody>
+            </table>
+          </div>
+          <div class="table-footer">
+            <span id="customerRiwayatInfo"></span>
+            <div class="pagination" id="customerRiwayatPagination"></div>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <!-- MODAL DETAIL SERVICE -->
+    <div class="modal-overlay" id="riwayatDetailModal">
+      <div class="modal">
+        <div class="modal-header">
+          <div>
+            <h3>Detail Service</h3>
+            <p>Rincian lengkap service dan tagihannya.</p>
+          </div>
+          <button
+            type="button"
+            class="modal-close"
+            data-close-modal="riwayatDetailModal"
+            aria-label="Tutup"
+          >
+            ×
+          </button>
+        </div>
+        <div class="modal-body">
+          <div class="detail-grid" id="riwayatDetailContent"></div>
+          <h4 class="detail-section">Riwayat Status Service</h4>
+          <div id="riwayatDetailSteps"></div>
+          <h4 class="detail-section">Rincian Tagihan</h4>
+          <div class="invoice" id="riwayatDetailInvoice"></div>
+          <h4 class="detail-section">Riwayat Service Kendaraan Ini</h4>
+          <div id="riwayatOverhaul"></div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-close-modal="riwayatDetailModal">
+            Tutup
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <script src="../../js/db.js"></script>
+    <script src="../../js/customer-auth.js"></script>
+    <script src="../../js/global.js"></script>
+
+    <script src="../../js/customer-app.js"></script>
+  </body>
+</html>

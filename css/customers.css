@@ -1,0 +1,24 @@
+/* Halaman Customers — gaya khusus */
+
+.kendaraan-stats {
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+
+.kendaraan-stats .stat-card:nth-child(1) {
+  background: linear-gradient(135deg, var(--surface), var(--stat-1-tint));
+}
+.kendaraan-stats .stat-card:nth-child(2) {
+  background: linear-gradient(135deg, var(--surface), var(--stat-3-tint));
+}
+.kendaraan-stats .stat-card:nth-child(3) {
+  background: linear-gradient(135deg, var(--surface), var(--stat-2-tint));
+}
+.kendaraan-stats .stat-card:nth-child(4) {
+  background: linear-gradient(135deg, var(--surface), var(--stat-4-tint));
+}
+
+@media (max-width: 700px) {
+  .kendaraan-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

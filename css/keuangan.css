@@ -24,15 +24,17 @@
   max-width: 54px;
   min-height: 6px;
   border-radius: 8px 8px 4px 4px;
-  background: linear-gradient(180deg, #1767e9, #104fc2);
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  background: var(--chart-bar);
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.15s ease;
 }
 .chart-bar:hover .chart-column {
   transform: translateY(-3px);
   box-shadow: 0 8px 16px rgba(18, 100, 232, 0.25);
 }
 .chart-bar.active .chart-column {
-  background: linear-gradient(180deg, #16a34a, #15803d);
+  background: var(--chart-bar-active);
 }
 .chart-value {
   font-size: 11px;

@@ -1,0 +1,296 @@
+/* =========================================
+   HALAMAN CUSTOMER
+   Gaya khusus untuk portal customer Pytabengkel.
+   ========================================= */
+
+/* HERO / SAMBUTAN */
+
+.customer-hero {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  flex-wrap: wrap;
+  padding: 24px 26px;
+  border-radius: 18px;
+  background:
+    radial-gradient(
+      circle at 90% 10%,
+      rgba(255, 255, 255, 0.22),
+      transparent 45%
+    ),
+    var(--primary-gradient);
+  color: #fff;
+  box-shadow: var(--shadow-primary);
+  margin-bottom: 20px;
+}
+
+.customer-hero h2 {
+  font-size: 24px;
+  letter-spacing: -0.5px;
+  margin-bottom: 6px;
+}
+
+.customer-hero p {
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 14px;
+}
+
+.customer-hero-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.18);
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+/* KARTU KENDARAAN */
+
+.vehicle-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 16px;
+}
+
+.vehicle-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 18px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+  transition: 0.2s;
+}
+
+.vehicle-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--primary);
+}
+
+.vehicle-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.vehicle-plate {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 13px;
+  border-radius: 8px;
+  background: var(--surface-3);
+  border: 1px dashed var(--border);
+  font-weight: 800;
+  font-size: 14px;
+  letter-spacing: 0.5px;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+
+.vehicle-card-title {
+  font-weight: 700;
+  font-size: 15px;
+}
+
+.vehicle-card-meta {
+  color: var(--secondary);
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.vehicle-card-meta span {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.vehicle-card-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+  font-size: 13px;
+}
+
+/* =========================================
+   PROFIL
+   ========================================= */
+
+.profile-card {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 22px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.profile-avatar {
+  width: 72px;
+  height: 72px;
+  border-radius: 20px;
+  display: grid;
+  place-items: center;
+  background: var(--primary-soft);
+  color: var(--primary-text);
+  font-size: 28px;
+  font-weight: 800;
+  flex-shrink: 0;
+}
+
+.profile-card h3 {
+  font-size: 20px;
+  margin-bottom: 4px;
+}
+
+.profile-card p {
+  color: var(--secondary);
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+/* PILIHAN TEMA */
+
+.theme-options {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px;
+}
+
+.theme-option {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface);
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.theme-option:hover {
+  border-color: var(--primary);
+}
+
+.theme-option input {
+  accent-color: var(--primary);
+  width: 16px;
+  height: 16px;
+}
+
+.theme-option-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  background: var(--surface-3);
+  color: var(--secondary);
+  font-size: 15px;
+}
+
+.theme-option.active {
+  border-color: var(--primary);
+  background: var(--primary-soft);
+}
+
+.theme-option.active .theme-option-icon {
+  background: var(--primary);
+  color: #fff;
+}
+
+.theme-option-text {
+  min-width: 0;
+}
+
+.theme-option-text strong {
+  display: block;
+  font-size: 14px;
+}
+
+.theme-option-text span {
+  color: var(--secondary);
+  font-size: 12px;
+}
+
+/* INFO BENGKEL */
+
+.info-list {
+  display: grid;
+  gap: 12px;
+}
+
+.info-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface-2);
+}
+
+.info-item i {
+  color: var(--primary);
+  margin-top: 3px;
+}
+
+.info-item strong {
+  display: block;
+  font-size: 13px;
+  margin-bottom: 3px;
+}
+
+.info-item span {
+  color: var(--secondary);
+  font-size: 13px;
+}
+
+@media (max-width: 700px) {
+  .customer-hero {
+    padding: 20px;
+  }
+  .customer-hero h2 {
+    font-size: 20px;
+  }
+  .vehicle-cards {
+    grid-template-columns: 1fr;
+  }
+  .profile-avatar {
+    width: 58px;
+    height: 58px;
+    font-size: 22px;
+  }
+  .invoice-head {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .vehicle-card-foot {
+    flex-wrap: wrap;
+  }
+}
+
+@media (max-width: 420px) {
+  .theme-options {
+    grid-template-columns: 1fr;
+  }
+  .vehicle-card-head {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}

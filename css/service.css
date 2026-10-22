@@ -19,14 +19,18 @@
   align-items: center;
   min-height: 42px;
   padding: 10px 12px;
-  color: var(--primary-dark);
+  color: var(--primary-text);
   font-size: 16px;
   font-weight: 750;
-  background: #edf5ff;
-  border: 1px solid #d8e8ff;
+  background: var(--primary-soft-strong);
+  border: 1px solid var(--primary-border);
   border-radius: 8px;
 }
 @media (max-width: 700px) {
-  .service-part-row { grid-template-columns: 1fr 76px; }
-  .service-part-row button { grid-column: 1 / -1; }
+  .service-part-row {
+    grid-template-columns: 1fr 76px;
+  }
+  .service-part-row button {
+    grid-column: 1 / -1;
+  }
 }

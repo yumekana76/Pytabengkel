@@ -19,23 +19,30 @@ function renderSparepartPage(search = "") {
   const keyword = String(search).toLowerCase().trim();
   const stockFilter =
     document.getElementById("filterSparepartStok")?.value || "";
-  const sparepart = getSparepart()
-    .filter((item) => stockFilter !== "tersedia" || Number(item.stok) > 0)
-    .filter((item) => stockFilter !== "habis" || Number(item.stok) <= 0)
-    .filter((item) =>
-    String(item.nama || "")
-      .toLowerCase()
-      .includes(keyword),
+  const sort = getSortValue("sortSparepart");
+  const sparepart = sortRows(
+    getSparepart()
+      .filter((item) => stockFilter !== "tersedia" || Number(item.stok) > 0)
+      .filter((item) => stockFilter !== "habis" || Number(item.stok) <= 0)
+      .filter((item) =>
+        [item.kode, item.id, item.nama, item.kategori].some((value) =>
+          String(value || "")
+            .toLowerCase()
+            .includes(keyword),
+        ),
+      ),
+    sort.key,
+    sort.direction,
   );
   table.innerHTML = sparepart.length
     ? sparepart
         .map(
           (item, index) => `
-    <tr><td>${index + 1}</td><td><strong>${escapeHTML(item.nama)}</strong></td><td>${item.stok}</td><td>${formatRupiah(item.harga)}</td>
+    <tr><td>${index + 1}</td><td><span class="cell-id">${escapeHTML(getKode("sparepart", item))}</span></td><td><strong>${escapeHTML(item.nama)}</strong></td><td>${item.stok}</td><td>${formatRupiah(item.harga)}</td>
     <td><div class="action-buttons"><button class="action-btn" type="button" data-edit-sparepart="${item.id}">Edit</button><button class="action-btn danger" type="button" data-delete-sparepart="${item.id}">Hapus</button></div></td></tr>`,
         )
         .join("")
-    : '<tr><td colspan="5" style="text-align:center; padding:30px;">Tidak ada data sparepart.</td></tr>';
+    : '<tr><td colspan="6" style="text-align:center; padding:30px;">Tidak ada data sparepart.</td></tr>';
   setText(
     "sparepartInfo",
     sparepart.length
@@ -93,7 +100,10 @@ function saveSparepartForm(event) {
     !Number.isFinite(harga) ||
     harga < 0
   ) {
-    showFormError("sparepartForm", "Nama, stok, dan harga sparepart harus valid.");
+    showFormError(
+      "sparepartForm",
+      "Nama, stok, dan harga sparepart harus valid.",
+    );
     return;
   }
   if (id) {
@@ -104,12 +114,32 @@ function saveSparepartForm(event) {
     const nextId = sparepart.length
       ? Math.max(...sparepart.map((item) => Number(item.id) || 0)) + 1
       : 1;
-    sparepart.push({ id: nextId, nama, stok, harga });
+    sparepart.push({
+      id: nextId,
+      kode: nextKode("sparepart", sparepart),
+      nama,
+      stok,
+      harga,
+    });
   }
   saveSparepart(sparepart);
+
+  addLog(
+    id ? "Update" : "Tambah",
+    "Sparepart",
+    `${nama} — stok ${stok}, ${formatRupiah(harga)}`,
+    getKode(
+      "sparepart",
+      id
+        ? sparepart.find((item) => Number(item.id) === Number(id))
+        : sparepart[sparepart.length - 1],
+    ),
+  );
+
   closeModal("sparepartModal");
   resetSparepartForm();
-  if (typeof renderSparepartPage === "function") renderSparepartPage(document.getElementById("searchSparepart").value);
+  if (typeof renderSparepartPage === "function")
+    renderSparepartPage(document.getElementById("searchSparepart").value);
   if (typeof updateSparepartStats === "function") updateSparepartStats();
   showPageNotice("Data sparepart tersimpan di tabel.", "success");
 }
@@ -139,7 +169,15 @@ function deleteSparepart(id, button = null) {
   saveSparepart(
     getSparepart().filter((part) => Number(part.id) !== Number(id)),
   );
-  if (typeof renderSparepartPage === "function") renderSparepartPage(document.getElementById("searchSparepart").value);
+
+  addLog(
+    "Hapus",
+    "Sparepart",
+    `${item.nama} — stok ${item.stok}`,
+    getKode("sparepart", item),
+  );
+  if (typeof renderSparepartPage === "function")
+    renderSparepartPage(document.getElementById("searchSparepart").value);
   if (typeof updateSparepartStats === "function") updateSparepartStats();
   showPageNotice(`Sparepart ${item.nama} dihapus dari tabel.`, "success");
 }
@@ -159,12 +197,26 @@ function initSparepartPage() {
     .addEventListener("submit", saveSparepartForm);
   document
     .getElementById("searchSparepart")
-    .addEventListener("input", (event) =>
-      (typeof renderSparepartPage === "function" && renderSparepartPage(event.target.value)),
+    .addEventListener(
+      "input",
+      (event) =>
+        typeof renderSparepartPage === "function" &&
+        renderSparepartPage(event.target.value),
     );
   document
     .getElementById("filterSparepartStok")
-    ?.addEventListener("change", (event) =>
-      (typeof renderSparepartPage === "function" && renderSparepartPage(document.getElementById("searchSparepart").value)),
+    ?.addEventListener(
+      "change",
+      (event) =>
+        typeof renderSparepartPage === "function" &&
+        renderSparepartPage(document.getElementById("searchSparepart").value),
+    );
+  document
+    .getElementById("sortSparepart")
+    ?.addEventListener(
+      "change",
+      (event) =>
+        typeof renderSparepartPage === "function" &&
+        renderSparepartPage(document.getElementById("searchSparepart").value),
     );
 }

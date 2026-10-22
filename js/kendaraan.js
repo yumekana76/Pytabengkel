@@ -13,12 +13,6 @@ function resetKendaraanForm() {
 
   populateVehicleFormRelations();
 
-  const list = document.getElementById("vehicleSparepartList");
-  if (list) {
-    list.innerHTML = "";
-    addVehicleSparepartRow();
-  }
-
   const id = document.getElementById("vehicleId");
 
   if (id) {
@@ -42,15 +36,19 @@ function populateVehicleFormRelations() {
     getCustomers()
       .map(
         (item) =>
-          `<option value="${item.id}">#${item.id} — ${escapeHTML(item.nama)}</option>`,
+          `<option value="${item.id}">${escapeHTML(
+            getKode("customers", item),
+          )} — ${escapeHTML(item.nama)}</option>`,
       )
       .join("");
   mekanikSelect.innerHTML =
     '<option value="">Tambah mekanik baru</option>' +
-    getMekanik()
+    getMekanikAktif()
       .map(
         (item) =>
-          `<option value="${item.id}">#${item.id} — ${escapeHTML(item.nama)}</option>`,
+          `<option value="${item.id}">${escapeHTML(
+            getKode("mekanik", item),
+          )} — ${escapeHTML(item.nama)}</option>`,
       )
       .join("");
 
@@ -76,64 +74,6 @@ function populateVehicleFormRelations() {
     document.getElementById("vehicleMekanikSpesialisasi").value =
       mekanik.spesialisasi || "";
   };
-}
-
-function vehicleSparepartOptions(selectedId = "") {
-  return (
-    '<option value="">Tambah sparepart baru</option>' +
-    getSparepart()
-      .map(
-        (item) =>
-          `<option value="${item.id}"${Number(item.id) === Number(selectedId) ? " selected" : ""}>#${item.id} — ${escapeHTML(item.nama)} (${item.stok})</option>`,
-      )
-      .join("")
-  );
-}
-
-function addVehicleSparepartRow(selectedId = "", jumlah = "", preset = {}) {
-  const list = document.getElementById("vehicleSparepartList");
-  if (!list) return;
-  const row = document.createElement("div");
-  row.className = "part-row-box";
-  row.innerHTML = `
-    <div class="part-row-head">
-      <select class="form-control" data-part-select aria-label="Sparepart terdaftar">
-        ${vehicleSparepartOptions(selectedId)}
-      </select>
-      <button type="button" class="action-btn danger" data-part-remove aria-label="Hapus baris sparepart">Hapus</button>
-    </div>
-    <div class="part-row-grid">
-      <div class="form-group">
-        <label>Nama Sparepart</label>
-        <input type="text" class="form-control" data-part-nama placeholder="Contoh: Oli Mesin" value="${escapeHTML(preset.nama || "")}" />
-      </div>
-      <div class="form-group">
-        <label>Stok Awal (khusus baru)</label>
-        <input type="number" class="form-control" data-part-stok min="0" placeholder="0" value="${preset.stok ?? ""}" />
-      </div>
-      <div class="form-group">
-        <label>Harga Satuan</label>
-        <input type="number" class="form-control" data-part-harga min="0" placeholder="0" value="${preset.harga ?? ""}" />
-      </div>
-      <div class="form-group">
-        <label>Jumlah Dipakai</label>
-        <input type="number" class="form-control" data-part-jumlah min="1" placeholder="0" value="${jumlah}" />
-      </div>
-    </div>`;
-  const select = row.querySelector("[data-part-select]");
-  select.addEventListener("change", () => {
-    const part = getSparepart().find(
-      (item) => Number(item.id) === Number(select.value),
-    );
-    if (!part) return;
-    row.querySelector("[data-part-nama]").value = part.nama || "";
-    row.querySelector("[data-part-stok]").value = part.stok ?? "";
-    row.querySelector("[data-part-harga]").value = part.harga ?? "";
-  });
-  row.querySelector("[data-part-remove]").addEventListener("click", () => {
-    row.remove();
-  });
-  list.appendChild(row);
 }
 
 /* EDIT KENDARAAN */
@@ -200,27 +140,6 @@ function editKendaraan(id, button = null) {
   if (tanggal) {
     tanggal.value = item.tanggalService || "";
   }
-  const list = document.getElementById("vehicleSparepartList");
-  if (list) {
-    list.innerHTML = "";
-    const rows = item.spareparts || [];
-    if (!rows.length) {
-      addVehicleSparepartRow();
-    } else {
-      const stokNow = getSparepart();
-      rows.forEach((used) => {
-        const part = stokNow.find(
-          (entry) => Number(entry.id) === Number(used.sparepartId),
-        );
-        addVehicleSparepartRow(used.sparepartId || "", used.jumlah || "", {
-          nama: used.nama || part?.nama || "",
-          stok: part ? part.stok : "",
-          harga: used.harga ?? part?.harga ?? "",
-        });
-      });
-    }
-  }
-
   if (jenis) {
     jenis.value = item.jenis;
   }
@@ -283,6 +202,7 @@ function saveKendaraanForm(event) {
     }
     customer = {
       id: nextNumericId(customers),
+      kode: nextKode("customers", customers),
       nama: pelangganNama,
       telepon,
       email: value("vehicleCustomerEmail"),
@@ -309,108 +229,13 @@ function saveKendaraanForm(event) {
     }
     mekanik = {
       id: nextNumericId(mekanikData),
+      kode: nextKode("mekanik", mekanikData),
       nama: namaMekanik,
       spesialisasi,
+      telepon: value("vehicleMekanikTelepon"),
       status: "Aktif",
     };
     mekanikData.push(mekanik);
-  }
-
-  const sparepartData = getSparepart();
-  const existingVehicle = getKendaraan().find(
-    (item) => Number(item.id) === Number(id),
-  );
-  (existingVehicle?.spareparts || []).forEach((used) => {
-    const part = sparepartData.find(
-      (item) => Number(item.id) === Number(used.sparepartId),
-    );
-    if (part) part.stok = Number(part.stok) + (Number(used.jumlah) || 0);
-  });
-  let spareparts = [];
-  const partRows = [
-    ...document.querySelectorAll("#vehicleSparepartList .part-row-box"),
-  ];
-  const pemakaian = [];
-  for (const row of partRows) {
-    const partId = row.querySelector("[data-part-select]").value.trim();
-    const nama = row.querySelector("[data-part-nama]").value.trim();
-    const stokInput = row.querySelector("[data-part-stok]").value.trim();
-    const hargaInput = row.querySelector("[data-part-harga]").value.trim();
-    const jumlahInput = row.querySelector("[data-part-jumlah]").value.trim();
-    if (!partId && !nama && !stokInput && !hargaInput && !jumlahInput) {
-      continue;
-    }
-    pemakaian.push({
-      partId,
-      nama,
-      stok: stokInput === "" ? NaN : Number(stokInput),
-      harga: hargaInput === "" ? NaN : Number(hargaInput),
-      jumlah: jumlahInput === "" ? NaN : Number(jumlahInput),
-    });
-  }
-  if (pemakaian.length) {
-    const resolved = [];
-    for (const pakai of pemakaian) {
-      let sparepart = pakai.partId
-        ? sparepartData.find(
-            (item) => Number(item.id) === Number(pakai.partId),
-          )
-        : null;
-      if (!sparepart) {
-        if (
-          !pakai.nama ||
-          !Number.isInteger(pakai.stok) ||
-          pakai.stok < 0 ||
-          !Number.isFinite(pakai.harga) ||
-          pakai.harga < 0
-        ) {
-          showFormError(
-            "vehicleForm",
-            "Isi nama, stok awal, dan harga untuk sparepart baru.",
-          );
-          return;
-        }
-        sparepart = {
-          id: nextNumericId(sparepartData),
-          nama: pakai.nama,
-          stok: pakai.stok,
-          harga: pakai.harga,
-        };
-        sparepartData.push(sparepart);
-      }
-      resolved.push({ sparepart, jumlah: pakai.jumlah });
-    }
-    const totalPerPart = {};
-    for (const { sparepart, jumlah } of resolved) {
-      totalPerPart[sparepart.id] =
-        (totalPerPart[sparepart.id] || 0) + (Number(jumlah) || 0);
-    }
-    for (const { sparepart } of resolved) {
-      const total = totalPerPart[sparepart.id];
-      if (
-        !Number.isInteger(total) ||
-        total < 1 ||
-        total > Number(sparepart.stok)
-      ) {
-        showFormError(
-          "vehicleForm",
-          `Jumlah sparepart ${sparepart.nama} harus tersedia dalam stok.`,
-        );
-        return;
-      }
-    }
-    for (const partId of Object.keys(totalPerPart)) {
-      const part = sparepartData.find(
-        (item) => Number(item.id) === Number(partId),
-      );
-      if (part) part.stok = Number(part.stok) - totalPerPart[partId];
-    }
-    spareparts = resolved.map(({ sparepart, jumlah }) => ({
-      sparepartId: sparepart.id,
-      nama: sparepart.nama,
-      harga: Number(sparepart.harga),
-      jumlah: Number(jumlah),
-    }));
   }
 
   const kendaraan = getKendaraan();
@@ -426,7 +251,9 @@ function saveKendaraanForm(event) {
     mekanikId: mekanik.id,
     mekanik: mekanik.nama,
     biayaJasa: Number(value("vehicleBiayaJasa")) || 0,
-    spareparts,
+    /* Sparepart dikelola di halaman Service, jadi di sini
+       data sparepart lama tetap dipertahankan. */
+    spareparts: existingVehicle?.spareparts || [],
     tanggalService:
       tanggalInput ||
       existingVehicle?.tanggalService ||
@@ -437,13 +264,28 @@ function saveKendaraanForm(event) {
     const index = kendaraan.findIndex((item) => Number(item.id) === Number(id));
     if (index !== -1) kendaraan[index] = { ...kendaraan[index], ...data };
   } else {
-    kendaraan.push({ id: nextNumericId(kendaraan), ...data });
+    kendaraan.push({
+      id: nextNumericId(kendaraan),
+      kode: nextKode("kendaraan", kendaraan),
+      ...data,
+    });
   }
 
   saveKendaraan(kendaraan);
   saveCustomers(customers);
   saveMekanik(mekanikData);
-  saveSparepart(sparepartData);
+
+  addLog(
+    id ? "Update" : "Tambah",
+    "Kendaraan",
+    `${polisi} — ${merk} (${customer.nama})`,
+    getKode(
+      "kendaraan",
+      id
+        ? kendaraan.find((item) => Number(item.id) === Number(id))
+        : kendaraan[kendaraan.length - 1],
+    ),
+  );
 
   closeModal("vehicleModal");
 
@@ -473,12 +315,7 @@ function deleteKendaraan(id, button = null) {
 
   if (!confirmUnlock(item, "menghapus", button)) return;
 
-  if (
-    !armConfirmButton(
-      button,
-      `Klik lagi untuk hapus ${item.polisi}`,
-    )
-  ) {
+  if (!armConfirmButton(button, `Klik lagi untuk hapus ${item.polisi}`)) {
     showPageNotice(
       `Klik Hapus sekali lagi untuk menghapus kendaraan ${item.polisi}.`,
       "error",
@@ -502,6 +339,13 @@ function deleteKendaraan(id, button = null) {
   );
 
   saveKendaraan(dataBaru);
+
+  addLog(
+    "Hapus",
+    "Kendaraan",
+    `${item.polisi} — ${item.merk}`,
+    getKode("kendaraan", item),
+  );
 
   if (typeof updateDashboard === "function") updateDashboard();
   if (typeof updateKendaraanStats === "function") updateKendaraanStats();
@@ -743,6 +587,8 @@ function initKendaraanPage() {
 
   const search = document.getElementById("searchKendaraan");
 
+  const sort = document.getElementById("sortKendaraan");
+
   const tambah = document.getElementById("btnTambahKendaraan");
 
   const form = document.getElementById("vehicleForm");
@@ -761,10 +607,6 @@ function initKendaraanPage() {
     form.addEventListener("submit", saveKendaraanForm);
   }
 
-  document
-    .getElementById("btnTambahVehicleSparepart")
-    ?.addEventListener("click", () => addVehicleSparepartRow());
-
   if (search) {
     search.addEventListener("input", function () {
       renderKendaraan(this.value, 1);
@@ -777,17 +619,9 @@ function initKendaraanPage() {
       renderKendaraan(search.value, 1);
     });
 
-  document.querySelectorAll("[data-close-modal]").forEach(function (button) {
-    button.addEventListener("click", function () {
-      closeModal(this.dataset.closeModal);
-    });
+  sort?.addEventListener("change", function () {
+    renderKendaraan(search.value, 1);
   });
 
-  document.querySelectorAll(".modal-overlay").forEach(function (modal) {
-    modal.addEventListener("click", function (event) {
-      if (event.target === modal) {
-        modal.classList.remove("show");
-      }
-    });
-  });
+  /* Penutupan modal sudah ditangani global.js */
 }

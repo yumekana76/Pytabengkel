@@ -1,0 +1,251 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; font-src 'self' https://cdnjs.cloudflare.com; img-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+    />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Profil Saya | Pytabengkel</title>
+    <link rel="stylesheet" href="../../css/global.css" />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
+    />
+    <link rel="stylesheet" href="../../css/customer.css" />
+    <script src="../../js/theme.js"></script>
+    <script src="../../js/config.js"></script>
+    <script src="../../js/vendor/supabase.min.js"></script>
+    <script src="../../js/supabase.js"></script>
+    <script>
+      applyThemeBeforePaint();
+      window.__APP_ROLE = "customer";
+    </script>
+  </head>
+  <body>
+    <header class="topbar">
+      <button
+        type="button"
+        class="burger"
+        id="burgerBtn"
+        aria-label="Buka menu"
+        aria-expanded="false"
+        aria-controls="sidebar"
+      >
+        <i class="fa-solid fa-bars" aria-hidden="true"></i>
+        <i class="fa-solid fa-times icon-close" aria-hidden="true"></i>
+      </button>
+      <div class="brand">
+        <h1>Pytabengkel</h1>
+      </div>
+      <div class="topbar-actions">
+        <button
+          type="button"
+          class="icon-btn theme-toggle"
+          data-theme-toggle
+          aria-label="Aktifkan mode gelap"
+          aria-pressed="false"
+          title="Ganti tema terang / gelap"
+        >
+          <i class="fa-solid fa-sun icon-sun" aria-hidden="true"></i>
+          <i class="fa-solid fa-moon icon-moon" aria-hidden="true"></i>
+        </button>
+        <div class="admin" id="userChip" hidden>
+          <i class="fa-solid fa-user" aria-hidden="true"></i>
+          <span id="userChipName">Customer</span>
+        </div>
+        <button
+          type="button"
+          class="icon-btn logout-btn"
+          id="btnLogout"
+          data-logout-target="../index.html?role=customer"
+          aria-label="Keluar"
+          title="Keluar"
+        >
+          <i class="fa-solid fa-right-from-bracket" aria-hidden="true"></i>
+        </button>
+      </div>
+    </header>
+    <div class="layout">
+      <aside class="sidebar" id="sidebar">
+        <nav class="nav">
+          <a href="dashboard.html" class="nav-link">
+            <i class="fa-solid fa-gauge nav-icon" aria-hidden="true"></i>
+            <span>Dashboard</span>
+          </a>
+          <a href="kendaraan.html" class="nav-link">
+            <i class="fa-solid fa-car nav-icon" aria-hidden="true"></i>
+            <span>Kendaraan Saya</span>
+          </a>
+          <a href="service.html" class="nav-link">
+            <i class="fa-solid fa-screwdriver-wrench nav-icon" aria-hidden="true"></i>
+            <span>Service Saya</span>
+          </a>
+          <a href="riwayat.html" class="nav-link">
+            <i class="fa-solid fa-clock-rotate-left nav-icon" aria-hidden="true"></i>
+            <span>Riwayat Service</span>
+          </a>
+          <a href="keuangan.html" class="nav-link">
+            <i class="fa-solid fa-wallet nav-icon" aria-hidden="true"></i>
+            <span>Keuangan</span>
+          </a>
+          <div class="nav-separator"></div>
+          <a href="profil.html" class="nav-link active">
+            <i class="fa-solid fa-user nav-icon" aria-hidden="true"></i>
+            <span>Profil Saya</span>
+          </a>
+          <a href="pengaturan.html" class="nav-link">
+            <i class="fa-solid fa-gear nav-icon" aria-hidden="true"></i>
+            <span>Pengaturan</span>
+          </a>
+        </nav>
+      </aside>
+      <main class="main">
+        <div class="page-header">
+          <h2>Profil Saya</h2>
+          <p>Perubahan profil langsung tersinkron dengan data customer di bengkel.</p>
+        </div>
+
+        <section class="profile-card">
+          <div class="profile-avatar" id="profileAvatar">C</div>
+          <div>
+            <h3 id="profileName">Customer</h3>
+            <p id="profileMeta">-</p>
+          </div>
+        </section>
+
+        <section class="panel vehicle-panel">
+          <div class="panel-header">
+            <div>
+              <h3>Data Customer</h3>
+              <p>Informasi ini dipakai bengkel saat menghubungi Anda.</p>
+            </div>
+          </div>
+          <div class="panel-body">
+            <form id="profileForm">
+              <p class="form-error" id="profileError" hidden></p>
+              <div class="form-grid">
+                <div class="form-group">
+                  <label for="profileNama"> Nama Lengkap </label>
+                  <input
+                    type="text"
+                    id="profileNama"
+                    class="form-control"
+                    placeholder="Nama lengkap"
+                    required
+                  />
+                </div>
+                <div class="form-group">
+                  <label for="profileTelepon"> No. HP </label>
+                  <input
+                    type="tel"
+                    id="profileTelepon"
+                    class="form-control"
+                    placeholder="08xxxxxxxxxx"
+                    required
+                  />
+                </div>
+                <div class="form-group form-full">
+                  <label for="profileEmail"> Email </label>
+                  <input
+                    type="email"
+                    id="profileEmail"
+                    class="form-control"
+                    placeholder="nama@email.com"
+                    required
+                  />
+                  <span class="form-hint"> Email dipakai untuk masuk ke akun customer. </span>
+                </div>
+                <div class="form-group form-full">
+                  <label for="profileAlamat"> Alamat </label>
+                  <textarea
+                    id="profileAlamat"
+                    class="form-control"
+                    rows="3"
+                    placeholder="Alamat lengkap"
+                  ></textarea>
+                </div>
+                <div class="form-group form-full">
+                  <label for="profileCatatan"> Catatan untuk Bengkel </label>
+                  <textarea
+                    id="profileCatatan"
+                    class="form-control"
+                    rows="3"
+                    placeholder="Contoh: rutin servis tiap 5.000 km"
+                  ></textarea>
+                </div>
+              </div>
+              <div class="modal-footer" style="padding-left: 0; padding-right: 0">
+                <button type="submit" class="btn btn-primary">
+                  <i class="fa-solid fa-floppy-disk" aria-hidden="true"></i>
+                  Simpan Perubahan
+                </button>
+              </div>
+            </form>
+          </div>
+        </section>
+
+        <section class="panel vehicle-panel">
+          <div class="panel-header">
+            <div>
+              <h3>Ubah Password</h3>
+              <p>Gunakan password minimal 6 karakter.</p>
+            </div>
+          </div>
+          <div class="panel-body">
+            <form id="passwordForm">
+              <p class="form-error" id="passwordError" hidden></p>
+              <div class="form-grid">
+                <div class="form-group form-full">
+                  <label for="currentPassword"> Password Saat Ini </label>
+                  <input
+                    type="password"
+                    id="currentPassword"
+                    class="form-control"
+                    placeholder="Masukkan password saat ini"
+                    autocomplete="current-password"
+                    required
+                  />
+                </div>
+                <div class="form-group">
+                  <label for="newPassword"> Password Baru </label>
+                  <input
+                    type="password"
+                    id="newPassword"
+                    class="form-control"
+                    placeholder="Minimal 6 karakter"
+                    autocomplete="new-password"
+                    required
+                  />
+                </div>
+                <div class="form-group">
+                  <label for="newPasswordConfirm"> Konfirmasi Password </label>
+                  <input
+                    type="password"
+                    id="newPasswordConfirm"
+                    class="form-control"
+                    placeholder="Ulangi password baru"
+                    autocomplete="new-password"
+                    required
+                  />
+                </div>
+              </div>
+              <div class="modal-footer" style="padding-left: 0; padding-right: 0">
+                <button type="submit" class="btn btn-primary">
+                  <i class="fa-solid fa-key" aria-hidden="true"></i>
+                  Update Password
+                </button>
+              </div>
+            </form>
+          </div>
+        </section>
+      </main>
+    </div>
+    <script src="../../js/db.js"></script>
+    <script src="../../js/customer-auth.js"></script>
+    <script src="../../js/global.js"></script>
+
+    <script src="../../js/customer-app.js"></script>
+  </body>
+</html>

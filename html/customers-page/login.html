@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; font-src 'self' https://cdnjs.cloudflare.com; img-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+    />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Login Customer | Pytabengkel</title>
+    <meta http-equiv="refresh" content="0; url=../index.html?role=customer" />
+    <link rel="stylesheet" href="../../css/login.css" />
+    <script>
+      window.location.replace("../index.html?role=customer");
+    </script>
+  </head>
+  <body>
+    <main class="login-container" style="max-width: 520px; min-height: auto">
+      <section class="login-form-container" style="min-height: auto">
+        <div class="login-form-wrap" style="text-align: center">
+          <p style="color: var(--secondary); margin-bottom: 16px">
+            Mengarahkan ke halaman login… Anda akan otomatis masuk ke tab
+            <strong>Customer</strong>.
+          </p>
+          <a class="login-button" href="../index.html?role=customer" style="text-decoration: none">
+            <i class="fa-solid fa-right-to-bracket" aria-hidden="true"></i>
+            <span>Lanjut ke login Customer</span>
+          </a>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>

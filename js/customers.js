@@ -36,13 +36,9 @@ function renderCustomers(search = "", page = 1) {
 
   const searchText = String(search).toLowerCase().trim();
 
-  const vehicleFilter =
-    document.getElementById("filterCustomerVehicle")?.value || "";
+  const sort = getSortValue("sortCustomer");
 
   const filteredCustomers = customers.filter((customer) => {
-    const jumlahKendaraan = getCustomerVehicleCount(customer.id);
-    if (vehicleFilter === "punya" && jumlahKendaraan === 0) return false;
-    if (vehicleFilter === "belum" && jumlahKendaraan > 0) return false;
     return (
       String(customer.nama || "")
         .toLowerCase()
@@ -55,9 +51,17 @@ function renderCustomers(search = "", page = 1) {
         .includes(searchText) ||
       String(customer.alamat || "")
         .toLowerCase()
+        .includes(searchText) ||
+      String(customer.id || "")
+        .toLowerCase()
+        .includes(searchText) ||
+      String(customer.kode || "")
+        .toLowerCase()
         .includes(searchText)
     );
   });
+
+  const sortedCustomers = sortRows(filteredCustomers, sort.key, sort.direction);
 
   const perPage = 10;
 
@@ -69,7 +73,7 @@ function renderCustomers(search = "", page = 1) {
 
   const start = (page - 1) * perPage;
 
-  const currentCustomers = filteredCustomers.slice(start, start + perPage);
+  const currentCustomers = sortedCustomers.slice(start, start + perPage);
 
   table.innerHTML = "";
 
@@ -77,7 +81,7 @@ function renderCustomers(search = "", page = 1) {
     table.innerHTML = `
       <tr>
         <td
-          colspan="7"
+          colspan="8"
           style="text-align: center;"
         >
           Tidak ada data customer.
@@ -97,9 +101,17 @@ function renderCustomers(search = "", page = 1) {
 
     const jumlahKendaraan = getCustomerVehicleCount(customer.id);
 
+    const account = getCustomerAccounts().find(
+      (item) => Number(item.customerId) === Number(customer.id),
+    );
+
     table.innerHTML += `
         <tr>
           <td>${nomor}</td>
+
+          <td>
+            <span class="cell-id">${escapeHTML(getKode("customers", customer))}</span>
+          </td>
 
           <td>
             <strong>
@@ -124,12 +136,18 @@ function renderCustomers(search = "", page = 1) {
           </td>
 
           <td>
+            <span class="badge ${account ? "done" : "neutral"}">
+              ${account ? "Punya Akun" : "Belum Punya Akun"}
+            </span>
+          </td>
+
+          <td>
             <div class="action-buttons">
 
               <button
                 type="button"
                 class="action-btn"
-                onclick="showCustomerDetail(${customer.id})"
+                data-customer-detail="${customer.id}"
               >
                 Detail
               </button>
@@ -137,15 +155,23 @@ function renderCustomers(search = "", page = 1) {
               <button
                 type="button"
                 class="action-btn"
-                onclick="editCustomer(${customer.id})"
+                data-customer-edit="${customer.id}"
               >
                 Edit
               </button>
 
               <button
                 type="button"
+                class="action-btn"
+                data-customer-account="${customer.id}"
+              >
+                Akun
+              </button>
+
+              <button
+                type="button"
                 class="action-btn danger"
-                onclick="deleteCustomer(${customer.id}, this)"
+                data-customer-delete="${customer.id}"
               >
                 Hapus
               </button>
@@ -156,16 +182,41 @@ function renderCustomers(search = "", page = 1) {
       `;
   });
 
+  /* Listener tombol aksi (tanpa inline onclick -> CSP friendly) */
+  table.querySelectorAll("[data-customer-detail]").forEach((button) => {
+    button.addEventListener("click", () =>
+      showCustomerDetail(button.dataset.customerDetail),
+    );
+  });
+
+  table.querySelectorAll("[data-customer-edit]").forEach((button) => {
+    button.addEventListener("click", () =>
+      editCustomer(button.dataset.customerEdit),
+    );
+  });
+
+  table.querySelectorAll("[data-customer-account]").forEach((button) => {
+    button.addEventListener("click", () =>
+      manageCustomerAccount(button.dataset.customerAccount),
+    );
+  });
+
+  table.querySelectorAll("[data-customer-delete]").forEach((button) => {
+    button.addEventListener("click", () =>
+      deleteCustomer(button.dataset.customerDelete, button),
+    );
+  });
+
   const showingStart = start + 1;
 
-  const showingEnd = Math.min(start + perPage, filteredCustomers.length);
+  const showingEnd = Math.min(start + perPage, sortedCustomers.length);
 
   setText(
     "customerInfo",
-    `Menampilkan ${showingStart}-${showingEnd} dari ${filteredCustomers.length} customer`,
+    `Menampilkan ${showingStart}-${showingEnd} dari ${sortedCustomers.length} customer`,
   );
 
-  renderCustomerPagination(filteredCustomers.length, page, perPage);
+  renderCustomerPagination(sortedCustomers.length, page, perPage);
 }
 
 /* PAGINATION CUSTOMER */
@@ -194,10 +245,11 @@ function renderCustomerPagination(totalItems, currentPage, perPage) {
   previousButton.disabled = currentPage === 1;
 
   previousButton.addEventListener("click", () => {
-    if (typeof renderCustomers === "function") renderCustomers(
-      document.getElementById("searchCustomer").value,
-      currentPage - 1,
-    );
+    if (typeof renderCustomers === "function")
+      renderCustomers(
+        document.getElementById("searchCustomer").value,
+        currentPage - 1,
+      );
   });
 
   pagination.appendChild(previousButton);
@@ -214,7 +266,8 @@ function renderCustomerPagination(totalItems, currentPage, perPage) {
     pageButton.textContent = i;
 
     pageButton.addEventListener("click", () => {
-      if (typeof renderCustomers === "function") renderCustomers(document.getElementById("searchCustomer").value, i);
+      if (typeof renderCustomers === "function")
+        renderCustomers(document.getElementById("searchCustomer").value, i);
     });
 
     pagination.appendChild(pageButton);
@@ -229,10 +282,11 @@ function renderCustomerPagination(totalItems, currentPage, perPage) {
   nextButton.disabled = currentPage === totalPages;
 
   nextButton.addEventListener("click", () => {
-    if (typeof renderCustomers === "function") renderCustomers(
-      document.getElementById("searchCustomer").value,
-      currentPage + 1,
-    );
+    if (typeof renderCustomers === "function")
+      renderCustomers(
+        document.getElementById("searchCustomer").value,
+        currentPage + 1,
+      );
   });
 
   pagination.appendChild(nextButton);
@@ -257,7 +311,29 @@ function resetCustomerForm() {
     id.value = "";
   }
 
+  toggleCustomerAccountFields();
+
   setText("customerModalTitle", "Tambah Customer");
+}
+
+/* Tampilkan / sembunyikan kolom akun login sesuai checkbox. */
+function toggleCustomerAccountFields() {
+  const aktif = document.getElementById("customerBuatAkun")?.checked;
+  const supabaseMode =
+    typeof isSupabaseMode === "function" && isSupabaseMode();
+
+  const emailGroup = document.getElementById("customerAkunEmailGroup");
+  const passwordGroup = document.getElementById("customerAkunPasswordGroup");
+  const hint = document.getElementById("customerBuatAkunHint");
+
+  if (emailGroup) emailGroup.hidden = !aktif;
+  if (passwordGroup) passwordGroup.hidden = !aktif || supabaseMode;
+
+  if (hint) {
+    hint.textContent = supabaseMode
+      ? "Di mode online, tautan login akan dikirim ke email customer."
+      : "Centang bila ingin membantu customer masuk ke portal customer. Password bisa dibuatkan di sini atau dikirim lewat email.";
+  }
 }
 
 /* EDIT CUSTOMER */
@@ -285,6 +361,19 @@ function editCustomer(id) {
 
   document.getElementById("customerCatatan").value = customer.catatan || "";
 
+  const buatAkun = document.getElementById("customerBuatAkun");
+  const akunEmail = document.getElementById("customerAkunEmail");
+
+  if (buatAkun) buatAkun.checked = false;
+
+  if (akunEmail) akunEmail.value = customer.email || "";
+
+  const akunPassword = document.getElementById("customerAkunPassword");
+
+  if (akunPassword) akunPassword.value = "";
+
+  toggleCustomerAccountFields();
+
   setText("customerModalTitle", "Edit Customer");
 
   openModal("customerModal");
@@ -292,9 +381,8 @@ function editCustomer(id) {
 
 /* TAMBAH / EDIT CUSTOMER */
 
-function saveCustomerForm(event) {
+async function saveCustomerForm(event) {
   event.preventDefault();
-
   clearFormError("customerForm");
   clearPageNotice();
 
@@ -368,6 +456,23 @@ function saveCustomerForm(event) {
       if (kendaraanChanged) {
         saveKendaraan(kendaraan);
       }
+
+      /* Sinkronkan email akun login customer bila email berubah. */
+
+      const accounts = getCustomerAccounts();
+      const accountIndex = accounts.findIndex(
+        (account) => Number(account.customerId) === customerId,
+      );
+
+      if (accountIndex !== -1) {
+        accounts[accountIndex] = {
+          ...accounts[accountIndex],
+          nama,
+          email,
+        };
+
+        saveCustomerAccounts(accounts);
+      }
     }
   } else {
     /* TAMBAH */
@@ -375,6 +480,7 @@ function saveCustomerForm(event) {
       id: customers.length
         ? Math.max(...customers.map((item) => Number(item.id) || 0)) + 1
         : 1,
+      kode: nextKode("customers", customers),
       nama,
       telepon,
       email,
@@ -388,6 +494,26 @@ function saveCustomerForm(event) {
 
   saveCustomers(customers);
 
+  addLog(
+    id ? "Update" : "Tambah",
+    "Customer",
+    `${nama} (${telepon})`,
+    getKode(
+      "customers",
+      id
+        ? customers.find((item) => Number(item.id) === Number(id))
+        : customers[customers.length - 1],
+    ),
+  );
+
+  /* Bantu customer membuat akun login (opsional). */
+  const buatAkun = document.getElementById("customerBuatAkun")?.checked;
+  const target = id ? customers.find((item) => Number(item.id) === Number(id)) : customers[customers.length - 1];
+
+  if (buatAkun && target) {
+    await buatAkunCustomer(target);
+  }
+
   closeModal("customerModal");
 
   resetCustomerForm();
@@ -396,6 +522,93 @@ function saveCustomerForm(event) {
   if (typeof updateCustomerStats === "function") updateCustomerStats();
   if (typeof updateDashboard === "function") updateDashboard();
   showPageNotice("Data customer tersimpan di tabel.", "success");
+}
+
+/* Buat akun login customer (mode lokal: simpan password,
+   mode Supabase: kirim tautan login ke email). */
+async function buatAkunCustomer(customer) {
+  const emailAkun =
+    document.getElementById("customerAkunEmail")?.value.trim() ||
+    customer.email ||
+    "";
+
+  const password =
+    document.getElementById("customerAkunPassword")?.value.trim() || "";
+
+  if (!emailAkun) {
+    showPageNotice(
+      "Akun login tidak dibuat: email customer masih kosong.",
+      "error",
+    );
+    return;
+  }
+
+  if (typeof isSupabaseMode === "function" && isSupabaseMode()) {
+    const result = await Auth.sendLoginLink(
+      emailAkun,
+      `${window.location.origin}/html/customers-page/dashboard.html`,
+    );
+
+    if (!result.ok) {
+      showPageNotice(
+        result.error || "Gagal mengirim tautan login ke customer.",
+        "error",
+      );
+      return;
+    }
+
+    showPageNotice(
+      `Tautan login berhasil dikirim ke ${emailAkun}.`,
+      "success",
+    );
+    return;
+  }
+
+  if (password.length < 6) {
+    showPageNotice(
+      "Akun login tidak dibuat: password minimal 6 karakter.",
+      "error",
+    );
+    return;
+  }
+
+  const bentrok = getCustomerAccounts().find(
+    (item) =>
+      String(item.email || "").toLowerCase() === emailAkun.toLowerCase(),
+  );
+
+  if (bentrok) {
+    showPageNotice(
+      "Akun login tidak dibuat: email tersebut sudah dipakai akun lain.",
+      "error",
+    );
+    return;
+  }
+
+  const accounts = getCustomerAccounts();
+
+  accounts.push({
+    id: nextNumericId(accounts),
+    customerId: Number(customer.id),
+    nama: customer.nama,
+    email: emailAkun,
+    password,
+    createdAt: new Date().toISOString(),
+  });
+
+  saveCustomerAccounts(accounts);
+
+  const customers = getCustomers();
+  const index = customers.findIndex(
+    (item) => Number(item.id) === Number(customer.id),
+  );
+
+  if (index !== -1 && customers[index].email !== emailAkun) {
+    customers[index] = { ...customers[index], email: emailAkun };
+    saveCustomers(customers);
+  }
+
+  showPageNotice(`Akun login customer dibuat (${emailAkun}).`, "success");
 }
 
 /* HAPUS CUSTOMER */
@@ -420,12 +633,7 @@ function deleteCustomer(id, button = null) {
     return;
   }
 
-  if (
-    !armConfirmButton(
-      button,
-      `Klik lagi untuk hapus ${customer.nama}`,
-    )
-  ) {
+  if (!armConfirmButton(button, `Klik lagi untuk hapus ${customer.nama}`)) {
     showPageNotice(
       `Klik Hapus sekali lagi untuk menghapus customer "${customer.nama}".`,
       "error",
@@ -438,6 +646,21 @@ function deleteCustomer(id, button = null) {
   );
 
   saveCustomers(filteredCustomers);
+
+  addLog(
+    "Hapus",
+    "Customer",
+    `${customer.nama} (${customer.telepon})`,
+    getKode("customers", customer),
+  );
+
+  /* Hapus juga akun login customer. */
+
+  const accounts = getCustomerAccounts().filter(
+    (account) => Number(account.customerId) !== Number(id),
+  );
+
+  saveCustomerAccounts(accounts);
 
   if (typeof renderCustomers === "function") renderCustomers();
   if (typeof updateCustomerStats === "function") updateCustomerStats();
@@ -483,6 +706,10 @@ function showCustomerDetail(id) {
       })
       .join("");
   }
+
+  const account = getCustomerAccounts().find(
+    (item) => Number(item.customerId) === Number(customer.id),
+  );
 
   const content = document.getElementById("customerDetailContent");
 
@@ -560,9 +787,224 @@ function showCustomerDetail(id) {
         ${kendaraanHTML}
       </span>
     </div>
+
+    <div class="detail-item full">
+      <span class="detail-label">
+        Akun Login Customer
+      </span>
+
+      <span class="detail-value">
+        ${
+          account
+            ? `${escapeHTML(account.email)} — bisa masuk ke portal customer`
+            : "Belum punya akun login"
+        }
+      </span>
+    </div>
   `;
 
   openModal("customerDetailModal");
+}
+
+/* KELOLA AKUN LOGIN CUSTOMER */
+
+function manageCustomerAccount(id) {
+  const customers = getCustomers();
+
+  const customer = customers.find((item) => Number(item.id) === Number(id));
+
+  if (!customer) {
+    return;
+  }
+
+  const account = getCustomerAccounts().find(
+    (item) => Number(item.customerId) === Number(customer.id),
+  );
+
+  document.getElementById("customerAccountId").value = customer.id;
+  document.getElementById("customerAccountNama").value = customer.nama || "";
+  document.getElementById("customerAccountEmail").value =
+    account?.email || customer.email || "";
+  document.getElementById("customerAccountPassword").value = "";
+
+  const error = document.getElementById("customerAccountError");
+
+  if (error) {
+    error.hidden = true;
+  }
+
+  const status = document.getElementById("customerAccountStatus");
+
+  if (status) {
+    status.textContent = account
+      ? `Sudah punya akun login (${account.email}).`
+      : "Belum punya akun login. Kirim link login ke email customer.";
+  }
+
+  /* Di mode Supabase password dikelola Supabase Auth,
+     jadi admin cukup mengirim link login ke customer. */
+  const supabaseMode = typeof isSupabaseMode === "function" && isSupabaseMode();
+
+  const passwordGroup = document.getElementById("customerAccountPasswordGroup");
+  const hint = document.getElementById("customerAccountHint");
+  const submit = document.getElementById("btnSaveCustomerAccount");
+
+  if (passwordGroup) {
+    passwordGroup.hidden = supabaseMode;
+  }
+
+  if (hint) {
+    hint.textContent = supabaseMode
+      ? "Customer akan menerima tautan login ke emailnya."
+      : "Kosongkan jika tidak ingin mengubah password.";
+  }
+
+  if (submit) {
+    submit.innerHTML = supabaseMode
+      ? '<i class="fa-solid fa-paper-plane" aria-hidden="true"></i> Kirim Link Login'
+      : '<i class="fa-solid fa-floppy-disk" aria-hidden="true"></i> Simpan Akun';
+  }
+
+  openModal("customerAccountModal");
+}
+
+async function saveCustomerAccountForm(event) {
+  event.preventDefault();
+
+  const error = document.getElementById("customerAccountError");
+
+  const showError = (message) => {
+    if (!error) return;
+    error.textContent = message;
+    error.hidden = false;
+  };
+
+  const customerId = Number(document.getElementById("customerAccountId").value);
+  const email = document.getElementById("customerAccountEmail").value.trim();
+  const password = document
+    .getElementById("customerAccountPassword")
+    .value.trim();
+
+  if (!email) {
+    showError("Email login wajib diisi.");
+    return;
+  }
+
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    showError("Masukkan alamat email yang valid.");
+    return;
+  }
+
+  const bentrok = getCustomerAccounts().find(
+    (item) =>
+      String(item.email || "").toLowerCase() === email.toLowerCase() &&
+      Number(item.customerId) !== customerId,
+  );
+
+  if (bentrok) {
+    showError("Email tersebut sudah dipakai akun customer lain.");
+    return;
+  }
+
+  /* MODE SUPABASE: kirim magic link, password diurus Supabase. */
+
+  if (typeof isSupabaseMode === "function" && isSupabaseMode()) {
+    const result = await Auth.sendLoginLink(
+      email,
+      `${window.location.origin}/html/customers-page/dashboard.html`,
+    );
+
+    if (!result.ok) {
+      showError(result.error || "Gagal mengirim link login.");
+      return;
+    }
+
+    /* Samakan email customer & data customer di server. */
+
+    const customers = getCustomers();
+    const customerIndex = customers.findIndex(
+      (item) => Number(item.id) === customerId,
+    );
+
+    if (customerIndex !== -1) {
+      customers[customerIndex] = {
+        ...customers[customerIndex],
+        email,
+      };
+
+      saveCustomers(customers);
+    }
+
+    closeModal("customerAccountModal");
+    showPageNotice(`Link login berhasil dikirim ke ${email}.`, "success");
+    return;
+  }
+
+  /* MODE LOKAL: simpan password di localStorage. */
+
+  const accounts = getCustomerAccounts();
+
+  const index = accounts.findIndex(
+    (item) => Number(item.customerId) === customerId,
+  );
+
+  if (index === -1) {
+    if (!password || password.length < 6) {
+      showError("Password minimal 6 karakter untuk akun baru.");
+      return;
+    }
+
+    accounts.push({
+      id: nextNumericId(accounts),
+      customerId,
+      nama: document.getElementById("customerAccountNama").value.trim(),
+      email,
+      password,
+      createdAt: new Date().toISOString(),
+    });
+  } else {
+    if (password && password.length < 6) {
+      showError("Password minimal 6 karakter.");
+      return;
+    }
+
+    accounts[index] = {
+      ...accounts[index],
+      email,
+      nama: document.getElementById("customerAccountNama").value.trim(),
+      ...(password ? { password } : {}),
+    };
+  }
+
+  saveCustomerAccounts(accounts);
+
+  addLog(
+    "Akun",
+    "Customer",
+    `Akun login ${email} untuk ${customer.nama}`,
+    getKode("customers", customer),
+  );
+
+  /* Samakan email pada data customer agar konsisten. */
+
+  const customers = getCustomers();
+  const customerIndex = customers.findIndex(
+    (item) => Number(item.id) === customerId,
+  );
+
+  if (customerIndex !== -1) {
+    customers[customerIndex] = {
+      ...customers[customerIndex],
+      email,
+    };
+
+    saveCustomers(customers);
+  }
+
+  closeModal("customerAccountModal");
+
+  if (typeof renderCustomers === "function") renderCustomers();
+  showPageNotice("Akun login customer tersimpan.", "success");
 }
 
 /* INIT CUSTOMER */
@@ -592,33 +1034,28 @@ function initCustomerPage() {
     form.addEventListener("submit", saveCustomerForm);
   }
 
+  document
+    .getElementById("customerBuatAkun")
+    ?.addEventListener("change", toggleCustomerAccountFields);
+
+  const accountForm = document.getElementById("customerAccountForm");
+
+  if (accountForm) {
+    accountForm.addEventListener("submit", saveCustomerAccountForm);
+  }
+
   const search = document.getElementById("searchCustomer");
 
   if (search) {
     search.addEventListener("input", () => {
-      if (typeof renderCustomers === "function") renderCustomers(search.value, 1);
+      if (typeof renderCustomers === "function")
+        renderCustomers(search.value, 1);
     });
   }
 
-  document
-    .getElementById("filterCustomerVehicle")
-    ?.addEventListener("change", () => {
-      if (typeof renderCustomers === "function") renderCustomers(search.value, 1);
-    });
-
-  document.querySelectorAll("[data-close-modal]").forEach((button) => {
-    button.addEventListener("click", () => {
-      const modalId = button.dataset.closeModal;
-
-      closeModal(modalId);
-    });
+  document.getElementById("sortCustomer")?.addEventListener("change", () => {
+    if (typeof renderCustomers === "function") renderCustomers(search.value, 1);
   });
 
-  document.querySelectorAll(".modal-overlay").forEach((modal) => {
-    modal.addEventListener("click", (event) => {
-      if (event.target === modal) {
-        closeModal(modal.id);
-      }
-    });
-  });
+  /* Penutupan modal sudah ditangani global.js */
 }

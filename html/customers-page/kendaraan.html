@@ -1,0 +1,301 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; font-src 'self' https://cdnjs.cloudflare.com; img-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+    />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Kendaraan Saya | Pytabengkel</title>
+    <link rel="stylesheet" href="../../css/global.css" />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
+    />
+    <link rel="stylesheet" href="../../css/customer.css" />
+    <script src="../../js/theme.js"></script>
+    <script src="../../js/config.js"></script>
+    <script src="../../js/vendor/supabase.min.js"></script>
+    <script src="../../js/supabase.js"></script>
+    <script>
+      applyThemeBeforePaint();
+      window.__APP_ROLE = "customer";
+    </script>
+  </head>
+  <body>
+    <header class="topbar">
+      <button
+        type="button"
+        class="burger"
+        id="burgerBtn"
+        aria-label="Buka menu"
+        aria-expanded="false"
+        aria-controls="sidebar"
+      >
+        <i class="fa-solid fa-bars" aria-hidden="true"></i>
+        <i class="fa-solid fa-times icon-close" aria-hidden="true"></i>
+      </button>
+      <div class="brand">
+        <h1>Pytabengkel</h1>
+      </div>
+      <div class="topbar-actions">
+        <button
+          type="button"
+          class="icon-btn theme-toggle"
+          data-theme-toggle
+          aria-label="Aktifkan mode gelap"
+          aria-pressed="false"
+          title="Ganti tema terang / gelap"
+        >
+          <i class="fa-solid fa-sun icon-sun" aria-hidden="true"></i>
+          <i class="fa-solid fa-moon icon-moon" aria-hidden="true"></i>
+        </button>
+        <div class="admin" id="userChip" hidden>
+          <i class="fa-solid fa-user" aria-hidden="true"></i>
+          <span id="userChipName">Customer</span>
+        </div>
+        <button
+          type="button"
+          class="icon-btn logout-btn"
+          id="btnLogout"
+          data-logout-target="../index.html?role=customer"
+          aria-label="Keluar"
+          title="Keluar"
+        >
+          <i class="fa-solid fa-right-from-bracket" aria-hidden="true"></i>
+        </button>
+      </div>
+    </header>
+    <div class="layout">
+      <aside class="sidebar" id="sidebar">
+        <nav class="nav">
+          <a href="dashboard.html" class="nav-link">
+            <i class="fa-solid fa-gauge nav-icon" aria-hidden="true"></i>
+            <span>Dashboard</span>
+          </a>
+          <a href="kendaraan.html" class="nav-link active">
+            <i class="fa-solid fa-car nav-icon" aria-hidden="true"></i>
+            <span>Kendaraan Saya</span>
+          </a>
+          <a href="service.html" class="nav-link">
+            <i class="fa-solid fa-screwdriver-wrench nav-icon" aria-hidden="true"></i>
+            <span>Service Saya</span>
+          </a>
+          <a href="riwayat.html" class="nav-link">
+            <i class="fa-solid fa-clock-rotate-left nav-icon" aria-hidden="true"></i>
+            <span>Riwayat Service</span>
+          </a>
+          <a href="keuangan.html" class="nav-link">
+            <i class="fa-solid fa-wallet nav-icon" aria-hidden="true"></i>
+            <span>Keuangan</span>
+          </a>
+          <div class="nav-separator"></div>
+          <a href="profil.html" class="nav-link">
+            <i class="fa-solid fa-user nav-icon" aria-hidden="true"></i>
+            <span>Profil Saya</span>
+          </a>
+          <a href="pengaturan.html" class="nav-link">
+            <i class="fa-solid fa-gear nav-icon" aria-hidden="true"></i>
+            <span>Pengaturan</span>
+          </a>
+        </nav>
+      </aside>
+      <main class="main">
+        <div class="page-header page-header-row">
+          <div>
+            <h2>Kendaraan Saya</h2>
+            <p>Daftar kendaraan yang terdaftar atas nama Anda.</p>
+          </div>
+          <button type="button" class="btn btn-primary" id="btnAjukanService">
+            <i class="fa-solid fa-plus" aria-hidden="true"></i> Ajukan Service
+          </button>
+        </div>
+
+        <section class="stats-grid">
+          <div class="stat-card">
+            <i class="fa-solid fa-car-side stat-icon" aria-hidden="true"></i>
+            <span class="stat-number" id="statTotalKendaraan">0</span>
+            <span class="stat-label"> Total Kendaraan </span>
+          </div>
+          <div class="stat-card">
+            <i class="fa-solid fa-wrench stat-icon" aria-hidden="true"></i>
+            <span class="stat-number" id="statSedangProses">0</span>
+            <span class="stat-label"> Sedang Proses </span>
+          </div>
+          <div class="stat-card">
+            <i class="fa-solid fa-clipboard-check stat-icon" aria-hidden="true"></i>
+            <span class="stat-number" id="statTotalService">0</span>
+            <span class="stat-label"> Total Service </span>
+          </div>
+          <div class="stat-card">
+            <i class="fa-solid fa-money-bill-wave stat-icon" aria-hidden="true"></i>
+            <span class="stat-number money" id="statBelumLunas">Rp0</span>
+            <span class="stat-label"> Belum Lunas </span>
+          </div>
+        </section>
+
+        <section class="panel vehicle-panel">
+          <div class="panel-header">
+            <div>
+              <h3>Daftar Kendaraan</h3>
+              <p>Riwayat service untuk setiap kendaraan Anda.</p>
+            </div>
+            <div class="vehicle-toolbar">
+              <select
+                id="filterKendaraanStatus"
+                class="form-control filter-select"
+                aria-label="Filter status kendaraan"
+              >
+                <option value="">Semua Status</option>
+                <option value="Menunggu">Menunggu</option>
+                <option value="Dikerjakan">Dikerjakan</option>
+                <option value="Quality Check">Quality Check</option>
+                <option value="Selesai">Selesai</option>
+              </select>
+              <select
+                id="sortKendaraan"
+                class="form-control filter-select"
+                aria-label="Urutkan kendaraan"
+              >
+                <option value="id:desc">Urutkan: ID</option>
+                <option value="tanggalService:desc">Terbaru</option>
+                <option value="tanggalService:asc">Terlama</option>
+                <option value="polisi:asc">No. Polisi</option>
+              </select>
+              <div class="search-box">
+                <input type="search" id="searchKendaraan" placeholder="Cari kendaraan..." />
+              </div>
+            </div>
+          </div>
+          <div class="panel-body">
+            <div class="vehicle-cards" id="vehicleCards"></div>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <!-- MODAL AJUKAN SERVICE -->
+    <div class="modal-overlay" id="requestModal">
+      <div class="modal">
+        <div class="modal-header">
+          <div>
+            <h3>Ajukan Service</h3>
+            <p>Permintaan langsung masuk ke antrean service bengkel.</p>
+          </div>
+          <button
+            type="button"
+            class="modal-close"
+            data-close-modal="requestModal"
+            aria-label="Tutup"
+          >
+            ×
+          </button>
+        </div>
+        <form id="requestForm">
+          <div class="modal-body">
+            <p class="form-error" id="requestError" hidden></p>
+            <div class="form-grid">
+              <div class="form-group form-full">
+                <label for="requestMode">Pilih Kendaraan</label>
+                <select id="requestMode" class="form-control">
+                  <option value="existing">Kendaraan yang sudah ada</option>
+                  <option value="new">Tambah kendaraan baru</option>
+                </select>
+              </div>
+              <div class="form-group form-full" id="existingVehicleGroup">
+                <label for="requestVehicle">Kendaraan Saya</label>
+                <select id="requestVehicle" class="form-control"></select>
+              </div>
+              <div class="form-group form-full" id="newVehicleGroup" hidden>
+                <label for="requestPolisi">No.Police</label>
+                <input
+                  type="text"
+                  id="requestPolisi"
+                  class="form-control"
+                  placeholder="Contoh: B 1234 KZ"
+                />
+              </div>
+              <div class="form-group" id="newJenisGroup" hidden>
+                <label for="requestJenis">Jenis</label>
+                <select id="requestJenis" class="form-control">
+                  <option value="Mobil">Mobil</option>
+                  <option value="Motor">Motor</option>
+                </select>
+              </div>
+              <div class="form-group" id="newMerkGroup" hidden>
+                <label for="requestMerk">Merk</label>
+                <input
+                  type="text"
+                  id="requestMerk"
+                  class="form-control"
+                  placeholder="Contoh: Toyota"
+                />
+              </div>
+              <div class="form-group form-full">
+                <label for="requestKeluhan">Keluhan</label>
+                <input
+                  type="text"
+                  id="requestKeluhan"
+                  class="form-control"
+                  placeholder="Contoh: Ganti oli dan cek rem"
+                  required
+                />
+              </div>
+              <div class="form-group">
+                <label for="requestTanggal">Tanggal Service</label>
+                <input type="date" id="requestTanggal" class="form-control" />
+              </div>
+              <div class="form-group form-full">
+                <span class="form-hint">
+                  Service akan berstatus <strong>Menunggu</strong> sampai mekanik bengkel mengambil
+                  alih pekerjaan Anda.
+                </span>
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-close-modal="requestModal">
+              Batal
+            </button>
+            <button type="submit" class="btn btn-primary">Kirim Permintaan</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- MODAL DETAIL KENDARAAN -->
+    <div class="modal-overlay" id="vehicleDetailModal">
+      <div class="modal">
+        <div class="modal-header">
+          <div>
+            <h3>Detail Kendaraan</h3>
+            <p>Informasi lengkap kendaraan dan service Anda.</p>
+          </div>
+          <button
+            type="button"
+            class="modal-close"
+            data-close-modal="vehicleDetailModal"
+            aria-label="Tutup"
+          >
+            ×
+          </button>
+        </div>
+        <div class="modal-body">
+          <div class="detail-grid" id="vehicleDetailContent"></div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-close-modal="vehicleDetailModal">
+            Tutup
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <script src="../../js/db.js"></script>
+    <script src="../../js/customer-auth.js"></script>
+    <script src="../../js/global.js"></script>
+
+    <script src="../../js/customer-app.js"></script>
+  </body>
+</html>

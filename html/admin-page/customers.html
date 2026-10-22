@@ -1,0 +1,389 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; font-src 'self' https://cdnjs.cloudflare.com; img-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+    />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Pytabengkel - Customers</title>
+    <link rel="stylesheet" href="../../css/global.css" />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
+    />
+    <link rel="stylesheet" href="../../css/customers.css" />
+    <script src="../../js/theme.js"></script>
+    <script src="../../js/config.js"></script>
+    <script src="../../js/vendor/supabase.min.js"></script>
+    <script src="../../js/supabase.js"></script>
+    <script>
+      applyThemeBeforePaint();
+      window.__APP_ROLE = "admin";
+    </script>
+  </head>
+  <body>
+    <header class="topbar">
+      <button
+        type="button"
+        class="burger"
+        id="burgerBtn"
+        aria-label="Buka menu"
+        aria-expanded="false"
+        aria-controls="sidebar"
+      >
+        <i class="fa-solid fa-bars" aria-hidden="true"></i>
+        <i class="fa-solid fa-times icon-close" aria-hidden="true"></i>
+      </button>
+      <div class="brand">
+        <h1>Pytabengkel</h1>
+      </div>
+      <div class="topbar-actions">
+        <button
+          type="button"
+          class="icon-btn theme-toggle"
+          data-theme-toggle
+          aria-label="Aktifkan mode gelap"
+          aria-pressed="false"
+          title="Ganti tema terang / gelap"
+        >
+          <i class="fa-solid fa-sun icon-sun" aria-hidden="true"></i>
+          <i class="fa-solid fa-moon icon-moon" aria-hidden="true"></i>
+        </button>
+        <div class="admin" id="userChip" hidden>
+          <i class="fa-solid fa-user-shield" aria-hidden="true"></i>
+          <span id="userChipName">Administrator</span>
+        </div>
+        <button
+          type="button"
+          class="icon-btn logout-btn"
+          id="btnLogout"
+          data-logout-target="../index.html?role=admin"
+          aria-label="Keluar"
+          title="Keluar"
+        >
+          <i class="fa-solid fa-right-from-bracket" aria-hidden="true"></i>
+        </button>
+      </div>
+    </header>
+    <div class="layout">
+      <aside class="sidebar" id="sidebar">
+        <nav class="nav">
+          <a href="dashboard.html" class="nav-link"
+            ><i class="fa-solid fa-gauge nav-icon" aria-hidden="true"></i>
+            Dashboard
+          </a>
+          <a href="customers.html" class="nav-link active"
+            ><i class="fa-solid fa-users nav-icon" aria-hidden="true"></i>
+            Customers
+          </a>
+          <a href="kendaraan.html" class="nav-link"
+            ><i class="fa-solid fa-car nav-icon" aria-hidden="true"></i>
+            Kendaraan
+          </a>
+          <a href="service.html" class="nav-link"
+            ><i class="fa-solid fa-screwdriver-wrench nav-icon" aria-hidden="true"></i>
+            Service
+          </a>
+          <a href="riwayat.html" class="nav-link"
+            ><i class="fa-solid fa-clock-rotate-left nav-icon" aria-hidden="true"></i>
+            Riwayat
+          </a>
+          <a href="keuangan.html" class="nav-link"
+            ><i class="fa-solid fa-wallet nav-icon" aria-hidden="true"></i>
+            Keuangan
+          </a>
+          <a href="mekanik.html" class="nav-link"
+            ><i class="fa-solid fa-user-gear nav-icon" aria-hidden="true"></i>
+            Mekanik
+          </a>
+          <a href="sparepart.html" class="nav-link"
+            ><i class="fa-solid fa-gears nav-icon" aria-hidden="true"></i>
+            Sparepart
+          </a>
+          <a href="pengaturan.html" class="nav-link"
+            ><i class="fa-solid fa-gear nav-icon" aria-hidden="true"></i>
+            Pengaturan
+          </a>
+        </nav>
+      </aside>
+      <main class="main">
+        <div class="page-header">
+          <div>
+            <h2>Customers</h2>
+            <p>Kelola data pelanggan Pytabengkel.</p>
+          </div>
+        </div>
+        <section class="stats-grid kendaraan-stats">
+          <div class="stat-card">
+            <i class="fa-solid fa-users stat-icon" aria-hidden="true"></i
+            ><span class="stat-number" id="totalCustomers"> 0 </span>
+            <span class="stat-label"> Total Customers </span>
+          </div>
+          <div class="stat-card">
+            <i class="fa-solid fa-car stat-icon" aria-hidden="true"></i
+            ><span class="stat-number" id="customersWithVehicle"> 0 </span>
+            <span class="stat-label"> Punya Kendaraan </span>
+          </div>
+          <div class="stat-card">
+            <i class="fa-solid fa-user-xmark stat-icon" aria-hidden="true"></i
+            ><span class="stat-number" id="customersWithoutVehicle"> 0 </span>
+            <span class="stat-label"> Belum Punya Kendaraan </span>
+          </div>
+          <div class="stat-card">
+            <i class="fa-solid fa-car-side stat-icon" aria-hidden="true"></i
+            ><span class="stat-number" id="totalCustomerVehicles"> 0 </span>
+            <span class="stat-label"> Total Kendaraan </span>
+          </div>
+        </section>
+        <section class="panel vehicle-panel">
+          <div class="panel-header">
+            <div>
+              <h3>Daftar Customers</h3>
+              <p>Data pelanggan yang terdaftar di Pytabengkel.</p>
+            </div>
+            <div class="vehicle-toolbar">
+              <select
+                id="sortCustomer"
+                class="form-control filter-select"
+                aria-label="Urutkan customer"
+              >
+                <option value="id:asc">Urutkan: ID</option>
+                <option value="nama:asc">Nama (A-Z)</option>
+                <option value="nama:desc">Nama (Z-A)</option>
+                <option value="email:asc">Email (A-Z)</option>
+                <option value="telepon:asc">No. HP</option>
+                <option value="alamat:asc">Alamat</option>
+                <option value="registeredAt:desc">Terbaru daftar</option>
+                <option value="registeredAt:asc">Lama daftar</option>
+              </select>
+              <div class="search-box">
+                <input type="text" id="searchCustomer" placeholder="Cari pelanggan..." />
+              </div>
+              <button type="button" class="btn btn-primary" id="btnTambahCustomer">
+                <i class="fa-solid fa-plus" aria-hidden="true"></i> Tambah Customer
+              </button>
+            </div>
+          </div>
+          <div class="table-container">
+            <table>
+              <thead>
+                <tr>
+                  <th>No</th>
+                  <th class="cell-id-col">ID</th>
+                  <th>Nama</th>
+                  <th>No. HP</th>
+                  <th>Email</th>
+                  <th>Alamat</th>
+                  <th>Kendaraan</th>
+                  <th>Akun Customer</th>
+                  <th>Aksi</th>
+                </tr>
+              </thead>
+              <tbody id="customerTable"></tbody>
+            </table>
+          </div>
+          <div class="table-footer">
+            <span id="customerInfo"></span>
+            <div class="pagination" id="customerPagination"></div>
+          </div>
+        </section>
+      </main>
+    </div>
+    <div class="modal-overlay" id="customerModal">
+      <div class="modal">
+        <div class="modal-header">
+          <div>
+            <h3 id="customerModalTitle">Tambah Customer</h3>
+            <p>Masukkan informasi pelanggan.</p>
+          </div>
+          <button type="button" class="modal-close" data-close-modal="customerModal">×</button>
+        </div>
+        <form id="customerForm">
+          <input type="hidden" id="customerId" />
+          <div class="modal-body">
+            <div class="form-grid">
+              <div class="form-group form-full">
+                <label for="customerNama"> Nama Pelanggan </label>
+                <input
+                  type="text"
+                  id="customerNama"
+                  class="form-control"
+                  placeholder="Contoh: Andi"
+                  required
+                />
+              </div>
+              <div class="form-group">
+                <label for="customerTelepon"> No. HP </label>
+                <input
+                  type="tel"
+                  id="customerTelepon"
+                  class="form-control"
+                  placeholder="Contoh: 081234567890"
+                  required
+                />
+              </div>
+              <div class="form-group">
+                <label for="customerEmail"> Email </label>
+                <input
+                  type="email"
+                  id="customerEmail"
+                  class="form-control"
+                  placeholder="Contoh: andi@email.com"
+                />
+              </div>
+              <div class="form-group form-full">
+                <label for="customerAlamat"> Alamat </label>
+                <textarea
+                  id="customerAlamat"
+                  class="form-control"
+                  rows="3"
+                  placeholder="Alamat pelanggan"
+                ></textarea>
+              </div>
+              <div class="form-group form-full">
+                <label for="customerCatatan"> Catatan </label>
+                <textarea
+                  id="customerCatatan"
+                  class="form-control"
+                  rows="3"
+                  placeholder="Catatan tambahan"
+                ></textarea>
+              </div>
+              <div class="form-group form-full">
+                <div class="form-section-title">
+                  Akun login customer (opsional)
+                </div>
+              </div>
+              <div class="form-group form-full">
+                <label class="remember" for="customerBuatAkun">
+                  <input type="checkbox" id="customerBuatAkun" />
+                  <span>Buat akun login untuk customer ini</span>
+                </label>
+                <p class="form-hint" id="customerBuatAkunHint">
+                  Centang bila ingin membantu customer masuk ke portal
+                  customer. Password bisa dibuatkan di sini atau dikirim
+                  lewat email.
+                </p>
+              </div>
+              <div class="form-group" id="customerAkunEmailGroup" hidden>
+                <label for="customerAkunEmail"> Email untuk login </label>
+                <input
+                  type="email"
+                  id="customerAkunEmail"
+                  class="form-control"
+                  placeholder="Kosongkan = pakai email customer"
+                />
+              </div>
+              <div class="form-group" id="customerAkunPasswordGroup" hidden>
+                <label for="customerAkunPassword"> Password </label>
+                <input
+                  type="password"
+                  id="customerAkunPassword"
+                  class="form-control"
+                  placeholder="Minimal 6 karakter"
+                  autocomplete="new-password"
+                />
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-close-modal="customerModal">
+              Batal
+            </button>
+            <button type="submit" class="btn btn-primary">Simpan</button>
+          </div>
+        </form>
+      </div>
+    </div>
+    <div class="modal-overlay" id="customerDetailModal">
+      <div class="modal">
+        <div class="modal-header">
+          <div>
+            <h3>Detail Customer</h3>
+            <p>Informasi lengkap pelanggan.</p>
+          </div>
+          <button type="button" class="modal-close" data-close-modal="customerDetailModal">
+            ×
+          </button>
+        </div>
+        <div class="modal-body">
+          <div class="detail-grid" id="customerDetailContent"></div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-close-modal="customerDetailModal">
+            Tutup
+          </button>
+        </div>
+      </div>
+    </div>
+    <div class="modal-overlay" id="customerAccountModal">
+      <div class="modal">
+        <div class="modal-header">
+          <div>
+            <h3>Akun Login Customer</h3>
+            <p>Customer memakai akun ini untuk masuk ke portal customer.</p>
+          </div>
+          <button
+            type="button"
+            class="modal-close"
+            data-close-modal="customerAccountModal"
+            aria-label="Tutup"
+          >
+            ×
+          </button>
+        </div>
+        <form id="customerAccountForm">
+          <input type="hidden" id="customerAccountId" />
+          <div class="modal-body">
+            <p class="form-error" id="customerAccountError" hidden></p>
+            <p class="form-hint" id="customerAccountStatus" style="margin-bottom: 16px"></p>
+            <div class="form-grid">
+              <div class="form-group form-full">
+                <label for="customerAccountNama"> Nama Customer </label>
+                <input type="text" id="customerAccountNama" class="form-control" readonly />
+              </div>
+              <div class="form-group form-full">
+                <label for="customerAccountEmail"> Email Login </label>
+                <input
+                  type="email"
+                  id="customerAccountEmail"
+                  class="form-control"
+                  placeholder="email@contoh.com"
+                  required
+                />
+              </div>
+              <div class="form-group form-full" id="customerAccountPasswordGroup">
+                <label for="customerAccountPassword"> Password </label>
+                <input
+                  type="text"
+                  id="customerAccountPassword"
+                  class="form-control"
+                  placeholder="Minimal 6 karakter"
+                  autocomplete="off"
+                />
+                <span class="form-hint" id="customerAccountHint">
+                  Kosongkan jika tidak ingin mengubah password.
+                </span>
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-close-modal="customerAccountModal">
+              Batal
+            </button>
+            <button type="submit" class="btn btn-primary" id="btnSaveCustomerAccount">
+              <i class="fa-solid fa-floppy-disk" aria-hidden="true"></i>
+              Simpan Akun
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+    <script src="../../js/db.js"></script>
+    <script src="../../js/auth.js"></script>
+    <script src="../../js/global.js"></script>
+    <script src="../../js/customers.js"></script>
+  </body>
+</html>

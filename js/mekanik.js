@@ -20,20 +20,26 @@ function renderMekanikPage(search = "") {
   const keyword = String(search).toLowerCase().trim();
   const statusFilter =
     document.getElementById("filterMekanikStatus")?.value || "";
-  const mekanik = getMekanik()
-    .filter((item) => !statusFilter || item.status === statusFilter)
-    .filter((item) =>
-    [item.nama, item.spesialisasi, item.status].some((value) =>
-      String(value || "")
-        .toLowerCase()
-        .includes(keyword),
-    ),
+  const sort = getSortValue("sortMekanik");
+  const mekanik = sortRows(
+    getMekanik()
+      .filter((item) => !statusFilter || item.status === statusFilter)
+      .filter((item) =>
+        [item.kode, item.id, item.nama, item.spesialisasi, item.status].some(
+          (value) =>
+          String(value || "")
+            .toLowerCase()
+            .includes(keyword),
+        ),
+      ),
+    sort.key,
+    sort.direction,
   );
 
   table.innerHTML = "";
   if (!mekanik.length) {
     table.innerHTML =
-      '<tr><td colspan="5" style="text-align: center; padding: 30px;">Tidak ada data mekanik.</td></tr>';
+      '<tr><td colspan="6" style="text-align: center; padding: 30px;">Tidak ada data mekanik.</td></tr>';
     setText("mekanikInfo", "Tidak ada data");
     return;
   }
@@ -42,8 +48,10 @@ function renderMekanikPage(search = "") {
     table.innerHTML += `
       <tr>
         <td>${index + 1}</td>
+        <td><span class="cell-id">${escapeHTML(getKode("mekanik", item))}</span></td>
         <td><strong>${escapeHTML(item.nama)}</strong></td>
         <td>${escapeHTML(item.spesialisasi)}</td>
+        <td>${escapeHTML(item.telepon || "-")}</td>
         <td>${escapeHTML(item.status)}</td>
         <td><div class="action-buttons">
           <button type="button" class="action-btn" data-edit-mekanik="${item.id}">Edit</button>
@@ -81,6 +89,7 @@ function editMekanik(id) {
   document.getElementById("mekanikId").value = mekanik.id;
   document.getElementById("mekanikNama").value = mekanik.nama;
   document.getElementById("mekanikSpesialisasi").value = mekanik.spesialisasi;
+  document.getElementById("mekanikTelepon").value = mekanik.telepon || "";
   document.getElementById("mekanikStatus").value = mekanik.status;
   setText("mekanikModalTitle", "Edit Mekanik");
   openModal("mekanikModal");
@@ -95,8 +104,13 @@ function saveMekanikForm(event) {
   const spesialisasi = document
     .getElementById("mekanikSpesialisasi")
     .value.trim();
+  const telepon = document.getElementById("mekanikTelepon").value.trim();
   if (!nama || !spesialisasi) {
     showFormError("mekanikForm", "Nama dan spesialisasi mekanik wajib diisi.");
+    return;
+  }
+  if (!telepon) {
+    showFormError("mekanikForm", "Nomor HP mekanik wajib diisi.");
     return;
   }
   const status = document.getElementById("mekanikStatus").value;
@@ -104,18 +118,45 @@ function saveMekanikForm(event) {
   if (id) {
     const index = mekanik.findIndex((item) => Number(item.id) === Number(id));
     if (index !== -1)
-      mekanik[index] = { ...mekanik[index], nama, spesialisasi, status };
+      mekanik[index] = {
+        ...mekanik[index],
+        nama,
+        spesialisasi,
+        telepon,
+        status,
+      };
   } else {
     const nextId = mekanik.length
       ? Math.max(...mekanik.map((item) => Number(item.id) || 0)) + 1
       : 1;
-    mekanik.push({ id: nextId, nama, spesialisasi, status });
+    mekanik.push({
+      id: nextId,
+      kode: nextKode("mekanik", mekanik),
+      nama,
+      spesialisasi,
+      telepon,
+      status,
+    });
   }
 
   saveMekanik(mekanik);
+
+  addLog(
+    id ? "Update" : "Tambah",
+    "Mekanik",
+    `${nama} — ${spesialisasi} (${status})`,
+    getKode(
+      "mekanik",
+      id
+        ? mekanik.find((item) => Number(item.id) === Number(id))
+        : mekanik[mekanik.length - 1],
+    ),
+  );
+
   closeModal("mekanikModal");
   resetMekanikForm();
-  if (typeof renderMekanikPage === "function") renderMekanikPage(document.getElementById("searchMekanik").value);
+  if (typeof renderMekanikPage === "function")
+    renderMekanikPage(document.getElementById("searchMekanik").value);
   if (typeof updateMekanikStats === "function") updateMekanikStats();
   if (typeof renderMekanik === "function") renderMekanik();
   showPageNotice("Data mekanik tersimpan di tabel.", "success");
@@ -145,7 +186,15 @@ function deleteMekanik(id, button = null) {
   }
 
   saveMekanik(mekanik.filter((entry) => Number(entry.id) !== Number(id)));
-  if (typeof renderMekanikPage === "function") renderMekanikPage(document.getElementById("searchMekanik").value);
+
+  addLog(
+    "Hapus",
+    "Mekanik",
+    `${item.nama} — ${item.spesialisasi}`,
+    getKode("mekanik", item),
+  );
+  if (typeof renderMekanikPage === "function")
+    renderMekanikPage(document.getElementById("searchMekanik").value);
   if (typeof updateMekanikStats === "function") updateMekanikStats();
   if (typeof renderMekanik === "function") renderMekanik();
   showPageNotice(`Mekanik ${item.nama} dihapus dari tabel.`, "success");
@@ -166,22 +215,27 @@ function initMekanikPage() {
     .addEventListener("submit", saveMekanikForm);
   document
     .getElementById("searchMekanik")
-    .addEventListener("input", (event) =>
-      (typeof renderMekanikPage === "function" && renderMekanikPage(event.target.value)),
+    .addEventListener(
+      "input",
+      (event) =>
+        typeof renderMekanikPage === "function" &&
+        renderMekanikPage(event.target.value),
     );
   document
     .getElementById("filterMekanikStatus")
-    ?.addEventListener("change", (event) =>
-      (typeof renderMekanikPage === "function" && renderMekanikPage(document.getElementById("searchMekanik").value)),
+    ?.addEventListener(
+      "change",
+      (event) =>
+        typeof renderMekanikPage === "function" &&
+        renderMekanikPage(document.getElementById("searchMekanik").value),
     );
-  document.querySelectorAll("[data-close-modal]").forEach((button) => {
-    button.addEventListener("click", () =>
-      closeModal(button.dataset.closeModal),
+  document
+    .getElementById("sortMekanik")
+    ?.addEventListener(
+      "change",
+      (event) =>
+        typeof renderMekanikPage === "function" &&
+        renderMekanikPage(document.getElementById("searchMekanik").value),
     );
-  });
-  document.querySelectorAll(".modal-overlay").forEach((modal) => {
-    modal.addEventListener("click", (event) => {
-      if (event.target === modal) closeModal(modal.id);
-    });
-  });
+  /* Penutupan modal sudah ditangani global.js */
 }
