@@ -30,15 +30,21 @@ function getPreferredTheme() {
   return "light";
 }
 
-function applyTheme(theme) {
+/* `persist = false` dipakai saat tema hanya DITERAPKAN (bukan dipilih
+   pengguna): saat halaman dimuat atau saat sistem operasi berganti
+   tema. Tanpa opsi ini, pilihan "Ikuti Sistem" langsung tertimpa oleh
+   nilai hasil terjemahan dan mode ikut-sistem mati untuk selamanya. */
+function applyTheme(theme, persist = true) {
   const value = theme === "dark" ? "dark" : "light";
 
   document.documentElement.setAttribute("data-theme", value);
 
-  try {
-    localStorage.setItem(THEME_KEY, value);
-  } catch (error) {
-    /* localStorage bisa tidak tersedia (mode privat) */
+  if (persist) {
+    try {
+      localStorage.setItem(THEME_KEY, value);
+    } catch (error) {
+      /* localStorage bisa tidak tersedia (mode privat) */
+    }
   }
 
   return value;
@@ -71,7 +77,9 @@ function updateThemeButtons() {
 }
 
 function initTheme() {
-  applyTheme(getPreferredTheme());
+  /* Jangan menyimpan hasil terjemahan — cukup terapkan, supaya
+     pilihan "Ikuti Sistem" tetap dikenali di kunjungan berikutnya. */
+  applyTheme(getPreferredTheme(), false);
   updateThemeButtons();
 
   document.querySelectorAll("[data-theme-toggle]").forEach((button) => {
@@ -88,7 +96,7 @@ function initTheme() {
       .matchMedia("(prefers-color-scheme: dark)")
       .addEventListener("change", (event) => {
         if (!getStoredTheme()) {
-          applyTheme(event.matches ? "dark" : "light");
+          applyTheme(event.matches ? "dark" : "light", false);
           updateThemeButtons();
         }
       });

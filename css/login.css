@@ -654,50 +654,6 @@ body {
   display: block;
 }
 
-/* Badge mode koneksi (Supabase / lokal) */
-
-.mode-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  margin-bottom: 16px;
-  padding: 6px 12px;
-  border-radius: 999px;
-  font-size: 11px;
-  font-weight: 700;
-  border: 1px solid var(--border);
-  background: var(--surface-2);
-  color: var(--secondary);
-}
-
-.mode-badge::before {
-  content: "";
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: currentColor;
-}
-
-.mode-badge.online {
-  background: rgba(34, 197, 94, 0.12);
-  border-color: rgba(34, 197, 94, 0.4);
-  color: #15803d;
-}
-
-[data-theme="dark"] .mode-badge.online {
-  color: #86efac;
-}
-
-.mode-badge.offline {
-  background: rgba(245, 158, 11, 0.12);
-  border-color: rgba(245, 158, 11, 0.4);
-  color: #b45309;
-}
-
-[data-theme="dark"] .mode-badge.offline {
-  color: #fcd34d;
-}
-
 /* Link antar halaman login / daftar */
 
 .auth-links {
@@ -794,8 +750,7 @@ body {
   .login-header {
     margin-bottom: 18px;
   }
-  .login-header p,
-  .mode-badge {
+  .login-header p {
     display: none;
   }
 }

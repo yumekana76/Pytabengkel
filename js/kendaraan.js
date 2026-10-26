@@ -239,6 +239,11 @@ function saveKendaraanForm(event) {
   }
 
   const kendaraan = getKendaraan();
+  /* Baris lama dipakai saat mode Edit supaya sparepart & tanggal
+     service yang tidak diedit tidak ikut hilang/tertimpa. */
+  const existingVehicle = id
+    ? kendaraan.find((item) => Number(item.id) === Number(id)) || null
+    : null;
   const tanggalInput = value("vehicleTanggal");
   const data = {
     polisi,

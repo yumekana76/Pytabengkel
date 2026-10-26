@@ -25,7 +25,15 @@ function renderServicePage(search = "") {
     )
     .sort(compareStatusOrder);
 
-  const servicesSorted = sortRows(services, sort.key, sort.direction);
+  /* `total` tidak ada pada objek service mentah, jadi harus dihitung
+     dulu — tanpa ini opsi urut "Total tertinggi" selalu menghasilkan
+     urutan yang sama. */
+  const servicesWithTotal = services.map((item) => ({
+    ...item,
+    total: getServiceTotal(item),
+  }));
+
+  const servicesSorted = sortRows(servicesWithTotal, sort.key, sort.direction);
 
   table.innerHTML = "";
   if (!servicesSorted.length) {

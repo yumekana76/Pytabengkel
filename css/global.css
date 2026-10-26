@@ -850,18 +850,23 @@ tbody tr:last-child td {
 
 /* =========================================
    SKELETON LOADING
+   Ukuran & padding tiap balok disamakan dengan rule aslinya
+   (.topbar 76px, .sidebar 244px, .nav-link 41px, .main 30px,
+   .stat-card 19px, .panel-header 16/20px, td 14/16px, dst.)
+   supaya tidak ada lompatan posisi saat konten asli muncul.
    ========================================= */
 
 .skeleton {
   position: fixed;
   inset: 0;
   z-index: 9000;
-  display: grid;
-  place-items: center;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
   background: var(--background);
   transition:
-    opacity 0.25s ease,
-    visibility 0.25s ease;
+    opacity 0.12s ease,
+    visibility 0.12s ease;
 }
 
 .skeleton.hidden {
@@ -870,14 +875,20 @@ tbody tr:last-child td {
   pointer-events: none;
 }
 
-.skeleton-inner {
-  display: grid;
-  gap: 14px;
-  width: min(420px, calc(100vw - 48px));
+/* Teks hanya untuk pembaca layar — tampilannya memakai balok. */
+.skeleton-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 
 .skeleton-bar {
-  height: 14px;
+  display: block;
+  height: 12px;
   border-radius: 8px;
   background: linear-gradient(
     90deg,
@@ -889,19 +900,6 @@ tbody tr:last-child td {
   animation: skeletonShimmer 1.4s ease infinite;
 }
 
-.skeleton-bar.title {
-  height: 26px;
-  width: 62%;
-}
-
-.skeleton-bar.short {
-  width: 38%;
-}
-
-.skeleton-bar.medium {
-  width: 78%;
-}
-
 @keyframes skeletonShimmer {
   0% {
     background-position: 100% 50%;
@@ -911,12 +909,341 @@ tbody tr:last-child td {
   }
 }
 
-.skeleton-text {
-  text-align: center;
-  color: var(--secondary);
-  font-size: 13px;
-  font-weight: 600;
-  margin-top: 4px;
+/* Lebar utilitas untuk balok yang tidak punya lebar sendiri. */
+.w20 {
+  width: 20%;
+}
+
+.w30 {
+  width: 30%;
+}
+
+/* --- TOPBAR (ukuran sama dengan .topbar) --- */
+
+.sk-topbar {
+  height: 76px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px; /* .topbar-actions */
+  padding: 0 var(--space-3xl);
+  background: var(--topbar-bg);
+  border-bottom: 1px solid var(--border);
+}
+
+/* .brand h1: font-size 21px → tinggi baris ±25px */
+.sk-logo {
+  width: 170px;
+  height: 25px;
+}
+
+.sk-spacer {
+  flex: 1;
+}
+
+/* .admin: padding 8px 14px + teks 14px → 35px, bentuk pil */
+.sk-chip {
+  width: 128px;
+  height: 35px;
+  border-radius: 999px;
+}
+
+/* .icon-btn: 40×40, radius 12 */
+.sk-chip-sm {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+}
+
+/* --- SIDEBAR (ukuran sama dengan .sidebar/.nav/.nav-link) --- */
+
+.sk-layout {
+  flex: 1;
+  display: flex;
+  min-height: 0;
+}
+
+.sk-side {
+  width: 244px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding: 12px 14px 8px; /* .sidebar padding-top 12px + .nav padding */
+  background: var(--primary-gradient);
+  overflow: hidden;
+}
+
+/* Balok di atas sidebar gelap memakai shimmer putih translucent. */
+.sk-side .skeleton-bar {
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.18) 25%,
+    rgba(255, 255, 255, 0.36) 37%,
+    rgba(255, 255, 255, 0.18) 63%
+  );
+}
+
+/* .sidebar::before: padding 14px 25px 22px, teks 18px/1.5 → 27px.
+   Margin 11px + padding sidebar 14px = 25px seperti aslinya. */
+.sk-side-title {
+  height: 27px;
+  margin: 14px 11px 22px;
+}
+
+/* .nav-link: padding 12px 15px + teks 14px → 41px */
+.sk-nav-item {
+  width: 100%;
+  height: 41px;
+  border-radius: 8px;
+}
+
+/* .nav: padding-top 8px sebelum item pertama */
+.sk-side-title + .sk-nav-item {
+  margin-top: 8px;
+}
+
+/* .nav gap antar item = 7px */
+.sk-nav-item + .sk-nav-item {
+  margin-top: 7px;
+}
+
+.sk-nav-item.active {
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.3) 25%,
+    rgba(255, 255, 255, 0.5) 37%,
+    rgba(255, 255, 255, 0.3) 63%
+  );
+}
+
+/* --- AREA KONTEN (ukuran sama dengan .main/.page-header/.stats-grid) --- */
+
+.sk-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding: var(--space-3xl);
+  overflow: hidden;
+}
+
+/* .page-header: h2 28px (baris ±34px) + jarak 5px + p 14px (±17px),
+   lalu margin-bottom 24px */
+.sk-head {
+  display: grid;
+  gap: 5px;
+  margin-bottom: var(--space-2xl);
+}
+
+.sk-title {
+  width: 34%;
+  max-width: 280px;
+  height: 34px;
+}
+
+.sk-sub {
+  height: 17px;
+}
+
+/* .stats-grid: gap 16px, margin-bottom 20px */
+.sk-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(155px, 1fr));
+  gap: var(--space-lg);
+  margin-bottom: var(--space-xl);
+}
+
+/* .stat-card: padding 19px, isinya angka (26px) + 7px + label (13px)
+   → tinggi total ±93px seperti kartu asli */
+.sk-card {
+  position: relative;
+  display: grid;
+  gap: 7px;
+  padding: 19px;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: 16px;
+}
+
+/* .stat-icon: ikon dekoratif 26px di pojok kanan atas */
+.sk-card-icon {
+  position: absolute;
+  top: 12px;
+  right: 14px;
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
+}
+
+.sk-card-number {
+  width: 60%;
+  height: 31px;
+}
+
+.sk-card-label {
+  width: 45%;
+  height: 16px;
+}
+
+/* .panel: radius 16px, border --border-soft */
+.sk-panel {
+  background: var(--surface);
+  border: 1px solid var(--border-soft);
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+/* .panel-header: padding 16px 20px, isinya h3 (16px) + 5px + p (12px)
+   → tinggi total ±71px seperti panel asli */
+.sk-panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-lg);
+  padding: var(--space-lg) var(--space-xl);
+  border-bottom: 1px solid var(--border);
+}
+
+.sk-panel-title {
+  flex: 1 1 220px;
+  min-width: 0;
+  display: grid;
+  gap: 5px;
+}
+
+.sk-panel-h {
+  width: 45%;
+  max-width: 220px;
+  height: 19px;
+}
+
+.sk-panel-p {
+  max-width: 240px;
+  height: 15px;
+}
+
+/* .panel-header a: teks 13px → 16px */
+.sk-panel-link {
+  flex-shrink: 0;
+  width: 84px;
+  height: 16px;
+}
+
+/* Baris header tabel (th): padding 14px 16px, latar --surface-3 */
+.sk-thead {
+  display: grid;
+  grid-template-columns: 30% 20% 25% minmax(0, 1fr);
+  padding: 14px 0;
+  background: var(--surface-3);
+  border-bottom: 1px solid var(--border);
+}
+
+.sk-thead .skeleton-bar {
+  height: 16px;
+  margin: 0 16px;
+}
+
+.sk-rows {
+  display: grid;
+}
+
+/* Baris isi tabel (td): padding 14px 16px, teks 13px → baris 44px.
+   Margin horizontal 16px meniru padding sel, jadi jarak antar kolom
+   = 32px persis seperti tabel asli. */
+.sk-row {
+  display: grid;
+  grid-template-columns: 30% 20% 25% minmax(0, 1fr);
+  align-items: center;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.sk-row:last-child {
+  border-bottom: 0;
+}
+
+.sk-row .skeleton-bar {
+  width: calc(100% - 32px);
+  margin: 0 16px;
+  height: 16px;
+}
+
+/* Ukuran skeleton mengikuti rule responsif layout asli
+   (1200px → 3 kartu, 900px → sidebar 200px, 700px → sidebar
+   off-canvas + topbar 62px, 450px → padding 12px). */
+@media (max-width: 1200px) {
+  .sk-cards {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 900px) {
+  .sk-side {
+    width: 200px;
+    padding: 12px 10px 8px; /* .nav padding 8px 10px */
+  }
+  .sk-side-title {
+    height: 23px; /* .sidebar::before font-size 15px */
+    margin: 14px 10px 18px; /* padding 14px 20px 18px */
+  }
+  .sk-nav-item {
+    height: 38px; /* .nav-link padding 11px 12px */
+  }
+}
+
+@media (min-width: 701px) and (max-width: 900px) {
+  .sk-main {
+    padding: 22px 20px;
+  }
+}
+
+@media (max-width: 700px) {
+  .sk-topbar {
+    height: 62px;
+    padding: 0 14px;
+  }
+  .sk-chip-sm {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px; /* .icon-btn 36×36 */
+  }
+  .sk-side {
+    display: none;
+  }
+  .sk-main {
+    padding: 20px 16px;
+  }
+  .sk-cards {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .sk-panel-head {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .sk-panel-link {
+    align-self: flex-start;
+  }
+}
+
+@media (max-width: 450px) {
+  .sk-main {
+    padding: 12px;
+  }
+  .sk-cards {
+    grid-template-columns: 1fr;
+  }
+  .sk-title {
+    height: 26px; /* .page-header h2 font-size 22px */
+  }
+  .sk-logo {
+    width: 130px;
+    height: 19px; /* .brand h1 font-size 16px */
+  }
+  .sk-chip {
+    width: 40px; /* .admin teks disembunyikan, ikon saja */
+  }
 }
 
 /* =========================================

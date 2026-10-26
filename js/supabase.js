@@ -97,25 +97,6 @@ function isSupabaseMode() {
   return authState.mode === "supabase";
 }
 
-/* Menampilkan badge mode koneksi di halaman login / portal. */
-function showModeBadge() {
-  const badge = document.getElementById("modeBadge");
-
-  if (!badge) {
-    return;
-  }
-
-  if (isSupabaseMode()) {
-    badge.textContent = "Terhubung ke Supabase";
-    badge.className = "mode-badge online";
-    badge.title = "Data disimpan di database Supabase";
-  } else {
-    badge.textContent = "Mode lokal — data disimpan di browser";
-    badge.className = "mode-badge offline";
-    badge.title = "Isi js/config.js untuk menyambungkan ke Supabase";
-  }
-}
-
 /* ---------------------------------------------------------------------
    HELPER LOCAL (fallback)
    ---------------------------------------------------------------------
@@ -289,6 +270,123 @@ var Auth = {
     return { ok: true };
   },
 
+  /* Email LOGIN pengguna yang sedang aktif (sumbernya Supabase Auth,
+     bukan tabel profiles — bisa berbeda sementara kalau perubahan email
+     sedang menunggu konfirmasi). */
+  currentUserEmail() {
+    if (isSupabaseMode()) {
+      return authState.user?.email || authState.profile?.email || "";
+    }
+
+    return authState.profile?.email || "";
+  },
+
+  /* Verifikasi password lama TANPA mengubah apa pun.
+     Dipakai halaman Profil sebelum password / email boleh diganti. */
+  async verifyPassword(password) {
+    const email = this.currentUserEmail();
+
+    if (!email) {
+      return { ok: false, error: "Sesi login berakhir. Silakan masuk kembali." };
+    }
+
+    if (!isSupabaseMode()) {
+      await dbInit();
+
+      const target = email.trim().toLowerCase();
+      const account = getLocalAccounts().find(
+        (item) => String(item.email || "").toLowerCase() === target,
+      );
+
+      return account && account.password === password
+        ? { ok: true }
+        : { ok: false, error: "Password saat ini salah." };
+    }
+
+    try {
+      /* Client CADANGAN dengan persistSession:false: percobaan ini
+         tidak boleh menimpa, memperbarui, atau mematikan sesi yang
+         sedang dipakai halaman. */
+      const probe = window.supabase.createClient(
+        SUPABASE_SETTINGS.url,
+        SUPABASE_SETTINGS.anonKey,
+        {
+          auth: {
+            persistSession: false,
+            autoRefreshToken: false,
+            detectSessionInUrl: false,
+          },
+        },
+      );
+
+      /* Email cadangan dipakai kalau perubahan email belum/telah
+         disinkronkan antara Supabase Auth dan tabel profiles. */
+      const candidates = [
+        ...new Set(
+          [email, authState.profile?.email].filter(
+            (item) => item && String(item).trim(),
+          ),
+        ),
+      ];
+
+      for (const target of candidates) {
+        const { error } = await probe.auth.signInWithPassword({
+          email: String(target).trim(),
+          password: String(password || ""),
+        });
+
+        if (!error) {
+          return { ok: true };
+        }
+      }
+
+      return { ok: false, error: "Password saat ini salah." };
+    } catch (error) {
+      return {
+        ok: false,
+        error: error?.message || "Gagal memverifikasi password.",
+      };
+    }
+  },
+
+  /* Ganti email LOGIN (Supabase Auth).
+     `applied = true`  -> email langsung berlaku (konfirmasi dinonaktifkan)
+     `applied = false` -> Supabase mengirim tautan konfirmasi; email login
+                          baru berlaku setelah tautan itu dibuka. */
+  async updateEmail(email) {
+    if (!isSupabaseMode()) {
+      return { ok: true, applied: true };
+    }
+
+    const next = String(email || "").trim();
+    const current = this.currentUserEmail();
+
+    if (!next || next.toLowerCase() === current.toLowerCase()) {
+      return { ok: true, applied: true };
+    }
+
+    const { data, error } = await supabaseClient.auth.updateUser({
+      email: next,
+    });
+
+    if (error) {
+      return { ok: false, error: error.message };
+    }
+
+    const returned = String(data?.user?.email || "").toLowerCase();
+
+    /* Kalau perubahan langsung berlaku, sinkronkan juga email pada
+       objek sesi supaya langkah berikutnya (verifikasi password) tidak
+       memakai email lama yang sudah kedaluwarsa. */
+    if (returned === next.toLowerCase()) {
+      if (authState.user) authState.user.email = next;
+      if (authState.profile) authState.profile.email = next;
+      return { ok: true, applied: true };
+    }
+
+    return { ok: true, applied: false };
+  },
+
   /* Atur password baru untuk akun lokal (mode demo). */
   async setLocalPassword(email, password) {
     await dbInit();
@@ -343,6 +441,9 @@ var Auth = {
     sessionStorage.removeItem("workshopUserName");
     sessionStorage.removeItem("workshopCustomerSession");
     sessionStorage.removeItem("workshopCustomerName");
+    /* Sesi lokal tunggal juga harus dihapus, kalau tidak
+       restoreLocalSession() akan menganggap pengguna masih masuk. */
+    sessionStorage.removeItem(LOCAL_SESSION_KEY);
 
     authState.user = null;
     authState.profile = null;
