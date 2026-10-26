@@ -39,7 +39,7 @@ function renderMekanikPage(search = "") {
   table.innerHTML = "";
   if (!mekanik.length) {
     table.innerHTML =
-      '<tr><td colspan="6" style="text-align: center; padding: 30px;">Tidak ada data mekanik.</td></tr>';
+      '<tr><td colspan="7" style="text-align: center; padding: 30px;">Tidak ada data mekanik.</td></tr>';
     setText("mekanikInfo", "Tidak ada data");
     return;
   }

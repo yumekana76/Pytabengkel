@@ -403,6 +403,7 @@ function saveUnifiedForm(event) {
     }
     customer = {
       id: nextNumericId(customers),
+      kode: nextKode("customers", customers),
       nama: namaCustomer,
       telepon,
       email: value("unifiedCustomerEmail"),
@@ -429,6 +430,7 @@ function saveUnifiedForm(event) {
     }
     mekanik = {
       id: nextNumericId(mekanikData),
+      kode: nextKode("mekanik", mekanikData),
       nama: namaMekanik,
       spesialisasi,
       status: "Aktif",
@@ -481,6 +483,7 @@ function saveUnifiedForm(event) {
         }
         sparepart = {
           id: nextNumericId(sparepartData),
+          kode: nextKode("sparepart", sparepartData),
           nama: pakai.nama,
           stok: pakai.stok,
           harga: pakai.harga,
@@ -523,6 +526,7 @@ function saveUnifiedForm(event) {
   const kendaraan = getKendaraan();
   kendaraan.push({
     id: nextNumericId(kendaraan),
+    kode: nextKode("kendaraan", kendaraan),
     polisi,
     pelanggan: customer.nama,
     pelangganId: customer.id,
@@ -635,6 +639,18 @@ function initDashboardInput() {
   const form = document.getElementById("unifiedForm");
   if (!button || !form) return;
   initDashboardEdit();
+
+  /* Pencarian pada tabel kendaraan dashboard. Di halaman lain listener
+     ini dipasang oleh kendaraan.js, tapi kendaraan.js tidak dimuat di
+     sini — jadi tanpa baris ini kotak pencarian tidak berfungsi. */
+  document
+    .getElementById("searchKendaraan")
+    ?.addEventListener("input", (event) => {
+      if (typeof renderKendaraan === "function") {
+        renderKendaraan(event.target.value, 1);
+      }
+    });
+
   document
     .getElementById("filterMekanikDashboard")
     ?.addEventListener("change", () => {
@@ -659,16 +675,7 @@ function initDashboardInput() {
     });
 }
 
-document.addEventListener("DOMContentLoaded", function () {
-  if (typeof updateDashboard === "function") updateDashboard();
-  if (typeof renderMekanik === "function") renderMekanik();
-  if (typeof initDashboardInput === "function") initDashboardInput();
-  if (typeof initKendaraanPage === "function") initKendaraanPage();
-  if (typeof initCustomerPage === "function") initCustomerPage();
-  if (typeof initMekanikPage === "function") initMekanikPage();
-  if (typeof initServicePage === "function") initServicePage();
-  if (typeof initRiwayatPage === "function") initRiwayatPage();
-  if (typeof initSparepartPage === "function") initSparepartPage();
-  if (typeof initPengaturanPage === "function") initPengaturanPage();
-  if (typeof initKeuanganPage === "function") initKeuanganPage();
-});
+/* Inisialisasi halaman dashboard DIJALANKAN OLEH js/global.js
+   (langkah boot setelah dbInit() + requireAdminAuth()). Mendaftarkan
+   listener DOMContentLoaded kedua di sini hanya membuat render jalan
+   dua kali — dan yang pertama kali berjalan sebelum data & sesi siap. */

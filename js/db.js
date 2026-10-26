@@ -192,11 +192,25 @@ function serviceFromDb(row) {
    INISIALISASI
    --------------------------------------------------------------------- */
 
+/* Promise dbInit yang sedang berjalan — dipakai bersama oleh semua
+   pemanggil supaya tidak ada request ganda ke Supabase. */
+let DB_INIT_PROMISE = null;
+
 async function dbInit() {
   if (DB.ready) {
     return DB.cache;
   }
 
+  if (!DB_INIT_PROMISE) {
+    DB_INIT_PROMISE = dbInitOnce().finally(function () {
+      DB_INIT_PROMISE = null;
+    });
+  }
+
+  return DB_INIT_PROMISE;
+}
+
+async function dbInitOnce() {
   if (!supabaseClient) {
     /* Production tanpa Supabase: JANGAN diam-diam pakai localStorage.
        Halaman sudah menampilkan pesan konfigurasi dari supabase.js. */
@@ -211,6 +225,10 @@ async function dbInit() {
   }
 
   try {
+    /* Log aktivitas dimulai berbarengan dengan tabel lain, bukan
+       setelahnya — menghemat satu putaran jaringan penuh. */
+    const logsReady = dbLoadLogs();
+
     const [customers, services, mechanics, spareparts, info, profiles] =
       await Promise.all([
         supabaseClient.from("customers").select("*").order("id"),
@@ -251,37 +269,39 @@ async function dbInit() {
       role: row.role,
     }));
 
-    DB.cache.logs = await dbLoadLogs();
+    DB.cache.logs = await logsReady;
 
     dbSyncKnown();
 
     /* Kode yang baru dibuat (data lama) disimpan ke server agar
        konsisten di semua perangkat. */
     if (dbIsAdmin()) {
-      await dbPushKodeIfNeeded(
-        rawCustomers,
-        DB.cache.customers,
-        "customers",
-        customerToDb,
-      );
-      await dbPushKodeIfNeeded(
-        rawServices,
-        DB.cache.services,
-        "services",
-        serviceToDb,
-      );
-      await dbPushKodeIfNeeded(
-        rawMechanics,
-        DB.cache.mechanics,
-        "mechanics",
-        mekanikToDb,
-      );
-      await dbPushKodeIfNeeded(
-        rawSpareparts,
-        DB.cache.spareparts,
-        "spareparts",
-        sparepartToDb,
-      );
+      await Promise.all([
+        dbPushKodeIfNeeded(
+          rawCustomers,
+          DB.cache.customers,
+          "customers",
+          customerToDb,
+        ),
+        dbPushKodeIfNeeded(
+          rawServices,
+          DB.cache.services,
+          "services",
+          serviceToDb,
+        ),
+        dbPushKodeIfNeeded(
+          rawMechanics,
+          DB.cache.mechanics,
+          "mechanics",
+          mekanikToDb,
+        ),
+        dbPushKodeIfNeeded(
+          rawSpareparts,
+          DB.cache.spareparts,
+          "spareparts",
+          sparepartToDb,
+        ),
+      ]);
     }
 
     /* Mirror ke localStorage supaya tetap ada cadangan di perangkat. */
@@ -589,13 +609,17 @@ function saveCustomers(customers) {
       return;
     }
 
-    const { error } = await supabaseClient
-      .from("customers")
-      .upsert(payload, { onConflict: "id" });
+    /* Payload kosong (mis. Reset Data) → lewati upsert, langsung hapus
+       baris yang hilang. */
+    if (payload.length) {
+      const { error } = await supabaseClient
+        .from("customers")
+        .upsert(payload, { onConflict: "id" });
 
-    if (error) {
-      notifyDbError(error.message);
-      return;
+      if (error) {
+        notifyDbError(error.message);
+        return;
+      }
     }
 
     if (removed.length) {
@@ -651,13 +675,15 @@ function saveKendaraan(data) {
       return;
     }
 
-    const { error } = await supabaseClient
-      .from("services")
-      .upsert(payload, { onConflict: "id" });
+    if (payload.length) {
+      const { error } = await supabaseClient
+        .from("services")
+        .upsert(payload, { onConflict: "id" });
 
-    if (error) {
-      notifyDbError(error.message);
-      return;
+      if (error) {
+        notifyDbError(error.message);
+        return;
+      }
     }
 
     if (removed.length) {
@@ -691,13 +717,17 @@ function saveMekanik(data) {
   }
 
   dbQueue(async () => {
-    const { error } = await supabaseClient
-      .from("mechanics")
-      .upsert(data.map(mekanikToDb), { onConflict: "id" });
+    const payload = data.map(mekanikToDb);
 
-    if (error) {
-      notifyDbError(error.message);
-      return;
+    if (payload.length) {
+      const { error } = await supabaseClient
+        .from("mechanics")
+        .upsert(payload, { onConflict: "id" });
+
+      if (error) {
+        notifyDbError(error.message);
+        return;
+      }
     }
 
     if (removed.length) {
@@ -731,13 +761,17 @@ function saveSparepart(sparepart) {
   }
 
   dbQueue(async () => {
-    const { error } = await supabaseClient
-      .from("spareparts")
-      .upsert(sparepart.map(sparepartToDb), { onConflict: "id" });
+    const payload = sparepart.map(sparepartToDb);
 
-    if (error) {
-      notifyDbError(error.message);
-      return;
+    if (payload.length) {
+      const { error } = await supabaseClient
+        .from("spareparts")
+        .upsert(payload, { onConflict: "id" });
+
+      if (error) {
+        notifyDbError(error.message);
+        return;
+      }
     }
 
     if (removed.length) {
@@ -946,11 +980,13 @@ async function dbUpdateProfile(patch = {}) {
 
   const payload = {};
 
+  /* Tabel `profiles` TIDAK punya kolom `catatan` (kolom itu hanya ada
+     di `customers`). Mengirimnya membuat seluruh UPDATE ditolak
+     PostgREST, jadi nama/email/telepon tidak pernah tersimpan. */
   if (patch.nama !== undefined) payload.nama = patch.nama;
   if (patch.telepon !== undefined) payload.telepon = patch.telepon;
   if (patch.email !== undefined) payload.email = patch.email;
   if (patch.alamat !== undefined) payload.alamat = patch.alamat;
-  if (patch.catatan !== undefined) payload.catatan = patch.catatan;
 
   const { error } = await supabaseClient
     .from("profiles")

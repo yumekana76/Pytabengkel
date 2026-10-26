@@ -20,16 +20,17 @@ const REDIRECTS = {
   customer: "customers-page/dashboard.html",
 };
 
+/* Jeda (ms) sebelum pindah halaman setelah login berhasil.
+   Cukup supaya pesan sukses sempat terbaca, tanpa terasa
+   menunggu — tujuan sudah menampilkan skeleton sendiri. */
+const REDIRECT_DELAY = 500;
+
 let currentRole = "admin";
 
 /* TEMA */
 
 if (typeof initTheme === "function") {
   initTheme();
-}
-
-if (typeof showModeBadge === "function") {
-  showModeBadge();
 }
 
 /* Form atur password hanya untuk mode lokal. Di mode Supabase,
@@ -41,6 +42,29 @@ if (isSupabaseMode()) {
 /* =========================================
    GANTI ROLE
    ========================================= */
+
+/* Kunci localStorage untuk "Ingat saya" dibedakan per role,
+   jadi harus selalu dihitung dari currentRole SAAT INI (bukan
+   saat halaman dimuat), karena user bisa ganti tab role. */
+function getRememberKey() {
+  return currentRole === "customer"
+    ? "workshopCustomerRememberEmail"
+    : "workshopRememberEmail";
+}
+
+/* Isi ulang email + status checkbox "Ingat saya" dari penyimpanan
+   role yang sedang dipilih. */
+function loadRememberedEmail() {
+  const remembered = localStorage.getItem(getRememberKey());
+
+  if (remembered) {
+    emailInput.value = remembered;
+    rememberMe.checked = true;
+  } else {
+    if (emailInput.value) emailInput.value = "";
+    rememberMe.checked = false;
+  }
+}
 
 function setRole(role) {
   currentRole = role === "customer" ? "customer" : "admin";
@@ -98,17 +122,7 @@ function setRole(role) {
   }
 
   /* Muat email yang diingat untuk role ini */
-  const key =
-    currentRole === "customer"
-      ? "workshopCustomerRememberEmail"
-      : "workshopRememberEmail";
-
-  const remembered = localStorage.getItem(key);
-
-  if (remembered && !emailInput.value) {
-    emailInput.value = remembered;
-    rememberMe.checked = true;
-  }
+  loadRememberedEmail();
 
   hideMessages();
 }
@@ -143,22 +157,6 @@ passwordToggle.addEventListener("click", () => {
 });
 
 /* =========================================
-   INGAT EMAIL
-   ========================================= */
-
-const rememberKey =
-  currentRole === "customer"
-    ? "workshopCustomerRememberEmail"
-    : "workshopRememberEmail";
-
-const savedEmail = localStorage.getItem(rememberKey);
-
-if (savedEmail) {
-  emailInput.value = savedEmail;
-  rememberMe.checked = true;
-}
-
-/* =========================================
    LOGIN
    ========================================= */
 
@@ -179,15 +177,15 @@ loginForm.addEventListener("submit", async (event) => {
     return;
   }
 
+  /* Nonaktifkan tombol sementara supaya tidak diklik dobel.
+     Tidak ada teks "loading" — biarkan tombol tetap "Masuk". */
   loginButton.disabled = true;
-  loginButton.querySelector("span").textContent = "Memproses...";
 
   const result = await Auth.signIn(email, password);
 
   if (!result.ok) {
     showError(result.error || "Email atau password salah.");
     loginButton.disabled = false;
-    loginButton.querySelector("span").textContent = "Masuk";
     return;
   }
 
@@ -200,21 +198,21 @@ loginForm.addEventListener("submit", async (event) => {
         : "Akun ini bukan akun customer. Pilih tab Administrator.",
     );
     loginButton.disabled = false;
-    loginButton.querySelector("span").textContent = "Masuk";
     return;
   }
 
+  /* Simpan / hapus email sesuai role yang sedang dipilih. */
   if (rememberMe.checked) {
-    localStorage.setItem(rememberKey, email);
+    localStorage.setItem(getRememberKey(), email);
   } else {
-    localStorage.removeItem(rememberKey);
+    localStorage.removeItem(getRememberKey());
   }
 
   showSuccess("Login berhasil. Mengarahkan...");
 
   setTimeout(() => {
     window.location.href = REDIRECTS[currentRole];
-  }, 900);
+  }, REDIRECT_DELAY);
 });
 
 /* =========================================
@@ -379,7 +377,7 @@ function showNotice(message, type = "error") {
     notice.textContent = "";
     notice.className = "page-notice";
     noticeTimer = null;
-  }, type === "success" ? 2500 : 4000);
+  }, type === "success" ? 3000 : 4000);
 }
 
 function showError(message) {

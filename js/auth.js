@@ -33,14 +33,14 @@ async function requireAdminAuth() {
 
   if (!profile) {
     clearAdminSession();
-    window.location.replace("../index.html?role=admin");
+    window.location.replace("/html/index.html?role=admin");
     return false;
   }
 
   if (profile.role !== "admin") {
     await Auth.signOut();
     clearAdminSession();
-    window.location.replace("../index.html?role=admin");
+    window.location.replace("/html/index.html?role=admin");
     return false;
   }
 

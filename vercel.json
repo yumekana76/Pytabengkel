@@ -1,9 +1,62 @@
-
 {
-  "rewrites": [
+  "redirects": [
     {
       "source": "/",
-      "destination": "/html/index.html"
+      "destination": "/html/index.html",
+      "permanent": false
+    },
+    {
+      "source": "/index.html",
+      "destination": "/html/index.html",
+      "permanent": false
+    },
+    {
+      "source": "/html",
+      "destination": "/html/index.html",
+      "permanent": false
+    },
+    {
+      "source": "/html/",
+      "destination": "/html/index.html",
+      "permanent": false
+    },
+    {
+      "source": "/admin-page",
+      "destination": "/admin-page/dashboard.html",
+      "permanent": false
+    },
+    {
+      "source": "/admin-page/",
+      "destination": "/admin-page/dashboard.html",
+      "permanent": false
+    },
+    {
+      "source": "/customers-page",
+      "destination": "/customers-page/dashboard.html",
+      "permanent": false
+    },
+    {
+      "source": "/customers-page/",
+      "destination": "/customers-page/dashboard.html",
+      "permanent": false
+    }
+  ],
+  "rewrites": [
+    {
+      "source": "/admin-page/:path([^./]+)",
+      "destination": "/html/admin-page/:path.html"
+    },
+    {
+      "source": "/admin-page/:path*",
+      "destination": "/html/admin-page/:path*"
+    },
+    {
+      "source": "/customers-page/:path([^./]+)",
+      "destination": "/html/customers-page/:path.html"
+    },
+    {
+      "source": "/customers-page/:path*",
+      "destination": "/html/customers-page/:path*"
     }
   ]
 }

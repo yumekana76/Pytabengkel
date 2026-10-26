@@ -54,9 +54,16 @@ function customerInitials(nama) {
     .join("");
 }
 
-function customerLogout() {
+async function customerLogout() {
+  /* Tutup sesi Supabase (kalau mode Supabase) SEBELUM redirect —
+     tanpa ini token tetap tersimpan dan pengguna langsung masuk
+     lagi saat membuka halaman customer berikutnya. */
+  if (typeof Auth !== "undefined") {
+    await Auth.signOut();
+  }
+
   clearCustomerSession();
-  window.location.href = "login.html";
+  window.location.href = "/html/index.html?role=customer";
 }
 
 /* HEADER */
@@ -220,7 +227,7 @@ function renderRecentServices() {
   if (!recent.length) {
     table.innerHTML = `
       <tr class="empty-row">
-        <td colspan="7">
+        <td colspan="8">
           Belum ada service. Ajukan service pertama Anda di halaman Kendaraan.
         </td>
       </tr>
@@ -1324,6 +1331,31 @@ async function saveProfile(event) {
     return;
   }
 
+  /* Email di sini = email LOGIN. Di mode Supabase tabel customers
+     tidak otoritatif — yang menentukan email masuk adalah Supabase
+     Auth. Tanpa langkah ini pengguna bisa mengganti email di Profil,
+     semuanya terlihat tersimpan, tetapi email lama tetap dipakai untuk
+     masuk. */
+
+  const emailSebelum = String(customers[index].email || "").toLowerCase();
+  const emailBerubah = emailSebelum !== email.toLowerCase();
+  let emailLoginMenungguKonfirmasi = false;
+
+  if (emailBerubah && typeof Auth !== "undefined" && isSupabaseMode()) {
+    const hasil = await Auth.updateEmail(email);
+
+    if (!hasil.ok) {
+      showError(
+        hasil.error || "Gagal mengubah email login. Data profil tidak disimpan.",
+      );
+      return;
+    }
+
+    /* applied = false -> Supabase mengaktifkan "secure email change",
+       email masuk baru berlaku setelah tautan konfirmasi dibuka. */
+    emailLoginMenungguKonfirmasi = hasil.applied === false;
+  }
+
   customers[index] = {
     ...customers[index],
     nama,
@@ -1375,14 +1407,26 @@ async function saveProfile(event) {
   updateCustomerSession({ nama, email });
 
   if (typeof dbUpdateProfile === "function") {
-    await dbUpdateProfile({ nama, telepon, email, alamat, catatan });
+    const hasil = await dbUpdateProfile({ nama, telepon, email, alamat });
+
+    if (!hasil.ok) {
+      showError(
+        "Data customer tersimpan, tetapi profil akun gagal disimpan ke server.",
+      );
+      return;
+    }
   }
 
   if (error) {
     error.hidden = true;
   }
 
-  showPageNotice("Profil berhasil diperbarui.", "success");
+  showPageNotice(
+    emailLoginMenungguKonfirmasi
+      ? "Profil diperbarui. Email login baru akan aktif setelah tautan konfirmasi di inbox email baru dibuka."
+      : "Profil berhasil diperbarui.",
+    "success",
+  );
 
   document.getElementById("profileName").textContent = nama;
   document.getElementById("profileAvatar").textContent = customerInitials(nama);
@@ -1423,6 +1467,25 @@ async function changePassword(event) {
   if (newPassword !== confirmPassword) {
     showError("Konfirmasi password tidak sama.");
     return;
+  }
+
+  if (newPassword === currentPassword) {
+    showError("Password baru tidak boleh sama dengan password saat ini.");
+    return;
+  }
+
+  /* WAJIB: cek dulu password lama. Sebelumnya mode Supabase langsung
+     memanggil Auth.updatePassword() tanpa pernah membaca kolom
+     "Password Saat Ini", jadi kolom itu cuma hiasan dan password apa
+     pun diterima. */
+
+  if (typeof Auth !== "undefined" && typeof Auth.verifyPassword === "function") {
+    const cek = await Auth.verifyPassword(currentPassword);
+
+    if (!cek.ok) {
+      showError(cek.error || "Password saat ini salah.");
+      return;
+    }
   }
 
   /* Mode Supabase: password diatur lewat Supabase Auth. */
@@ -1504,7 +1567,10 @@ function initCustomerSettings() {
           window.matchMedia &&
           window.matchMedia("(prefers-color-scheme: dark)").matches;
 
-        applyTheme(prefersDark ? "dark" : "light");
+        /* persist = false: jangan langsung menulis kembali kunci yang
+           baru saja dihapus, kalau tidak "Ikuti Sistem" tidak pernah
+           tersimpan. */
+        applyTheme(prefersDark ? "dark" : "light", false);
       } else {
         applyTheme(selected);
       }
@@ -1579,9 +1645,14 @@ function initCustomerSettings() {
 
 /* =========================================
    ENTRY POINT
-   ========================================= */
+   ----------------------------------------
+   DIPANGGIL OLEH js/global.js SETELAH dbInit() + requireCustomerAuth()
+   selesai. Jangan didaftarkan langsung ke DOMContentLoaded: listener
+   global.js masih menunggu jaringan (mode Supabase), jadi profil belum
+   terbentuk saat event berapi dan isCustomerLoggedIn() selalu false —
+   akibatnya seluruh halaman customer tidak pernah ter-render. */
 
-document.addEventListener("DOMContentLoaded", function () {
+function initCustomerApp() {
   if (!isCustomerLoggedIn()) {
     return;
   }
@@ -1615,4 +1686,4 @@ document.addEventListener("DOMContentLoaded", function () {
   if (document.getElementById("themeOptions")) {
     initCustomerSettings();
   }
-});
+}

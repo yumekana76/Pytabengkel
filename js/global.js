@@ -1303,8 +1303,8 @@ function initTopbar() {
       sessionStorage.removeItem("workshopCustomerSession");
       sessionStorage.removeItem("workshopCustomerName");
 
-      window.location.href =
-        logoutButton.dataset.logoutTarget || "../index.html";
+      /* Fallback: root sudah di-rewrite ke halaman login di vercel.json. */
+      window.location.href = logoutButton.dataset.logoutTarget || "/";
     });
   }
 }
@@ -1314,9 +1314,37 @@ function initTopbar() {
    ========================================= */
 
 function showSkeleton() {
-  if (document.getElementById("appSkeleton")) {
+  if (document.getElementById("appSkeleton") || !document.body) {
     return;
   }
+
+  /* Bentuk skeleton mengikuti layout asli halaman (topbar, sidebar,
+     kartu statistik, dan baris tabel) supaya pengguna bisa menebak
+     isi halaman, bukan hanya melihat layar kosong. */
+  const navItems = Array.from({ length: 6 }, function (_, index) {
+    return `<span class="skeleton-bar sk-nav-item${
+      index === 0 ? " active" : ""
+    }"></span>`;
+  }).join("");
+
+  const cards = Array.from({ length: 4 }, function () {
+    return `
+      <div class="sk-card">
+        <span class="skeleton-bar sk-card-icon"></span>
+        <span class="skeleton-bar sk-card-number"></span>
+        <span class="skeleton-bar sk-card-label"></span>
+      </div>`;
+  }).join("");
+
+  const rows = Array.from({ length: 6 }, function () {
+    return `
+      <div class="sk-row">
+        <span class="skeleton-bar"></span>
+        <span class="skeleton-bar"></span>
+        <span class="skeleton-bar"></span>
+        <span class="skeleton-bar"></span>
+      </div>`;
+  }).join("");
 
   const skeleton = document.createElement("div");
   skeleton.id = "appSkeleton";
@@ -1324,12 +1352,42 @@ function showSkeleton() {
   skeleton.setAttribute("role", "status");
   skeleton.setAttribute("aria-live", "polite");
   skeleton.innerHTML = `
-    <div class="skeleton-inner">
-      <div class="skeleton-bar title"></div>
-      <div class="skeleton-bar medium"></div>
-      <div class="skeleton-bar short"></div>
-      <p class="skeleton-text">Memuat data…</p>
+    <div class="sk-topbar">
+      <span class="skeleton-bar sk-logo"></span>
+      <span class="sk-spacer"></span>
+      <span class="skeleton-bar sk-chip"></span>
+      <span class="skeleton-bar sk-chip sk-chip-sm"></span>
     </div>
+    <div class="sk-layout">
+      <div class="sk-side">
+        <span class="skeleton-bar sk-side-title"></span>
+        ${navItems}
+      </div>
+      <div class="sk-main">
+        <div class="sk-head">
+          <span class="skeleton-bar sk-title"></span>
+          <span class="skeleton-bar sk-sub w30"></span>
+        </div>
+        <div class="sk-cards">${cards}</div>
+        <div class="sk-panel">
+          <div class="sk-panel-head">
+            <div class="sk-panel-title">
+              <span class="skeleton-bar sk-panel-h"></span>
+              <span class="skeleton-bar sk-panel-p w30"></span>
+            </div>
+            <span class="skeleton-bar sk-panel-link"></span>
+          </div>
+          <div class="sk-thead">
+            <span class="skeleton-bar w20"></span>
+            <span class="skeleton-bar w20"></span>
+            <span class="skeleton-bar w20"></span>
+            <span class="skeleton-bar w20"></span>
+          </div>
+          <div class="sk-rows">${rows}</div>
+        </div>
+      </div>
+    </div>
+    <span class="skeleton-sr">Memuat data…</span>
   `;
 
   document.body.appendChild(skeleton);
@@ -1340,9 +1398,14 @@ function hideSkeleton() {
 
   if (skeleton) {
     skeleton.classList.add("hidden");
-    window.setTimeout(() => skeleton.remove(), 300);
+    window.setTimeout(() => skeleton.remove(), 150);
   }
 }
+
+/* Skeleton dipasang SEGERA saat file ini dieksekusi (masih saat
+   parsing <body>), bukan menunggu DOMContentLoaded — jadi kilasan
+   halaman kosong sebelum data siap tidak sempat terlihat. */
+showSkeleton();
 
 /* =========================================
    BOOT SEQUENCE
@@ -1353,31 +1416,41 @@ document.addEventListener("DOMContentLoaded", async function () {
 
   showSkeleton();
 
-  /* 1. Muat data (Supabase atau localStorage) */
-  if (typeof dbInit === "function") {
-    await dbInit();
-  }
-
-  /* 2. Cek sesi login sesuai role halaman ini */
   const role = window.__APP_ROLE;
 
-  if (role === "admin" && typeof requireAdminAuth === "function") {
-    const allowed = await requireAdminAuth();
-    if (!allowed) {
-      hideSkeleton();
-      return;
+  /* 1+2. Cek sesi dan muat data dijalankan BERBARENGAN.
+     Waktu tunggu = yang paling lama di antara keduanya, bukan
+     jumlah keduanya (dulu berurutan: data dulu, baru sesi). */
+  const sessionReady = (async function () {
+    if (role === "admin" && typeof requireAdminAuth === "function") {
+      return requireAdminAuth();
     }
+
+    if (role === "customer" && typeof requireCustomerAuth === "function") {
+      return requireCustomerAuth();
+    }
+
+    return true;
+  })();
+
+  const results = await Promise.all([
+    typeof dbInit === "function" ? dbInit() : Promise.resolve(),
+    sessionReady,
+  ]);
+  const allowed = results[1];
+
+  if (!allowed) {
+    hideSkeleton();
+    return;
   }
 
-  if (role === "customer" && typeof requireCustomerAuth === "function") {
-    const allowed = await requireCustomerAuth();
-    if (!allowed) {
-      hideSkeleton();
-      return;
-    }
-  }
+  /* 3. Sembunyikan skeleton SEGERA setelah data + sesi siap.
+     Renderer di langkah berikutnya berjalan SINKRON dari data cache,
+     jadi skeleton tidak perlu menunggu mereka selesai — tampilan
+     terasa jauh lebih cepat. */
+  hideSkeleton();
 
-  /* 3. Tampilan umum */
+  /* 4. Tampilan umum */
   initTopbar();
   initSidebar();
   document.querySelectorAll("[data-close-modal]").forEach(function (button) {
@@ -1406,7 +1479,7 @@ document.addEventListener("DOMContentLoaded", async function () {
     }
   });
 
-  /* 4. Halaman aktif */
+  /* 5. Halaman aktif */
   if (
     document.getElementById("btnInputTerpadu") &&
     typeof initDashboardInput === "function"
@@ -1414,6 +1487,11 @@ document.addEventListener("DOMContentLoaded", async function () {
     updateDashboard();
     if (typeof renderMekanik === "function") renderMekanik();
     initDashboardInput();
+  }
+  /* Portal customer: inisialisasi dijalankan di sini (setelah sesi
+     customer terbentuk), bukan dari listener DOMContentLoaded sendiri. */
+  if (role === "customer" && typeof initCustomerApp === "function") {
+    initCustomerApp();
   }
   if (typeof initKendaraanPage === "function") initKendaraanPage();
   if (typeof initCustomerPage === "function") initCustomerPage();
@@ -1423,6 +1501,4 @@ document.addEventListener("DOMContentLoaded", async function () {
   if (typeof initSparepartPage === "function") initSparepartPage();
   if (typeof initPengaturanPage === "function") initPengaturanPage();
   if (typeof initKeuanganPage === "function") initKeuanganPage();
-
-  hideSkeleton();
 });

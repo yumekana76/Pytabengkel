@@ -125,7 +125,7 @@ function updateKeuanganStats() {
   setText("rataRataBulanan", formatRupiah(Math.round(pendapatan / 12)));
 
   setText("nominalLunas", formatRupiah(pendapatan));
-  setText("countLunas", `Sudah Lunas — ${lunas.length} transaksi`);
+  setText("statLunasLabel", `Sudah Lunas — ${lunas.length} transaksi`);
   setText("nominalBelumLunas", formatRupiah(nominalBelum));
   setText(
     "countBelumLunas",

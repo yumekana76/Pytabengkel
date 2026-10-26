@@ -88,7 +88,7 @@ function initPengaturanPage() {
           );
           window.setTimeout(() => {
             window.location.href = "dashboard.html";
-          }, 800);
+          }, 400);
         } catch (error) {
           showPageNotice("File backup tidak valid.", "error");
         }
@@ -105,13 +105,16 @@ function initPengaturanPage() {
   });
 
   document.getElementById("btnConfirmReset")?.addEventListener("click", () => {
-    [
-      "workshop_customers",
-      "workshop_customer_accounts",
-      "workshop_kendaraan",
-      "workshop_mekanik",
-      "workshop_sparepart",
-    ].forEach((key) => localStorage.setItem(key, "[]"));
+    /* Lewat lapisan data (save*), BUKAN localStorage langsung:
+       - mode lokal : cache + mirror localStorage ikut dikosongkan
+       - mode Supabase : baris di server ikut terhapus (fungsi save*)
+         sehingga reset benar-benar berlaku, bukan hanya "kelihatan" sukses */
+    saveCustomers([]);
+    saveKendaraan([]);
+    saveMekanik([]);
+    saveSparepart([]);
+    saveCustomerAccounts([]);
+
     closeModal("resetModal");
     showPageNotice(
       "Data harian berhasil dikosongkan. Membuka dashboard…",
@@ -119,6 +122,6 @@ function initPengaturanPage() {
     );
     window.setTimeout(() => {
       window.location.href = "dashboard.html";
-    }, 800);
+    }, 400);
   });
 }

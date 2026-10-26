@@ -11,10 +11,6 @@ if (typeof initTheme === "function") {
   initTheme();
 }
 
-if (typeof showModeBadge === "function") {
-  showModeBadge();
-}
-
 /* TAMPILKAN / SEMBUNYIKAN PASSWORD */
 
 document.getElementById("passwordToggle")?.addEventListener("click", () => {
@@ -100,7 +96,7 @@ if (registerForm) {
 
     setTimeout(() => {
       window.location.href = "dashboard.html";
-    }, 900);
+    }, 500);
   });
 }
 

@@ -81,7 +81,7 @@ function renderCustomers(search = "", page = 1) {
     table.innerHTML = `
       <tr>
         <td
-          colspan="8"
+          colspan="9"
           style="text-align: center;"
         >
           Tidak ada data customer.
