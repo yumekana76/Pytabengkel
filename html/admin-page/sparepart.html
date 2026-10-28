@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; font-src 'self' https://cdnjs.cloudflare.com; img-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+      content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; font-src 'self' https://cdnjs.cloudflare.com; img-src 'self' data: https://*.supabase.co; connect-src 'self' https://*.supabase.co wss://*.supabase.co; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
     />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Pytabengkel - Sparepart</title>
@@ -14,6 +14,7 @@
       href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
     />
     <link rel="stylesheet" href="../../css/sparepart.css" />
+    <script src="../../js/error-logger.js"></script>
     <script src="../../js/theme.js"></script>
     <script src="../../js/config.js"></script>
     <script src="../../js/vendor/supabase.min.js"></script>
@@ -24,6 +25,8 @@
     </script>
   </head>
   <body>
+    <!-- Skeleton dipasang SEBELUM paint pertama (lihat js/theme.js) -->
+    <script>showSkeleton();</script>
     <header class="topbar">
       <button
         type="button"
@@ -90,6 +93,10 @@
             ><i class="fa-solid fa-clock-rotate-left nav-icon" aria-hidden="true"></i>
             Riwayat
           </a>
+          <a href="ulasan.html" class="nav-link"
+            ><i class="fa-solid fa-star nav-icon" aria-hidden="true"></i>
+            Ulasan
+          </a>
           <a href="keuangan.html" class="nav-link"
             ><i class="fa-solid fa-wallet nav-icon" aria-hidden="true"></i>
             Keuangan
@@ -98,7 +105,7 @@
             ><i class="fa-solid fa-user-gear nav-icon" aria-hidden="true"></i>
             Mekanik
           </a>
-          <a href="sparepart.html" class="nav-link active"
+          <a href="sparepart.html" class="nav-link active" aria-current="page"
             ><i class="fa-solid fa-gears nav-icon" aria-hidden="true"></i>
             Sparepart
           </a>
@@ -169,14 +176,15 @@
           </div>
           <div class="table-container">
             <table>
+              <caption class="sr-only">Daftar sparepart</caption>
               <thead>
                 <tr>
-                  <th>No</th>
-                  <th class="cell-id-col">ID</th>
-                  <th>Nama Sparepart</th>
-                  <th>Stok</th>
-                  <th>Harga</th>
-                  <th>Aksi</th>
+                  <th scope="col">No</th>
+                  <th scope="col" class="cell-id-col">ID</th>
+                  <th scope="col">Nama Sparepart</th>
+                  <th scope="col">Stok</th>
+                  <th scope="col">Harga</th>
+                  <th scope="col">Aksi</th>
                 </tr>
               </thead>
               <tbody id="sparepartPageTable"></tbody>
@@ -187,7 +195,13 @@
       </main>
     </div>
     <div class="modal-overlay" id="sparepartModal">
-      <div class="modal">
+
+      <div
+        class="modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="sparepartModalTitle"
+      >
         <div class="modal-header">
           <div>
             <h3 id="sparepartModalTitle">Tambah Sparepart</h3>

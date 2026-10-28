@@ -207,6 +207,18 @@ function resetServiceForm() {
   updateServiceTotalPreview();
   document.getElementById("serviceVehicle").disabled = false;
   document.getElementById("serviceModalTitle").textContent = "Proses Service";
+
+  /* Zona foto hanya muncul saat mengedit service yang sudah ada. */
+  activeServiceId = null;
+  const photoZone = document.getElementById("servicePhotoZone");
+  if (photoZone) {
+    photoZone.hidden = true;
+    photoZone.dataset.serviceId = "";
+    const photoList = document.getElementById("servicePhotoList");
+    if (photoList) photoList.innerHTML = "";
+    const photoInput = document.getElementById("servicePhotoInput");
+    if (photoInput) photoInput.value = "";
+  }
 }
 
 var activeServiceId = null;
@@ -250,6 +262,9 @@ function editService(id, button = null) {
   );
   document.getElementById("serviceModalTitle").textContent =
     `Proses ${service.polisi}`;
+
+  /* Zona foto service (admin, mode Supabase). */
+  showServicePhotoSection(service.id);
 
   /* Struk hanya bisa dicetak kalau service sudah selesai. */
   const cetakButton = document.getElementById("btnCetakStrukService");

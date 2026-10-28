@@ -1,6 +1,43 @@
 function initPengaturanPage() {
   const resetButton = document.getElementById("btnResetData");
   if (!resetButton) return;
+
+  /* ---------------- LOG ERROR KLIEN ---------------- */
+  const errorLogButton = document.getElementById("btnErrorLog");
+  if (errorLogButton) {
+    errorLogButton.addEventListener("click", () => {
+      openModal("errorLogModal");
+      renderErrorLog();
+    });
+  }
+
+  const clearErrorLogButton = document.getElementById("btnClearErrorLog");
+  if (clearErrorLogButton) {
+    clearErrorLogButton.addEventListener("click", async () => {
+      window.__errorLogger?.clearLocalRows();
+
+      /* Baris server dibersihkan lewat RLS admin (delete policy). */
+      if (supabaseClient && dbIsAdmin()) {
+        const { error } = await supabaseClient
+          .from("client_errors")
+          .delete()
+          .neq("id", 0);
+
+        if (error) {
+          showPageNotice(
+            "Log lokal bersih, tetapi gagal membersihkan server: " +
+              error.message,
+            "error",
+          );
+          renderErrorLog();
+          return;
+        }
+      }
+
+      renderErrorLog();
+      showPageNotice("Log error klien dibersihkan.", "success");
+    });
+  }
   const infoButton = document.getElementById("btnInfoBengkel");
   if (infoButton) {
     infoButton.addEventListener("click", () => {
@@ -124,4 +161,91 @@ function initPengaturanPage() {
       window.location.href = "dashboard.html";
     }, 400);
   });
+}
+
+/* ---------------------------------------------------------------------
+   LOG ERROR KLIEN
+   Sumber: localStorage (error-logger.js, perangkat ini) + tabel
+   client_errors (dilaporkan semua pengguna, dibaca admin di sini).
+   --------------------------------------------------------------------- */
+
+function formatErrorLogTime(value) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return String(value || "-");
+  return date.toLocaleString("id-ID");
+}
+
+async function renderErrorLog() {
+  const list = document.getElementById("errorLogList");
+  if (!list) return;
+
+  const rows = [];
+
+  /* Error dari perangkat ini (localStorage). */
+  const localRows =
+    (window.__errorLogger && window.__errorLogger.getLocalRows()) || [];
+
+  localRows.forEach((row) => {
+    rows.push({ ...row, sumber: "lokal" });
+  });
+
+  /* Error dari semua pengguna (server) — hanya admin yang boleh baca. */
+  if (supabaseClient && dbIsAdmin()) {
+    const { data, error } = await supabaseClient
+      .from("client_errors")
+      .select("*")
+      .order("created_at", { ascending: false })
+      .limit(100);
+
+    if (!error && Array.isArray(data)) {
+      data.forEach((row) => {
+        rows.push({
+          pesan: row.pesan,
+          stack: row.stack,
+          halaman: row.halaman,
+          waktu: row.created_at,
+          jumlah: 1,
+          sumber: "server",
+        });
+      });
+    }
+  }
+
+  if (!rows.length) {
+    list.innerHTML =
+      '<p class="error-log-empty">Belum ada error tercatat. 🎉</p>';
+    return;
+  }
+
+  rows.sort((a, b) =>
+    String(b.waktu || "").localeCompare(String(a.waktu || "")),
+  );
+
+  list.innerHTML = rows
+    .slice(0, 100)
+    .map((row) => {
+      const jumlah = Number(row.jumlah) || 1;
+
+      return `
+        <div class="error-log-item">
+          <div class="error-log-meta">
+            <span class="error-log-badge">${escapeHTML(row.sumber || "?")}</span>
+            <strong>${escapeHTML(row.pesan || "(tanpa pesan)")}</strong>
+            ${jumlah > 1 ? `<span class="error-log-count">&times;${jumlah}</span>` : ""}
+          </div>
+          <div class="error-log-sub">
+            <span><i class="fa-solid fa-file" aria-hidden="true"></i> ${escapeHTML(row.halaman || "-")}</span>
+            <span><i class="fa-solid fa-clock" aria-hidden="true"></i> ${escapeHTML(formatErrorLogTime(row.waktu))}</span>
+          </div>
+          ${
+            row.stack
+              ? `<details>
+                   <summary>Lihat stack</summary>
+                   <pre class="error-log-stack">${escapeHTML(row.stack)}</pre>
+                 </details>`
+              : ""
+          }
+        </div>`;
+    })
+    .join("");
 }

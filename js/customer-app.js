@@ -862,12 +862,16 @@ function initCustomerHistory() {
     ?.addEventListener("change", () => renderCustomerHistoryTable(1));
 }
 
+let customerHistoryPage = 1;
+
 function renderCustomerHistoryTable(page = 1) {
   const table = document.getElementById("customerRiwayatTable");
 
   if (!table) {
     return;
   }
+
+  customerHistoryPage = page;
 
   const vehicles = getCustomerVehicles();
   const selesai = vehicles.filter((item) => item.status === "Selesai");
@@ -925,7 +929,7 @@ function renderCustomerHistoryTable(page = 1) {
   if (!sorted.length) {
     table.innerHTML = `
       <tr class="empty-row">
-        <td colspan="9">Belum ada service yang selesai.</td>
+        <td colspan="10">Belum ada service yang selesai.</td>
       </tr>
     `;
     setText("customerRiwayatInfo", "Tidak ada riwayat");
@@ -943,8 +947,10 @@ function renderCustomerHistoryTable(page = 1) {
   const dataHalaman = sorted.slice(start, start + perPage);
 
   table.innerHTML = dataHalaman
-    .map(
-      (item, index) => `
+    .map((item, index) => {
+      const review = getReviewByServiceId(item.id);
+
+      return `
         <tr>
           <td>${start + index + 1}</td>
           <td><span class="cell-id">${escapeHTML(getKode("kendaraan", item))}</span></td>
@@ -962,7 +968,24 @@ function renderCustomerHistoryTable(page = 1) {
               ${escapeHTML(item.pembayaran || "Belum Lunas")}
             </span>
           </td>
-          <td>
+          <td>${
+            review
+              ? buildStarsHTML(review.rating, { small: true })
+              : '<span class="rating-empty">Belum dinilai</span>'
+          }</td>
+          <td class="aksi-cell">
+            ${
+              !review && item.status === "Selesai"
+                ? `<button
+                    type="button"
+                    class="action-btn review-btn"
+                    data-riwayat-review="${item.id}"
+                  >
+                    <i class="fa-solid fa-star" aria-hidden="true"></i>
+                    Beri Ulasan
+                  </button>`
+                : ""
+            }
             <button
               type="button"
               class="action-btn"
@@ -972,13 +995,19 @@ function renderCustomerHistoryTable(page = 1) {
             </button>
           </td>
         </tr>
-      `,
-    )
+      `;
+    })
     .join("");
 
   table.querySelectorAll("[data-riwayat-detail]").forEach((button) => {
     button.addEventListener("click", () =>
       showCustomerServiceDetail(button.dataset.riwayatDetail),
+    );
+  });
+
+  table.querySelectorAll("[data-riwayat-review]").forEach((button) => {
+    button.addEventListener("click", () =>
+      openCustomerReviewForm(button.dataset.riwayatReview),
     );
   });
 
@@ -1033,7 +1062,206 @@ function showCustomerServiceDetail(id) {
     overhaul.innerHTML = buildServiceOverhaul(item);
   }
 
+  renderCustomerReviewSection(item);
+
   openModal("riwayatDetailModal");
+}
+
+/* =========================================
+   ULASAN / RATING SERVICE
+   Customer menilai service yang sudah selesai.
+   ========================================= */
+
+var activeReviewServiceId = null;
+var activeReviewRating = 0;
+
+function renderCustomerReviewSection(item) {
+  const section = document.getElementById("customerReviewSection");
+
+  if (!section) {
+    return;
+  }
+
+  /* Hanya service selesai yang boleh dinilai. */
+  if (item.status !== "Selesai") {
+    section.innerHTML =
+      '<p class="review-hint">Ulasan bisa diberikan setelah service selesai.</p>';
+    return;
+  }
+
+  const review = getReviewByServiceId(item.id);
+
+  activeReviewServiceId = item.id;
+  activeReviewRating = review ? Number(review.rating) : 0;
+
+  const tanggalUlasan = review?.createdAt
+    ? String(review.createdAt).slice(0, 10)
+    : "";
+
+  section.innerHTML = `
+    <div class="review-box">
+      <p class="review-hint">
+        ${
+          review
+            ? `Anda menilai service ini <strong>${escapeHTML(
+                tanggalUlasan,
+              )}</strong>. Anda tetap bisa memperbarui ulasan.`
+            : "Beri rating 1–5 bintang dan ceritakan pengalaman Anda."
+        }
+      </p>
+      <div
+        class="star-input"
+        id="reviewStarInput"
+        role="group"
+        aria-label="Pilih rating 1 sampai 5 bintang"
+      >
+        ${[1, 2, 3, 4, 5]
+          .map(
+            (value) => `
+          <button
+            type="button"
+            class="star-btn${value <= activeReviewRating ? " active" : ""}"
+            data-star="${value}"
+            aria-label="Rating ${value} — ${getRatingLabel(value)}"
+            aria-pressed="${value <= activeReviewRating}"
+          >
+            <i class="fa-solid fa-star" aria-hidden="true"></i>
+          </button>`,
+          )
+          .join("")}
+        <span class="star-label" id="reviewRatingLabel">${escapeHTML(
+          getRatingLabel(activeReviewRating),
+        )}</span>
+      </div>
+      <label class="review-label" for="reviewComment">Komentar (opsional)</label>
+      <textarea
+        id="reviewComment"
+        class="form-control"
+        rows="3"
+        maxlength="500"
+        placeholder="Contoh: servis cepat, mekanik ramah, harga wajar..."
+      >${escapeHTML(review?.komentar || "")}</textarea>
+      <div class="review-actions">
+        <span class="review-current">${
+          review ? `Ulasan Anda: ${buildStarsHTML(review.rating, { small: true })}` : "Belum ada ulasan untuk service ini."
+        }</span>
+        <button type="button" class="btn btn-primary" id="btnSaveReview">
+          <i class="fa-solid fa-star" aria-hidden="true"></i>
+          ${review ? "Perbarui Ulasan" : "Kirim Ulasan"}
+        </button>
+      </div>
+    </div>
+  `;
+
+  /* Bintang hanya berubah warna saat DIKLIK (bukan saat kursor
+     lewat) — warna kuning = pilihan yang benar-benar Anda ambil. */
+  section.querySelectorAll(".star-btn").forEach((button) => {
+    button.addEventListener("click", () => {
+      activeReviewRating = Number(button.dataset.star);
+      paintReviewStars(activeReviewRating);
+      setText("reviewRatingLabel", getRatingLabel(activeReviewRating));
+    });
+  });
+
+  section
+    .querySelector("#btnSaveReview")
+    ?.addEventListener("click", saveCustomerReview);
+}
+
+/* Warnai bintang input: semua bintang ≤ value menjadi kuning. */
+function paintReviewStars(value) {
+  const section = document.getElementById("customerReviewSection");
+
+  if (!section) return;
+
+  section.querySelectorAll(".star-btn").forEach((star) => {
+    const aktif = Number(star.dataset.star) <= Number(value);
+    star.classList.toggle("active", aktif);
+  });
+}
+
+/* Tombol "Beri Ulasan" di tabel: buka modal + langsung ke form ulasan. */
+function openCustomerReviewForm(id) {
+  const item = getCustomerVehicles().find(
+    (vehicle) => Number(vehicle.id) === Number(id),
+  );
+
+  if (!item) return;
+
+  showCustomerServiceDetail(id);
+
+  window.requestAnimationFrame(() => {
+    document
+      .getElementById("customerReviewSection")
+      ?.scrollIntoView({ behavior: "smooth", block: "center" });
+  });
+}
+
+/* Simpan ulasan (baru / pembaruan) untuk service yang sedang dibuka. */
+function saveCustomerReview() {
+  const item = getCustomerVehicles().find(
+    (vehicle) => Number(vehicle.id) === Number(activeReviewServiceId),
+  );
+
+  if (!item) return;
+
+  if (!activeReviewRating) {
+    showPageNotice("Pilih rating bintang 1–5 terlebih dahulu.", "error");
+    return;
+  }
+
+  const profile = getCurrentProfile();
+  const customerId = profile?.customer_id
+    ? Number(profile.customer_id)
+    : Number(item.pelangganId);
+
+  if (isSupabaseMode() && !customerId) {
+    showPageNotice(
+      "Akun Anda belum terhubung ke data customer. Hubungi bengkel.",
+      "error",
+    );
+    return;
+  }
+
+  const komentar = String(
+    document.getElementById("reviewComment")?.value || "",
+  ).trim();
+
+  const existing = getReviewByServiceId(item.id);
+
+  const entry = {
+    id: existing ? existing.id : nextNumericId(getReviews()),
+    kode: existing?.kode || nextKode("reviews", getReviews()),
+    serviceId: item.id,
+    customerId: customerId || null,
+    rating: activeReviewRating,
+    komentar,
+    createdAt: existing?.createdAt || new Date().toISOString(),
+  };
+
+  const lain = getReviews().filter(
+    (review) => Number(review.serviceId) !== Number(item.id),
+  );
+
+  saveReviews([...lain, entry]);
+
+  showPageNotice(
+    existing
+      ? "Ulasan Anda telah diperbarui. Terima kasih!"
+      : "Terima kasih atas ulasan Anda!",
+    "success",
+  );
+
+  addLog(
+    existing ? "Ubah" : "Tambah",
+    "Ulasan",
+    `Rating ${activeReviewRating} untuk service ${item.polisi}`,
+    getKode("kendaraan", item),
+  );
+
+  /* Perbarui tampilan tabel & isi modal. */
+  renderCustomerHistoryTable(customerHistoryPage);
+  renderCustomerReviewSection(item);
 }
 
 /* =========================================

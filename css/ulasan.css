@@ -1,0 +1,59 @@
+/* Halaman Ulasan (admin) — gaya khusus */
+
+.ulasan-rating-cell {
+  display: inline-flex;
+  align-items: center;
+  white-space: nowrap;
+}
+
+.review-comment {
+  display: inline-block;
+  max-width: 320px;
+  line-height: 1.5;
+  white-space: pre-line;
+  word-break: break-word;
+}
+
+.review-card {
+  display: grid;
+  gap: 10px;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface-2);
+}
+
+.review-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.review-card-rating {
+  margin-left: 6px;
+}
+
+.review-card-meta {
+  color: var(--secondary);
+  font-size: 13px;
+}
+
+.review-card-body {
+  margin: 0;
+  line-height: 1.6;
+  white-space: pre-line;
+  word-break: break-word;
+}
+
+.review-card-empty {
+  color: var(--secondary);
+  font-style: italic;
+}
+
+@media (max-width: 700px) {
+  .review-comment {
+    max-width: 200px;
+  }
+}

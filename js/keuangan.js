@@ -75,13 +75,18 @@ function getMonthlyFinance(tahun) {
     jumlah: 0,
     pendapatan: 0,
   }));
-  getSelesaiByTahun(tahun).forEach((item) => {
-    const bulan = Number(String(item.tanggalService || "").slice(5, 7));
-    if (bulan >= 1 && bulan <= 12) {
-      months[bulan - 1].jumlah += 1;
-      months[bulan - 1].pendapatan += getServiceTotal(item);
-    }
-  });
+  /* Grafik pendapatan per bulan hanya menghitung service yang SUDAH
+     LUNAS — tagihan belum lunas tidak dihitung sebagai pendapatan,
+     sama dengan kartu "Pendapatan Lunas (Tahun Berjalan)". */
+  getSelesaiByTahun(tahun)
+    .filter((item) => (item.pembayaran || "Belum Lunas") === "Lunas")
+    .forEach((item) => {
+      const bulan = Number(String(item.tanggalService || "").slice(5, 7));
+      if (bulan >= 1 && bulan <= 12) {
+        months[bulan - 1].jumlah += 1;
+        months[bulan - 1].pendapatan += getServiceTotal(item);
+      }
+    });
   return months;
 }
 
@@ -582,12 +587,12 @@ function buildRekapKeuangan() {
       <table class="rekap-table">
         <thead>
           <tr>
-            <th>Bulan</th>
-            <th class="num">Service</th>
-            <th class="num">Lunas</th>
-            <th class="num">Belum Lunas</th>
-            <th class="num">Pendapatan Lunas</th>
-            <th class="num">Sisa Tagihan</th>
+            <th scope="col">Bulan</th>
+            <th scope="col" class="num">Service</th>
+            <th scope="col" class="num">Lunas</th>
+            <th scope="col" class="num">Belum Lunas</th>
+            <th scope="col" class="num">Pendapatan Lunas</th>
+            <th scope="col" class="num">Sisa Tagihan</th>
           </tr>
         </thead>
         <tbody>

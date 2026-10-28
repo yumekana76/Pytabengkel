@@ -1,16 +1,29 @@
-# Kredensial production — JANGAN pernah di-commit
-js/config.prod.js
+
+# Environment dan rahasia
 .env
 .env.*
+!.env.example
 
-# Backup data bengkel
+# Konfigurasi production lokal
+js/config.prod.js
+
+# Supabase CLI sementara
+supabase/.temp/
+supabase/.branches/
+
+# Data backup lokal
 *.backup.json
 workshop-backup.json
 
-# OS
+# Dependensi dan hasil build
+node_modules/
+dist/
+.vercel/
+
+# Sistem operasi dan editor
 .DS_Store
 Thumbs.db
 *.log
 
-# Node
+# bla bla bla
 README.md

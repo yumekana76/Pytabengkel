@@ -243,10 +243,11 @@ function printRiwayatDetail() {
 
 function updateRiwayatStats() {
   const riwayat = getKendaraan().filter((item) => item.status === "Selesai");
-  const pendapatan = riwayat.reduce(
-    (total, item) => total + getServiceTotal(item),
-    0,
-  );
+  /* Pendapatan hanya dihitung dari tagihan yang SUDAH LUNAS —
+     service belum lunas tidak masuk angka pendapatan. */
+  const pendapatan = riwayat
+    .filter((item) => (item.pembayaran || "Belum Lunas") === "Lunas")
+    .reduce((total, item) => total + getServiceTotal(item), 0);
   const pelanggan = new Set(
     riwayat.map((item) => item.pelangganId).filter(Boolean),
   );

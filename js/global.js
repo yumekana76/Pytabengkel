@@ -325,10 +325,10 @@ function buildServiceInvoice(service) {
       <table class="invoice-table">
         <thead>
           <tr>
-            <th>Item</th>
-            <th class="num">Harga</th>
-            <th class="num">Qty</th>
-            <th class="num">Subtotal</th>
+            <th scope="col">Item</th>
+            <th scope="col" class="num">Harga</th>
+            <th scope="col" class="num">Qty</th>
+            <th scope="col" class="num">Subtotal</th>
           </tr>
         </thead>
         <tbody>${rows}</tbody>
@@ -571,6 +571,47 @@ function printServiceInvoice(service) {
 
 var idSequence = Math.floor(Math.random() * 1000);
 
+/* Sisipkan gallery foto service ke dalam container (async).
+   Dipanggil setelah detail modal di-render; tidak fatal kalau
+   tidak ada foto (container dibiarkan seperti adanya). */
+async function renderServicePhotos(container, serviceId) {
+  if (
+    !container ||
+    !supabaseClient ||
+    typeof getServicePhotos !== "function"
+  ) {
+    return;
+  }
+
+  try {
+    const photos = await getServicePhotos(serviceId);
+
+    /* Container mungkin sudah tertutup/diganti sementara menunggu. */
+    if (!photos.length || !container.isConnected) {
+      return;
+    }
+
+    const wrap = document.createElement("div");
+    wrap.className = "photo-gallery";
+
+    wrap.innerHTML = photos
+      .map(
+        (photo) => `
+        <figure>
+          <a href="${escapeHTML(photo.url)}" target="_blank" rel="noopener">
+            <img src="${escapeHTML(photo.url)}" alt="Foto service" loading="lazy" />
+          </a>
+          <figcaption class="photo-caption">${escapeHTML(photo.keterangan || "Foto")}</figcaption>
+        </figure>`,
+      )
+      .join("");
+
+    container.appendChild(wrap);
+  } catch (error) {
+    console.warn("[foto]", error?.message || error);
+  }
+}
+
 function nextNumericId(items) {
   const max = items.length
     ? Math.max(...items.map((item) => Number(item.id) || 0))
@@ -652,6 +693,49 @@ function getMekanikNama(mekanikId) {
     (item) => Number(item.id) === Number(mekanikId),
   );
   return mekanik ? mekanik.nama : "Belum ditugaskan";
+}
+
+/* =========================================
+   RATING & ULASAN
+   ========================================= */
+
+var RATING_LABELS = {
+  5: "Sangat Puas",
+  4: "Puas",
+  3: "Cukup",
+  2: "Kurang",
+  1: "Sangat Kurang",
+};
+
+function getRatingLabel(rating) {
+  return RATING_LABELS[Number(rating)] || "Belum dinilai";
+}
+
+/* Deret bintang untuk menampilkan rating (bukan input).
+   Semua bintang memakai ikon solid: yang terisi kuning, yang kosong abu. */
+function buildStarsHTML(rating, options = {}) {
+  const value = Math.min(5, Math.max(0, Number(rating) || 0));
+  const sizeClass = options.small ? " stars-small" : "";
+
+  let html = `<span class="stars${sizeClass}" role="img" aria-label="Rating ${value} dari 5 bintang">`;
+
+  for (let i = 1; i <= 5; i++) {
+    html += `<i class="fa-solid fa-star ${
+      i <= value ? "star-on" : "star-off"
+    }" aria-hidden="true"></i>`;
+  }
+
+  return `${html}</span>`;
+}
+
+/* Ringkas teks ulasan untuk tabel (komentar panjang dipotong). */
+function truncateText(value, max = 80) {
+  const text = String(value || "").trim();
+
+  if (!text) return "—";
+  if (text.length <= max) return text;
+
+  return `${text.slice(0, max).trimEnd()}…`;
 }
 
 /* URUTAN STATUS & KUNCI DATA SELESAI */
@@ -1311,87 +1395,13 @@ function initTopbar() {
 
 /* =========================================
    SKELETON LOADING
+   Definisi showSkeleton() ada di js/theme.js (dimuat dari
+   <head>) dan dipanggil tiap halaman lewat inline script
+   tepat setelah tag <body>, supaya skeleton tampil sejak
+   paint pertama — bukan setelah layout kosong terlanjur
+   dirender. global.js hanya MENGHILANGKAN skeleton setelah
+   data + sesi siap.
    ========================================= */
-
-function showSkeleton() {
-  if (document.getElementById("appSkeleton") || !document.body) {
-    return;
-  }
-
-  /* Bentuk skeleton mengikuti layout asli halaman (topbar, sidebar,
-     kartu statistik, dan baris tabel) supaya pengguna bisa menebak
-     isi halaman, bukan hanya melihat layar kosong. */
-  const navItems = Array.from({ length: 6 }, function (_, index) {
-    return `<span class="skeleton-bar sk-nav-item${
-      index === 0 ? " active" : ""
-    }"></span>`;
-  }).join("");
-
-  const cards = Array.from({ length: 4 }, function () {
-    return `
-      <div class="sk-card">
-        <span class="skeleton-bar sk-card-icon"></span>
-        <span class="skeleton-bar sk-card-number"></span>
-        <span class="skeleton-bar sk-card-label"></span>
-      </div>`;
-  }).join("");
-
-  const rows = Array.from({ length: 6 }, function () {
-    return `
-      <div class="sk-row">
-        <span class="skeleton-bar"></span>
-        <span class="skeleton-bar"></span>
-        <span class="skeleton-bar"></span>
-        <span class="skeleton-bar"></span>
-      </div>`;
-  }).join("");
-
-  const skeleton = document.createElement("div");
-  skeleton.id = "appSkeleton";
-  skeleton.className = "skeleton";
-  skeleton.setAttribute("role", "status");
-  skeleton.setAttribute("aria-live", "polite");
-  skeleton.innerHTML = `
-    <div class="sk-topbar">
-      <span class="skeleton-bar sk-logo"></span>
-      <span class="sk-spacer"></span>
-      <span class="skeleton-bar sk-chip"></span>
-      <span class="skeleton-bar sk-chip sk-chip-sm"></span>
-    </div>
-    <div class="sk-layout">
-      <div class="sk-side">
-        <span class="skeleton-bar sk-side-title"></span>
-        ${navItems}
-      </div>
-      <div class="sk-main">
-        <div class="sk-head">
-          <span class="skeleton-bar sk-title"></span>
-          <span class="skeleton-bar sk-sub w30"></span>
-        </div>
-        <div class="sk-cards">${cards}</div>
-        <div class="sk-panel">
-          <div class="sk-panel-head">
-            <div class="sk-panel-title">
-              <span class="skeleton-bar sk-panel-h"></span>
-              <span class="skeleton-bar sk-panel-p w30"></span>
-            </div>
-            <span class="skeleton-bar sk-panel-link"></span>
-          </div>
-          <div class="sk-thead">
-            <span class="skeleton-bar w20"></span>
-            <span class="skeleton-bar w20"></span>
-            <span class="skeleton-bar w20"></span>
-            <span class="skeleton-bar w20"></span>
-          </div>
-          <div class="sk-rows">${rows}</div>
-        </div>
-      </div>
-    </div>
-    <span class="skeleton-sr">Memuat data…</span>
-  `;
-
-  document.body.appendChild(skeleton);
-}
 
 function hideSkeleton() {
   const skeleton = document.getElementById("appSkeleton");
@@ -1402,9 +1412,10 @@ function hideSkeleton() {
   }
 }
 
-/* Skeleton dipasang SEGERA saat file ini dieksekusi (masih saat
-   parsing <body>), bukan menunggu DOMContentLoaded — jadi kilasan
-   halaman kosong sebelum data siap tidak sempat terlihat. */
+/* Fallback kalau sebuah halaman lupa memanggil showSkeleton()
+   via inline script setelah <body>. Pada halaman yang benar,
+   skeleton sudah ada sejak paint pertama dan baris ini hanya
+   no-op (showSkeleton() langsung return). */
 showSkeleton();
 
 /* =========================================
@@ -1501,4 +1512,5 @@ document.addEventListener("DOMContentLoaded", async function () {
   if (typeof initSparepartPage === "function") initSparepartPage();
   if (typeof initPengaturanPage === "function") initPengaturanPage();
   if (typeof initKeuanganPage === "function") initKeuanganPage();
+  if (typeof initUlasanPage === "function") initUlasanPage();
 });

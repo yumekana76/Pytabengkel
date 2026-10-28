@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; font-src 'self' https://cdnjs.cloudflare.com; img-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+      content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; font-src 'self' https://cdnjs.cloudflare.com; img-src 'self' data: https://*.supabase.co; connect-src 'self' https://*.supabase.co wss://*.supabase.co; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
     />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Pytabengkel - Customers</title>
@@ -14,6 +14,7 @@
       href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
     />
     <link rel="stylesheet" href="../../css/customers.css" />
+    <script src="../../js/error-logger.js"></script>
     <script src="../../js/theme.js"></script>
     <script src="../../js/config.js"></script>
     <script src="../../js/vendor/supabase.min.js"></script>
@@ -24,6 +25,8 @@
     </script>
   </head>
   <body>
+    <!-- Skeleton dipasang SEBELUM paint pertama (lihat js/theme.js) -->
+    <script>showSkeleton();</script>
     <header class="topbar">
       <button
         type="button"
@@ -74,7 +77,7 @@
             ><i class="fa-solid fa-gauge nav-icon" aria-hidden="true"></i>
             Dashboard
           </a>
-          <a href="customers.html" class="nav-link active"
+          <a href="customers.html" class="nav-link active" aria-current="page"
             ><i class="fa-solid fa-users nav-icon" aria-hidden="true"></i>
             Customers
           </a>
@@ -89,6 +92,10 @@
           <a href="riwayat.html" class="nav-link"
             ><i class="fa-solid fa-clock-rotate-left nav-icon" aria-hidden="true"></i>
             Riwayat
+          </a>
+          <a href="ulasan.html" class="nav-link"
+            ><i class="fa-solid fa-star nav-icon" aria-hidden="true"></i>
+            Ulasan
           </a>
           <a href="keuangan.html" class="nav-link"
             ><i class="fa-solid fa-wallet nav-icon" aria-hidden="true"></i>
@@ -168,17 +175,18 @@
           </div>
           <div class="table-container">
             <table>
+              <caption class="sr-only">Daftar customer</caption>
               <thead>
                 <tr>
-                  <th>No</th>
-                  <th class="cell-id-col">ID</th>
-                  <th>Nama</th>
-                  <th>No. HP</th>
-                  <th>Email</th>
-                  <th>Alamat</th>
-                  <th>Kendaraan</th>
-                  <th>Akun Customer</th>
-                  <th>Aksi</th>
+                  <th scope="col">No</th>
+                  <th scope="col" class="cell-id-col">ID</th>
+                  <th scope="col">Nama</th>
+                  <th scope="col">No. HP</th>
+                  <th scope="col">Email</th>
+                  <th scope="col">Alamat</th>
+                  <th scope="col">Kendaraan</th>
+                  <th scope="col">Akun Customer</th>
+                  <th scope="col">Aksi</th>
                 </tr>
               </thead>
               <tbody id="customerTable"></tbody>
@@ -192,7 +200,13 @@
       </main>
     </div>
     <div class="modal-overlay" id="customerModal">
-      <div class="modal">
+
+      <div
+        class="modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="customerModalTitle"
+      >
         <div class="modal-header">
           <div>
             <h3 id="customerModalTitle">Tambah Customer</h3>
@@ -298,10 +312,16 @@
       </div>
     </div>
     <div class="modal-overlay" id="customerDetailModal">
-      <div class="modal">
+
+      <div
+        class="modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="customerDetailModal-title"
+      >
         <div class="modal-header">
           <div>
-            <h3>Detail Customer</h3>
+            <h3 id="customerDetailModal-title">Detail Customer</h3>
             <p>Informasi lengkap pelanggan.</p>
           </div>
           <button type="button" class="modal-close" data-close-modal="customerDetailModal">
@@ -319,10 +339,16 @@
       </div>
     </div>
     <div class="modal-overlay" id="customerAccountModal">
-      <div class="modal">
+
+      <div
+        class="modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="customerAccountModal-title"
+      >
         <div class="modal-header">
           <div>
-            <h3>Akun Login Customer</h3>
+            <h3 id="customerAccountModal-title">Akun Login Customer</h3>
             <p>Customer memakai akun ini untuk masuk ke portal customer.</p>
           </div>
           <button

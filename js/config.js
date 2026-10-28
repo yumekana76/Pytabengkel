@@ -30,18 +30,6 @@ const SUPABASE_DEFAULTS = {
   url: "https://ggmjihuasfcjxvuewryn.supabase.co",
   anonKey: "sb_publishable_kx2HEvryTZWqtxDDiTtRsA_SMRsGEUH",
 
-  /* Email yang otomatis mendapat role admin saat mendaftar. */
-  adminEmail: "admin@workshop.com",
-
-  /* Akun lokal (dipakai hanya saat Supabase belum terhubung / mode lokal).
-     Credential ini SENGAJA TIDAK ditampilkan di halaman login supaya
-     tidak mudah dilihat orang lain. Ganti passwordnya di sini (atau di
-     `config.prod.js`) sebelum aplikasi dipakai demo di depan umum. */
-  localAccounts: {
-    admin: { email: "admin@workshop.com", password: "admin123" },
-    customer: { email: "customer@workshop.com", password: "customer123" },
-  },
-
   /* Halaman tujuan setelah login. */
   adminRedirect: "dashboard.html",
   customerRedirect: "dashboard.html",

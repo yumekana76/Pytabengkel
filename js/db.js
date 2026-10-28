@@ -20,6 +20,7 @@ var DB = {
     services: [],
     mechanics: [],
     spareparts: [],
+    reviews: [],
     accounts: [],
     logs: [],
     info: {},
@@ -29,6 +30,7 @@ var DB = {
     services: new Set(),
     mechanics: new Set(),
     spareparts: new Set(),
+    reviews: new Set(),
   },
   queue: Promise.resolve(),
 };
@@ -103,23 +105,26 @@ function customerFromDb(row) {
 }
 
 function mekanikToDb(row) {
+  /* Nomor telepon TIDAK dikirim ke tabel mechanics (kolomnya sudah
+     dipindah ke mechanics_private — lihat saveMekanik). */
   return {
     id: Number(row.id),
     kode: row.kode || "",
     nama: row.nama || "",
     spesialisasi: row.spesialisasi || "",
-    telepon: row.telepon || "",
     status: row.status || "Aktif",
   };
 }
 
-function mekanikFromDb(row) {
+function mekanikFromDb(row, telepon) {
   return {
     id: Number(row.id),
     kode: row.kode || "",
     nama: row.nama || "",
     spesialisasi: row.spesialisasi || "",
-    telepon: row.telepon || "",
+    /* telepon diisi dari mechanics_private (hanya admin yang dapat data;
+       customer otomatis mendapat string kosong). */
+    telepon: telepon || "",
     status: row.status || "Aktif",
   };
 }
@@ -188,6 +193,29 @@ function serviceFromDb(row) {
   };
 }
 
+function reviewToDb(row) {
+  return {
+    id: Number(row.id),
+    kode: row.kode || "",
+    service_id: Number(row.serviceId),
+    customer_id: row.customerId ? Number(row.customerId) : null,
+    rating: Math.min(5, Math.max(1, Number(row.rating) || 0)),
+    komentar: row.komentar || "",
+  };
+}
+
+function reviewFromDb(row) {
+  return {
+    id: Number(row.id),
+    kode: row.kode || "",
+    serviceId: Number(row.service_id),
+    customerId: row.customer_id ? Number(row.customer_id) : null,
+    rating: Number(row.rating) || 0,
+    komentar: row.komentar || "",
+    createdAt: row.created_at || "",
+  };
+}
+
 /* ---------------------------------------------------------------------
    INISIALISASI
    --------------------------------------------------------------------- */
@@ -229,28 +257,66 @@ async function dbInitOnce() {
        setelahnya — menghemat satu putaran jaringan penuh. */
     const logsReady = dbLoadLogs();
 
-    const [customers, services, mechanics, spareparts, info, profiles] =
-      await Promise.all([
-        supabaseClient.from("customers").select("*").order("id"),
-        supabaseClient.from("services").select("*").order("id"),
-        supabaseClient.from("mechanics").select("*").order("id"),
-        supabaseClient.from("spareparts").select("*").order("id"),
-        supabaseClient.from("workshop_info").select("*").limit(1),
-        supabaseClient.from("profiles").select("*"),
-      ]);
+    /* Ulasan dimuat terpisah dengan catch sendiri: kalau tabel `reviews`
+       belum dibuat di Supabase, halaman lain tetap harus berfungsi. */
+    const reviewsReady = supabaseClient
+      .from("reviews")
+      .select("*")
+      .order("id")
+      .then((result) => {
+        if (result.error) throw result.error;
+        return (result.data || []).map(reviewFromDb);
+      })
+      .catch((error) => {
+        dbLog(
+          "Gagal memuat reviews (jalankan ulang supabase/schema.sql?):",
+          error.message,
+        );
+        return [];
+      });
+
+    const [
+      customers,
+      services,
+      mechanics,
+      mechPrivate,
+      spareparts,
+      info,
+      profiles,
+    ] = await Promise.all([
+      supabaseClient.from("customers").select("*").order("id"),
+      supabaseClient.from("services").select("*").order("id"),
+      supabaseClient.from("mechanics").select("*").order("id"),
+      supabaseClient.from("mechanics_private").select("*"),
+      supabaseClient.from("spareparts").select("*").order("id"),
+      supabaseClient.from("workshop_info").select("*").limit(1),
+      supabaseClient.from("profiles").select("*"),
+    ]);
 
     if (customers.error) throw customers.error;
     if (services.error) throw services.error;
 
     const rawCustomers = (customers.data || []).map(customerFromDb);
     const rawServices = (services.data || []).map(serviceFromDb);
-    const rawMechanics = (mechanics.data || []).map(mekanikFromDb);
+
+    /* Nomor telepon menyusul dari tabel private (admin dapat semua,
+       customer kosong karena RLS). Gagal sekalipun tidak fatal. */
+    const teleponMap = new Map(
+      (mechPrivate.data || []).map((row) => [
+        Number(row.mechanic_id),
+        row.telepon || "",
+      ]),
+    );
+    const rawMechanics = (mechanics.data || []).map((row) =>
+      mekanikFromDb(row, teleponMap.get(Number(row.id))),
+    );
     const rawSpareparts = (spareparts.data || []).map(sparepartFromDb);
 
     DB.cache.customers = ensureKode(rawCustomers, "customers");
     DB.cache.services = ensureKode(rawServices, "kendaraan");
     DB.cache.mechanics = ensureKode(rawMechanics, "mekanik");
     DB.cache.spareparts = ensureKode(rawSpareparts, "sparepart");
+    DB.cache.reviews = ensureKode(await reviewsReady, "reviews");
     DB.cache.info = info.data?.[0]
       ? {
           nama: info.data[0].nama,
@@ -309,6 +375,7 @@ async function dbInitOnce() {
     dbPersistLocal("workshop_kendaraan", DB.cache.services);
     dbPersistLocal("workshop_mekanik", DB.cache.mechanics);
     dbPersistLocal("workshop_sparepart", DB.cache.spareparts);
+    dbPersistLocal("workshop_reviews", DB.cache.reviews);
     dbPersistLocal("workshop_info", DB.cache.info);
   } catch (error) {
     console.error("Gagal memuat data dari Supabase:", error);
@@ -331,6 +398,7 @@ function dbSyncKnown() {
   DB.known.spareparts = new Set(
     DB.cache.spareparts.map((item) => Number(item.id)),
   );
+  DB.known.reviews = new Set(DB.cache.reviews.map((item) => Number(item.id)));
 }
 
 /* Simpan kode yang belum ada di server (hasil backfill). */
@@ -383,6 +451,10 @@ function dbLoadFromLocal() {
     readLocalArray("workshop_sparepart", []),
     "sparepart",
   );
+  DB.cache.reviews = ensureKode(
+    readLocalArray("workshop_reviews", []),
+    "reviews",
+  );
 
   try {
     DB.cache.info = JSON.parse(localStorage.getItem("workshop_info") || "{}");
@@ -422,42 +494,6 @@ function dbLoadFromLocal() {
   dbSyncKnown();
 }
 
-/* Akun demo untuk mode lokal: admin + customer.
-   Credential diambil dari `js/config.js` (window.SUPABASE_CONFIG.localAccounts)
-   dan tidak pernah ditampilkan di halaman login. */
-function dbBuildDemoAccounts() {
-  const localAccounts = window.SUPABASE_CONFIG?.localAccounts || {};
-
-  const adminAccount = localAccounts.admin || {
-    email: "admin@workshop.com",
-    password: "admin123",
-  };
-
-  const customerAccount = localAccounts.customer || {
-    email: "customer@workshop.com",
-    password: "customer123",
-  };
-
-  return [
-    {
-      id: 1,
-      customerId: null,
-      nama: "Administrator Bengkel",
-      email: adminAccount.email,
-      password: adminAccount.password,
-      role: "admin",
-    },
-    {
-      id: 2,
-      customerId: null,
-      nama: "Customer",
-      email: customerAccount.email,
-      password: customerAccount.password,
-      role: "customer",
-    },
-  ];
-}
-
 function readLocalArray(key, fallback) {
   try {
     const raw = localStorage.getItem(key);
@@ -490,6 +526,7 @@ var KODE_PREFIX = {
   kendaraan: "knd",
   mekanik: "mek",
   sparepart: "spp",
+  reviews: "rev",
 };
 
 function formatKode(prefix, nomor, panjang = 3) {
@@ -498,10 +535,12 @@ function formatKode(prefix, nomor, panjang = 3) {
 
 /* Nomor urut berikutnya (maks dari kode yang sudah ada). */
 function nextKodeNumber(items) {
-  return (items || []).reduce((maks, item) => {
-    const cocok = String(item.kode || "").match(/(\d+)\s*$/);
-    return Math.max(maks, cocok ? Number(cocok[1]) : 0);
-  }, 0) + 1;
+  return (
+    (items || []).reduce((maks, item) => {
+      const cocok = String(item.kode || "").match(/(\d+)\s*$/);
+      return Math.max(maks, cocok ? Number(cocok[1]) : 0);
+    }, 0) + 1
+  );
 }
 
 function nextKode(type, items) {
@@ -728,6 +767,22 @@ function saveMekanik(data) {
         notifyDbError(error.message);
         return;
       }
+
+      /* Nomor telepon disimpan terpisah di mechanics_private
+         (RLS admin-only; fungsi ini sudah dijaga dbIsAdmin() di atas). */
+      const privatePayload = data.map((item) => ({
+        mechanic_id: Number(item.id),
+        telepon: item.telepon || "",
+      }));
+
+      const { error: privateError } = await supabaseClient
+        .from("mechanics_private")
+        .upsert(privatePayload, { onConflict: "mechanic_id" });
+
+      if (privateError) {
+        notifyDbError(privateError.message);
+        return;
+      }
     }
 
     if (removed.length) {
@@ -778,6 +833,163 @@ function saveSparepart(sparepart) {
       await supabaseClient.from("spareparts").delete().in("id", removed);
     }
   });
+}
+
+/* ULASAN / RATING */
+
+function getReviews() {
+  return DB.cache.reviews;
+}
+
+/* Ulasan milik sebuah service (satu service maksimal satu ulasan). */
+function getReviewByServiceId(serviceId) {
+  return (
+    getReviews().find((item) => Number(item.serviceId) === Number(serviceId)) ||
+    null
+  );
+}
+
+function saveReviews(reviews) {
+  DB.cache.reviews = reviews;
+  dbPersistLocal("workshop_reviews", reviews);
+
+  if (!supabaseClient) {
+    return;
+  }
+
+  const known = DB.known.reviews;
+  const current = new Set(reviews.map((item) => Number(item.id)));
+  const removed = [...known].filter((id) => !current.has(id));
+
+  DB.known.reviews = current;
+
+  dbQueue(async () => {
+    let payload = reviews.map(reviewToDb);
+
+    /* Customer hanya boleh menyimpan ulasan miliknya sendiri. */
+    if (!dbIsAdmin()) {
+      const profile = getCurrentProfile();
+      const ownId = profile?.customer_id ? Number(profile.customer_id) : null;
+
+      if (!ownId) {
+        return;
+      }
+
+      payload = payload.filter((row) => row.customer_id === ownId);
+    }
+
+    if (payload.length) {
+      const { error } = await supabaseClient
+        .from("reviews")
+        .upsert(payload, { onConflict: "id" });
+
+      if (error) {
+        notifyDbError(error.message);
+        return;
+      }
+    }
+
+    /* Penghapusan baris hanya dari sisi admin (mis. penataan data). */
+    if (dbIsAdmin() && removed.length) {
+      await supabaseClient.from("reviews").delete().in("id", removed);
+    }
+  });
+}
+
+/* ---------------------------------------------------------------------
+   FOTO SERVICE (Supabase Storage)
+   Hanya admin yang mengunggah/menghapus; customer hanya membaca foto
+   service miliknya (RLS service_photos). Mode lokal: tidak tersedia.
+   --------------------------------------------------------------------- */
+
+async function getServicePhotos(serviceId) {
+  if (!supabaseClient || !serviceId) {
+    return [];
+  }
+
+  const { data, error } = await supabaseClient
+    .from("service_photos")
+    .select("*")
+    .eq("service_id", Number(serviceId))
+    .order("id");
+
+  if (error) {
+    dbLog("Gagal memuat foto service:", error.message);
+    return [];
+  }
+
+  return data || [];
+}
+
+/* Unggah satu file ke bucket "service-photos", lalu catat barisnya.
+   Melempar Error dengan pesan yang bisa ditampilkan langsung. */
+async function uploadServicePhoto(serviceId, file) {
+  if (!supabaseClient) {
+    throw new Error("Foto hanya tersedia pada mode Supabase.");
+  }
+
+  if (!file || !String(file.type || "").startsWith("image/")) {
+    throw new Error("File harus berupa gambar (jpg/png/webp).");
+  }
+
+  if (file.size > 5 * 1024 * 1024) {
+    throw new Error("Ukuran foto maksimal 5 MB.");
+  }
+
+  const extRaw =
+    String(file.name || "")
+      .split(".")
+      .pop() || "jpg";
+  const ext = extRaw.toLowerCase().replace(/[^a-z0-9]/g, "") || "jpg";
+  const path = `svc-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+
+  const { error: uploadError } = await supabaseClient.storage
+    .from("service-photos")
+    .upload(path, file, { upsert: false, contentType: file.type });
+
+  if (uploadError) {
+    throw new Error(uploadError.message);
+  }
+
+  const { data: pub } = supabaseClient.storage
+    .from("service-photos")
+    .getPublicUrl(path);
+
+  const { error: insertError } = await supabaseClient
+    .from("service_photos")
+    .insert({
+      service_id: Number(serviceId),
+      path,
+      url: pub.publicUrl,
+      keterangan: String(file.name || "").slice(0, 120),
+    });
+
+  if (insertError) {
+    /* Gagal mencatat baris -> bersihkan object yang baru diunggah. */
+    await supabaseClient.storage.from("service-photos").remove([path]);
+    throw new Error(insertError.message);
+  }
+
+  return pub.publicUrl;
+}
+
+async function deleteServicePhoto(photo) {
+  if (!supabaseClient || !photo) {
+    return;
+  }
+
+  const { error } = await supabaseClient
+    .from("service_photos")
+    .delete()
+    .eq("id", Number(photo.id));
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  if (photo.path) {
+    await supabaseClient.storage.from("service-photos").remove([photo.path]);
+  }
 }
 
 /* AKUN CUSTOMER */
@@ -900,7 +1112,8 @@ function saveLogs(logs) {
 
 /* Catat aktivitas pengguna (create / update / delete / pembayaran). */
 function addLog(aksi, entitas, keterangan = "", kode = "") {
-  const profile = typeof getCurrentProfile === "function" ? getCurrentProfile() : null;
+  const profile =
+    typeof getCurrentProfile === "function" ? getCurrentProfile() : null;
   const nama = profile?.nama || "Administrator Bengkel";
 
   const entry = {

@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; font-src 'self' https://cdnjs.cloudflare.com; img-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+      content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; font-src 'self' https://cdnjs.cloudflare.com; img-src 'self' data: https://*.supabase.co; connect-src 'self' https://*.supabase.co wss://*.supabase.co; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
     />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Login | Pytabengkel</title>
@@ -17,6 +17,7 @@
     <!-- WAJIB urut: theme -> config -> library -> lapisan auth supaya
          db.js (panggil isSupabaseMode()) dan login.js (panggil Auth)
          sudah menemukan definisinya saat dieksekusi. -->
+    <script src="../js/error-logger.js"></script>
     <script src="../js/theme.js"></script>
     <script src="../js/config.js"></script>
     <script src="../js/vendor/supabase.min.js"></script>
@@ -66,6 +67,21 @@
             </div>
           </div>
         </div>
+        <div class="testimoni-section" id="testimoniSection" hidden>
+          <div class="testimoni-head">
+            <h3>
+              <i class="fa-solid fa-star" aria-hidden="true"></i>
+              Apa Kata Pelanggan
+            </h3>
+            <div class="testimoni-summary">
+              <span class="testimoni-rata" id="testimoniRata">-</span>
+              <span id="testimoniStars"></span>
+              <span class="testimoni-jumlah" id="testimoniJumlah"></span>
+            </div>
+          </div>
+          <div class="testimoni-list" id="publicTestimoni"></div>
+        </div>
+
         <div class="copyright">© 2026 Pytabengkel</div>
       </section>
 
@@ -227,5 +243,6 @@
     <script src="../js/db.js"></script>
     <script src="../js/auth.js"></script>
     <script src="../js/login.js"></script>
+    <script src="../js/testimoni.js"></script>
   </body>
 </html>
