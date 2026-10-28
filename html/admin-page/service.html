@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; font-src 'self' https://cdnjs.cloudflare.com; img-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+      content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; font-src 'self' https://cdnjs.cloudflare.com; img-src 'self' data: https://*.supabase.co; connect-src 'self' https://*.supabase.co wss://*.supabase.co; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
     />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Pytabengkel - Service</title>
@@ -14,6 +14,7 @@
       href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
     />
     <link rel="stylesheet" href="../../css/service.css" />
+    <script src="../../js/error-logger.js"></script>
     <script src="../../js/theme.js"></script>
     <script src="../../js/config.js"></script>
     <script src="../../js/vendor/supabase.min.js"></script>
@@ -24,6 +25,8 @@
     </script>
   </head>
   <body>
+    <!-- Skeleton dipasang SEBELUM paint pertama (lihat js/theme.js) -->
+    <script>showSkeleton();</script>
     <header class="topbar">
       <button
         type="button"
@@ -82,13 +85,17 @@
             ><i class="fa-solid fa-car nav-icon" aria-hidden="true"></i>
             Kendaraan
           </a>
-          <a href="service.html" class="nav-link active"
+          <a href="service.html" class="nav-link active" aria-current="page"
             ><i class="fa-solid fa-screwdriver-wrench nav-icon" aria-hidden="true"></i>
             Service
           </a>
           <a href="riwayat.html" class="nav-link"
             ><i class="fa-solid fa-clock-rotate-left nav-icon" aria-hidden="true"></i>
             Riwayat
+          </a>
+          <a href="ulasan.html" class="nav-link"
+            ><i class="fa-solid fa-star nav-icon" aria-hidden="true"></i>
+            Ulasan
           </a>
           <a href="keuangan.html" class="nav-link"
             ><i class="fa-solid fa-wallet nav-icon" aria-hidden="true"></i>
@@ -175,19 +182,20 @@
           </div>
           <div class="table-container">
             <table>
+              <caption class="sr-only">Daftar proses service</caption>
               <thead>
                 <tr>
-                  <th>No</th>
-                  <th class="cell-id-col">ID</th>
-                  <th>No. Polisi</th>
-                  <th>Pelanggan</th>
-                  <th>Keluhan</th>
-                  <th>Mekanik</th>
-                  <th>Status</th>
-                  <th>Pembayaran</th>
-                  <th>Total</th>
-                  <th>Tanggal</th>
-                  <th>Aksi</th>
+                  <th scope="col">No</th>
+                  <th scope="col" class="cell-id-col">ID</th>
+                  <th scope="col">No. Polisi</th>
+                  <th scope="col">Pelanggan</th>
+                  <th scope="col">Keluhan</th>
+                  <th scope="col">Mekanik</th>
+                  <th scope="col">Status</th>
+                  <th scope="col">Pembayaran</th>
+                  <th scope="col">Total</th>
+                  <th scope="col">Tanggal</th>
+                  <th scope="col">Aksi</th>
                 </tr>
               </thead>
               <tbody id="serviceTable"></tbody>
@@ -198,7 +206,13 @@
       </main>
     </div>
     <div class="modal-overlay" id="serviceModal">
-      <div class="modal">
+
+      <div
+        class="modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="serviceModalTitle"
+      >
         <div class="modal-header">
           <div>
             <h3 id="serviceModalTitle">Proses Service</h3>
@@ -267,6 +281,17 @@
                   </button>
                 </div>
                 <div id="serviceSparepartList" class="service-part-list"></div>
+              </div>
+              <div class="form-group form-full" id="servicePhotoZone" hidden>
+                <label>Foto Service</label>
+                <div class="photo-upload-zone">
+                  <div id="servicePhotoList"></div>
+                  <input type="file" id="servicePhotoInput" accept="image/*" multiple />
+                  <span class="photo-upload-hint"
+                    >Unggah foto kerusakan / hasil kerja (maks 5 MB per file, maks
+                    8 foto). Klik foto untuk memperbesar.</span
+                  >
+                </div>
               </div>
             </div>
           </div>

@@ -571,11 +571,16 @@ function updateKendaraanStats() {
     "totalSelesai",
     data.filter((item) => item.status === "Selesai").length,
   );
+  /* Pendapatan hanya dihitung dari service selesai yang SUDAH LUNAS. */
   setText(
     "totalPendapatan",
     formatRupiah(
       data
-        .filter((item) => item.status === "Selesai")
+        .filter(
+          (item) =>
+            item.status === "Selesai" &&
+            (item.pembayaran || "Belum Lunas") === "Lunas",
+        )
         .reduce((total, item) => total + getServiceTotal(item), 0),
     ),
   );

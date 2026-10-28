@@ -754,3 +754,166 @@ body {
     display: none;
   }
 }
+
+/* Teks hanya untuk pembaca layar (judul halaman redirect). */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* =====================================================================
+   TESTIMONI PUBLIK
+   Panel kiri selalu bertema gelap, jadi warnanya tidak mengikuti
+   terang/gelap. Gaya .stars diduplikasi dari global.css karena
+   halaman ini tidak memuat global.css.
+   ===================================================================== */
+
+.testimoni-section {
+  display: grid;
+  gap: 12px;
+  margin-top: 26px;
+}
+
+/* Atribut hidden harus tetap menang atas display:grid di atas. */
+.testimoni-section[hidden] {
+  display: none;
+}
+
+.testimoni-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.testimoni-head h3 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+  margin: 0;
+  color: #fff;
+}
+
+.testimoni-head h3 .fa-star {
+  color: #f59e0b;
+}
+
+.testimoni-summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.testimoni-rata {
+  font-size: 22px;
+  font-weight: 800;
+  color: #fbbf24;
+  line-height: 1;
+}
+
+.testimoni-jumlah {
+  color: #9ca3af;
+  font-size: 12px;
+}
+
+.testimoni-list {
+  display: grid;
+  gap: 10px;
+  max-height: 232px;
+  overflow-y: auto;
+  padding-right: 4px;
+  scrollbar-width: thin;
+  scrollbar-color: #4b5563 transparent;
+}
+
+.testimoni-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.testimoni-list::-webkit-scrollbar-thumb {
+  background: #4b5563;
+  border-radius: 999px;
+}
+
+.testimoni-card {
+  display: grid;
+  gap: 6px;
+  padding: 12px 14px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+}
+
+.testimoni-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.testimoni-nama {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 700;
+  font-size: 13px;
+  color: #fff;
+}
+
+.testimoni-nama .fa-circle-user {
+  color: #93c5fd;
+}
+
+.testimoni-tgl {
+  color: #9ca3af;
+  font-size: 11px;
+}
+
+.testimoni-card-rating {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.testimoni-rating-label {
+  color: #fcd34d;
+  font-size: 12px;
+}
+
+.testimoni-teks {
+  margin: 0;
+  color: #d1d5db;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+/* Bintang (duplikat dari global.css) */
+.stars {
+  display: inline-flex;
+  gap: 2px;
+  font-size: 14px;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.stars .star-on {
+  color: #f59e0b;
+}
+
+.stars .star-off {
+  color: #64748b;
+}
+
+.stars-small {
+  font-size: 12px;
+}

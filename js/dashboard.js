@@ -15,8 +15,14 @@ function updateDashboard() {
 
   const selesai = kendaraan.filter((item) => item.status === "Selesai").length;
 
+  /* Pendapatan hanya dihitung dari service selesai yang SUDAH LUNAS —
+     tagihan belum lunas tidak masuk angka pendapatan. */
   const pendapatan = kendaraan
-    .filter((item) => item.status === "Selesai")
+    .filter(
+      (item) =>
+        item.status === "Selesai" &&
+        (item.pembayaran || "Belum Lunas") === "Lunas",
+    )
     .reduce((total, item) => total + getServiceTotal(item), 0);
 
   setText("totalKendaraan", kendaraan.length);

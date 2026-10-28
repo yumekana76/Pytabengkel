@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; font-src 'self' https://cdnjs.cloudflare.com; img-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+      content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; font-src 'self' https://cdnjs.cloudflare.com; img-src 'self' data: https://*.supabase.co; connect-src 'self' https://*.supabase.co wss://*.supabase.co; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
     />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Pengaturan</title>
@@ -14,6 +14,7 @@
       href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
     />
     <link rel="stylesheet" href="../../css/pengaturan.css" />
+    <script src="../../js/error-logger.js"></script>
     <script src="../../js/theme.js"></script>
     <script src="../../js/config.js"></script>
     <script src="../../js/vendor/supabase.min.js"></script>
@@ -24,6 +25,8 @@
     </script>
   </head>
   <body>
+    <!-- Skeleton dipasang SEBELUM paint pertama (lihat js/theme.js) -->
+    <script>showSkeleton();</script>
     <header class="topbar">
       <button
         type="button"
@@ -90,6 +93,10 @@
             ><i class="fa-solid fa-clock-rotate-left nav-icon" aria-hidden="true"></i>
             Riwayat
           </a>
+          <a href="ulasan.html" class="nav-link"
+            ><i class="fa-solid fa-star nav-icon" aria-hidden="true"></i>
+            Ulasan
+          </a>
           <a href="keuangan.html" class="nav-link"
             ><i class="fa-solid fa-wallet nav-icon" aria-hidden="true"></i>
             Keuangan
@@ -102,7 +109,7 @@
             ><i class="fa-solid fa-gears nav-icon" aria-hidden="true"></i>
             Sparepart
           </a>
-          <a href="pengaturan.html" class="nav-link active"
+          <a href="pengaturan.html" class="nav-link active" aria-current="page"
             ><i class="fa-solid fa-gear nav-icon" aria-hidden="true"></i>
             Pengaturan
           </a>
@@ -143,15 +150,30 @@
             </button>
             <span class="setting-description">Pulihkan data dari cadangan yang tersedia.</span>
           </div>
+          <div class="setting-btn">
+            <button type="button" class="btn btn-secondary" id="btnErrorLog">
+              <i class="fa-solid fa-bug" aria-hidden="true"></i> Log Error Klien
+            </button>
+            <span class="setting-description"
+              >Error JavaScript yang tercatat dari browser pengguna — tempat
+              pertama memeriksa kalau ada yang error.</span
+            >
+          </div>
           <input type="file" id="restoreFile" accept="application/json" hidden />
         </section>
       </main>
     </div>
     <div class="modal-overlay" id="infoModal">
-      <div class="modal">
+
+      <div
+        class="modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="infoModal-title"
+      >
         <div class="modal-header">
           <div>
-            <h3>Informasi Bengkel</h3>
+            <h3 id="infoModal-title">Informasi Bengkel</h3>
             <p>Kelola nama, alamat, kontak, dan jam operasional bengkel.</p>
           </div>
           <button type="button" class="modal-close" data-close-modal="infoModal" aria-label="Tutup">
@@ -228,10 +250,16 @@
       </div>
     </div>
     <div class="modal-overlay" id="resetModal">
-      <div class="modal">
+
+      <div
+        class="modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="resetModal-title"
+      >
         <div class="modal-header">
           <div>
-            <h3>Reset Data Harian</h3>
+            <h3 id="resetModal-title">Reset Data Harian</h3>
             <p>Tindakan ini tidak dapat dibatalkan.</p>
           </div>
           <button
@@ -256,6 +284,43 @@
           <button type="button" class="btn btn-primary" id="btnConfirmReset">
             <i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>
             Ya, Reset
+          </button>
+        </div>
+      </div>
+    </div>
+    <div class="modal-overlay" id="errorLogModal">
+      <div
+        class="modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="errorLogModal-title"
+      >
+        <div class="modal-header">
+          <div>
+            <h3 id="errorLogModal-title">Log Error Klien</h3>
+            <p>
+              Error JavaScript dari browser pengguna — lokal + yang terkirim
+              ke server.
+            </p>
+          </div>
+          <button
+            type="button"
+            class="modal-close"
+            data-close-modal="errorLogModal"
+            aria-label="Tutup"
+          >
+            ×
+          </button>
+        </div>
+        <div class="modal-body">
+          <div id="errorLogList" class="error-log-list"></div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" id="btnClearErrorLog">
+            <i class="fa-solid fa-trash" aria-hidden="true"></i> Bersihkan
+          </button>
+          <button type="button" class="btn btn-primary" data-close-modal="errorLogModal">
+            Tutup
           </button>
         </div>
       </div>

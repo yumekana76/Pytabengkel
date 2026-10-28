@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; font-src 'self' https://cdnjs.cloudflare.com; img-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+      content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; font-src 'self' https://cdnjs.cloudflare.com; img-src 'self' data: https://*.supabase.co; connect-src 'self' https://*.supabase.co wss://*.supabase.co; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
     />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Kendaraan Saya | Pytabengkel</title>
@@ -14,6 +14,7 @@
       href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
     />
     <link rel="stylesheet" href="../../css/customer.css" />
+    <script src="../../js/error-logger.js"></script>
     <script src="../../js/theme.js"></script>
     <script src="../../js/config.js"></script>
     <script src="../../js/vendor/supabase.min.js"></script>
@@ -24,6 +25,8 @@
     </script>
   </head>
   <body>
+    <!-- Skeleton dipasang SEBELUM paint pertama (lihat js/theme.js) -->
+    <script>showSkeleton();</script>
     <header class="topbar">
       <button
         type="button"
@@ -74,7 +77,7 @@
             <i class="fa-solid fa-gauge nav-icon" aria-hidden="true"></i>
             <span>Dashboard</span>
           </a>
-          <a href="kendaraan.html" class="nav-link active">
+          <a href="kendaraan.html" class="nav-link active" aria-current="page">
             <i class="fa-solid fa-car nav-icon" aria-hidden="true"></i>
             <span>Kendaraan Saya</span>
           </a>
@@ -177,10 +180,16 @@
 
     <!-- MODAL AJUKAN SERVICE -->
     <div class="modal-overlay" id="requestModal">
-      <div class="modal">
+
+      <div
+        class="modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="requestModal-title"
+      >
         <div class="modal-header">
           <div>
-            <h3>Ajukan Service</h3>
+            <h3 id="requestModal-title">Ajukan Service</h3>
             <p>Permintaan langsung masuk ke antrean service bengkel.</p>
           </div>
           <button
@@ -266,10 +275,16 @@
 
     <!-- MODAL DETAIL KENDARAAN -->
     <div class="modal-overlay" id="vehicleDetailModal">
-      <div class="modal">
+
+      <div
+        class="modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="vehicleDetailModal-title"
+      >
         <div class="modal-header">
           <div>
-            <h3>Detail Kendaraan</h3>
+            <h3 id="vehicleDetailModal-title">Detail Kendaraan</h3>
             <p>Informasi lengkap kendaraan dan service Anda.</p>
           </div>
           <button

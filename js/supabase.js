@@ -479,11 +479,7 @@ var Auth = {
       telepon: meta.telepon || "",
       email: user.email || "",
       alamat: meta.alamat || "",
-      role:
-        user.email?.toLowerCase() ===
-        String(SUPABASE_SETTINGS.adminEmail || "").toLowerCase()
-          ? "admin"
-          : "customer",
+      role: "customer",
     };
 
     const { data: created, error: insertError } = await supabaseClient
