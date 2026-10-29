@@ -79,7 +79,19 @@
               <span class="testimoni-jumlah" id="testimoniJumlah"></span>
             </div>
           </div>
+          <!-- Filter bintang: tiap tombol memuat jumlah ulasannya. -->
+          <div
+            class="testimoni-filter"
+            id="testimoniFilter"
+            role="group"
+            aria-label="Filter ulasan berdasarkan bintang"
+          ></div>
           <div class="testimoni-list" id="publicTestimoni"></div>
+          <button type="button" class="testimoni-more" id="testimoniMore" hidden>
+            <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
+            <span>Lihat semua ulasan</span>
+            <span class="testimoni-more-count" id="testimoniMoreCount"></span>
+          </button>
         </div>
 
         <div class="copyright">© 2026 Pytabengkel</div>
@@ -239,6 +251,38 @@
         </div>
       </section>
     </main>
+
+    <!-- Modal semua ulasan (dibuka tombol "Lihat semua ulasan") -->
+    <div class="testimoni-modal-overlay" id="testimoniModal" hidden>
+      <div
+        class="testimoni-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="testimoniModalTitle"
+      >
+        <div class="testimoni-modal-head">
+          <div>
+            <h2 id="testimoniModalTitle">Semua Ulasan</h2>
+            <p id="testimoniModalSub"></p>
+          </div>
+          <button
+            type="button"
+            class="testimoni-modal-close"
+            id="testimoniModalClose"
+            aria-label="Tutup"
+          >
+            <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+          </button>
+        </div>
+        <div
+          class="testimoni-filter"
+          id="testimoniModalFilter"
+          role="group"
+          aria-label="Filter ulasan berdasarkan bintang"
+        ></div>
+        <div class="testimoni-modal-list" id="testimoniModalList"></div>
+      </div>
+    </div>
 
     <script src="../js/db.js"></script>
     <script src="../js/auth.js"></script>

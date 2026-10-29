@@ -917,3 +917,216 @@ body {
 .stars-small {
   font-size: 12px;
 }
+
+/* --- Filter bintang: tombol "Semua (n)" + "★ n (jumlah)" --- */
+
+.testimoni-filter {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.testimoni-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  color: #d1d5db;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease;
+}
+
+.testimoni-chip:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.testimoni-chip.active {
+  color: #fff;
+  background: rgba(245, 158, 11, 0.18);
+  border-color: #f59e0b;
+}
+
+/* Di modal (panel putih) chip memakai gaya terang. */
+.testimoni-modal .testimoni-chip {
+  color: var(--text);
+  background: var(--surface-2);
+  border-color: var(--border);
+}
+
+.testimoni-modal .testimoni-chip:hover {
+  color: var(--heading);
+  background: var(--primary-soft);
+}
+
+.testimoni-modal .testimoni-chip.active {
+  color: var(--primary-dark);
+  background: var(--primary-soft);
+  border-color: var(--primary);
+}
+
+.testimoni-chip .fa-star {
+  color: #f59e0b;
+  font-size: 10px;
+}
+
+.testimoni-chip-count {
+  font-weight: 700;
+  opacity: 0.75;
+}
+
+/* --- Tombol "Lihat semua ulasan" --- */
+
+.testimoni-more {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 9px 14px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  color: #93c5fd;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 10px;
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
+}
+
+.testimoni-more:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.testimoni-more-count {
+  color: #9ca3af;
+  font-weight: 700;
+}
+
+.testimoni-more:hover .testimoni-more-count {
+  color: #d1d5db;
+}
+
+/* Pesan kosong saat filter tidak punya hasil (hanya mungkin di modal:
+   chip dengan 0 ulasan tidak dirender). */
+.testimoni-kosong {
+  color: #9ca3af;
+  font-size: 13px;
+  text-align: center;
+  padding: 18px 10px;
+}
+
+/* --- Modal "Semua Ulasan" --- */
+
+.testimoni-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(15, 23, 42, 0.65);
+}
+
+.testimoni-modal-overlay[hidden] {
+  display: none;
+}
+
+.testimoni-modal {
+  width: 100%;
+  max-width: 560px;
+  max-height: min(720px, calc(100vh - 48px));
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: var(--space-2xl);
+  background: var(--surface);
+  border: 1px solid var(--border-soft);
+  border-radius: 16px;
+  box-shadow: 0 24px 48px rgba(15, 23, 42, 0.35);
+}
+
+.testimoni-modal-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.testimoni-modal-head h2 {
+  font-size: 18px;
+  color: var(--heading);
+}
+
+.testimoni-modal-head p {
+  margin-top: 4px;
+  color: var(--secondary);
+  font-size: 13px;
+}
+
+.testimoni-modal-close {
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  color: var(--secondary);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
+}
+
+.testimoni-modal-close:hover {
+  color: var(--heading);
+  background: var(--primary-soft);
+}
+
+/* Daftar ulasan di modal: bisa di-scroll, kartu versi terang. */
+.testimoni-modal-list {
+  display: grid;
+  gap: 10px;
+  overflow-y: auto;
+  padding-right: 4px;
+  scrollbar-width: thin;
+}
+
+.testimoni-modal .testimoni-card {
+  background: var(--surface-2);
+  border-color: var(--border);
+}
+
+.testimoni-modal .testimoni-nama {
+  color: var(--heading);
+}
+
+.testimoni-modal .testimoni-nama .fa-circle-user {
+  color: var(--primary);
+}
+
+.testimoni-modal .testimoni-tgl {
+  color: var(--muted);
+}
+
+.testimoni-modal .testimoni-rating-label {
+  color: #b45309;
+}
+
+.testimoni-modal .testimoni-teks {
+  color: #374151;
+}
