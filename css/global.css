@@ -752,6 +752,18 @@ a.stat-card:focus-visible {
   min-width: 640px;
 }
 
+/* Lebar kolom mengikuti isi sel, sama seperti tabel di halaman Service.
+   Tanpa ini tabel dengan sedikit kolom (Mekanik, Sparepart, ...) melebar
+   mengisi panel sehingga jarak antarsel terlihat jauh, padahal padding
+   selnya sama (14px 16px). Kolom terakhir (Aksi) menyerap sisa ruang
+   supaya tabel tetap selebar panel tanpa melebarkan kolom data lain.
+   Tabel Service tidak terpengaruh karena kolomnya sudah lebih lebar
+   dari panel (tidak ada sisa ruang). */
+.table-container table th:last-child,
+.table-container table td:last-child {
+  width: 100%;
+}
+
 table {
   width: 100%;
   border-collapse: collapse;
@@ -930,6 +942,15 @@ tbody tr:last-child td {
 
 .w30 {
   width: 30%;
+}
+
+/* .burger skeleton — 40×40 radius 10, di atas topbar hanya saat HP */
+.sk-burger {
+  display: none;
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
 }
 
 /* --- TOPBAR (ukuran sama dengan .topbar) --- */
@@ -1145,7 +1166,22 @@ tbody tr:last-child td {
   height: 16px;
 }
 
-/* Baris header tabel (th): padding 14px 16px, latar --surface-3 */
+/* Kolom tabel skeleton digulir seperti .table-container → table
+   asli (min-width 640px; 560px di max-width 450). Tanpa ini, 13
+   kolom pada layar HP tinggal lebar ±20px per kolom (bar hilang
+   terlalu sapu-tipis). */
+.sk-table-wrap {
+  overflow-x: auto;
+}
+
+.sk-thead,
+.sk-row {
+  min-width: 640px;
+}
+
+/* Header tabel (th): padding 14px 16px, latar --surface-3 */
+/* Baris header tabel (th): kolom diset inline dari skTable()
+   sesuai jumlah <th> asli; sel "No" 44px, sisanya rata. */
 .sk-thead {
   display: grid;
   grid-template-columns: 30% 20% 25% minmax(0, 1fr);
@@ -1165,7 +1201,7 @@ tbody tr:last-child td {
 
 /* Baris isi tabel (td): padding 14px 16px, teks 13px → baris 44px.
    Margin horizontal 16px meniru padding sel, jadi jarak antar kolom
-   = 32px persis seperti tabel asli. */
+   = 32px persis seperti tabel asli; kolom diset inline dari skTable(). */
 .sk-row {
   display: grid;
   grid-template-columns: 30% 20% 25% minmax(0, 1fr);
@@ -1178,8 +1214,13 @@ tbody tr:last-child td {
   border-bottom: 0;
 }
 
+/* Baris isi tabel (td): padding 14px 16px, teks 13px → baris 44px.
+   Margin horizontal 16px meniru padding sel, jadi jarak antar kolom
+   = 32px persis seperti tabel asli. max(0px, …) menjaga bar tetap
+   muat di trek saat kolom banyak di layar sempit (tidak menimpa
+   kolom sebelah). */
 .sk-row .skeleton-bar {
-  width: calc(100% - 32px);
+  width: max(0px, calc(100% - 32px));
   margin: 0 16px;
   height: 16px;
 }
@@ -1359,6 +1400,104 @@ tbody tr:last-child td {
   border-radius: 11px;
 }
 
+/* .table-footer: flex, padding var(--space-md) var(--space-xl), border-top */
+.sk-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-lg);
+  padding: var(--space-md) var(--space-xl);
+  border-top: 1px solid var(--border);
+}
+
+/* .table-footer span: font 13px → 16px */
+.sk-footer-info {
+  width: 130px;
+  height: 16px;
+}
+
+/* .pagination: gap 6px; .page-btn 36×36, radius 8 */
+.sk-pag {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.sk-page {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+}
+
+/* Kolom "No" (44px grid) & "Aksi" — balok sel "Aksi" DI-CAP saja
+   (max-width), bukan dipaksa lebar tetap: pada layar sempit trek
+   kolom bisa < 70px dan bar tetap bisa dipaksa melebihi treknya
+   jadi tumpang tindih dengan kolom sebelahnya. */
+.sk-col-no {
+  min-width: 28px;
+  max-width: 28px;
+}
+
+.sk-col-action {
+  max-width: 70px;
+}
+
+/* .chart: 12 kolom bar, gap 10px, padding 20px, min-height 260px */
+.sk-chart {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  align-items: end;
+  gap: 10px;
+  padding: 20px;
+  min-height: 260px;
+}
+
+/* Tiap kolom grafik: nilai (11px) + bar + label (11px), gap 8px */
+.sk-chart-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  min-width: 0;
+}
+
+.sk-chart-col .skeleton-bar {
+  width: 100%;
+  max-width: 54px;
+}
+
+.sk-chart-value,
+.sk-chart-month {
+  height: 11px;
+}
+
+/* .chart-column: radius 8px 8px 4px 4px */
+.sk-chart-bar {
+  border-radius: 8px 8px 4px 4px;
+}
+
+.sk-chart-panel {
+  margin-bottom: var(--space-xl);
+}
+
+/* Select di panel setengah lebar (dashboard) — .filter-select asli
+   160px tapi bisa wrap; skeleton memakai 120px biar tidak menabrak judul */
+.sk-select-sm {
+  width: 120px;
+}
+
+/* Info-list panel dashboard customer: baris teks 16px, gap seperti
+   .panel-body 20px antar item */
+.sk-info-list {
+  display: grid;
+  gap: 18px;
+}
+
+.sk-info-row {
+  height: 16px;
+}
+
 /* .dashboard-grid: 2 kolom, gap 20px, margin-bottom 20px */
 .sk-dash-grid {
   display: grid;
@@ -1367,12 +1506,12 @@ tbody tr:last-child td {
   margin-bottom: var(--space-xl);
 }
 
-/* Panel ringkasan: .progress-circle 160px + daftar status */
+/* Panel ringkasan: padding .service-status = var(--space-2xl) 24px */
 .sk-dash-body {
   display: flex;
   align-items: center;
   gap: 35px;
-  padding: var(--space-xl);
+  padding: var(--space-2xl);
 }
 
 .sk-circle {
@@ -1382,20 +1521,18 @@ tbody tr:last-child td {
   border-radius: 50%;
 }
 
+/* Baris status list: item asli = bar 34px (padding 8px 10px +
+   teks 13px + border), gap 15px seperti .status-list asli */
 .sk-status-list {
   flex: 1;
   display: grid;
-  gap: 18px;
+  gap: 15px;
 }
 
 .sk-status-item {
-  width: 75%;
-  height: 16px;
-}
-
-/* Panel dashboard kedua: baris pendek 3 kolom (bukan 4) */
-.sk-rows-sm .sk-row {
-  grid-template-columns: 40% 30% minmax(0, 1fr);
+  height: 34px;
+  border: 1px solid var(--border-soft);
+  border-radius: 10px;
 }
 
 /* .panel-body: padding 20px; .vehicle-cards: auto-fit minmax(280px),
@@ -1548,32 +1685,108 @@ tbody tr:last-child td {
   align-self: center;
 }
 
-@media (max-width: 700px) {
-  .sk-dash-grid,
-  .sk-form-grid {
-    grid-template-columns: minmax(0, 1fr);
-  }
+/* Skeleton register mengikuti .login-container asli: breakpoint
+   800px, kartu max 500px, panel brand disembunyikan. */
+@media (max-width: 800px) {
   .sk-auth {
     grid-template-columns: minmax(0, 1fr);
     min-height: 0;
+    max-width: 500px;
     width: calc(100% - 24px);
   }
   .sk-auth-info {
     display: none; /* .login-info ikut disembunyikan di mobile */
   }
-  .sk-select {
-    width: 120px;
+}
+
+@media (max-width: 700px) {
+  .sk-dash-grid,
+  .sk-form-grid {
+    grid-template-columns: minmax(0, 1fr);
   }
-  .sk-search {
-    flex: 1;
-    min-width: 140px;
+  .sk-chart {
+    grid-template-columns: repeat(12, minmax(52px, 1fr));
+    overflow-x: auto;
   }
+
+  /* Topbar HP: burger muncul (40×40 radius 10, sama dengan .burger) */
+  .sk-burger {
+    display: block;
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    flex-shrink: 0;
+  }
+  .sk-chip-sm {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px; /* .icon-btn 36×36 */
+  }
+
+  /* Toolbar HP: skeleton mengikuti .vehicle-toolbar asli
+     (grid 2 kolom: filter sebaris, kotak cari selebar panel). */
+  .sk-toolbar {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+  }
+  .sk-toolbar .sk-select {
+    width: 100%;
+    min-width: 0;
+  }
+  .sk-toolbar .sk-search {
+    grid-column: 1 / -1;
+    width: 100%;
+    min-width: 0;
+  }
+
+  /* .customer-hero HP: padding 20px */
+  .sk-hero {
+    padding: 20px;
+  }
+
+  /* .service-status HP: jadi kolom, gap 18px, padding 18px */
+  .sk-dash-body {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 18px;
+    padding: 18px;
+  }
+
+  /* .progress-wrapper HP: margin-inline auto → circle di tengah */
   .sk-circle {
     width: 126px;
     height: 126px;
+    margin-inline: auto;
   }
-  .sk-dash-body {
-    gap: 20px;
+
+  .sk-main {
+    padding: 20px 16px;
+  }
+  .sk-cards {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .sk-panel-head {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .sk-panel-link {
+    align-self: flex-start;
+  }
+}
+
+/* .table-footer HP: jadi kolom, pagination selebar baris
+   (sama dengan rule .table-footer/.pagination di max-width 768px) */
+@media (max-width: 768px) {
+  .sk-footer {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .sk-pag {
+    width: 100%;
+    justify-content: center;
   }
 }
 
@@ -1622,6 +1835,20 @@ tbody tr:last-child td {
   .sk-main {
     padding: 20px 16px;
   }
+  /* Tabel skeleton HP: tabel asli tidak lagi dipaksa 640px dan
+     padding selnya 6px, jadi baris skeleton ikut rapat & menciut. */
+  .sk-thead,
+  .sk-row {
+    min-width: 0;
+    padding: 8px 0;
+  }
+  .sk-thead .skeleton-bar,
+  .sk-row .skeleton-bar {
+    margin: 0 6px;
+  }
+  .sk-row .skeleton-bar {
+    width: max(0px, calc(100% - 12px));
+  }
   .sk-cards {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -1638,6 +1865,20 @@ tbody tr:last-child td {
   .sk-main {
     padding: 12px;
   }
+
+  /* Tabel skeleton: tabel asli di HP tidak lagi dipaksa 560px
+     (muat layar), jadi baris skeleton juga ikut menciut. */
+  .sk-thead,
+  .sk-row {
+    min-width: 0;
+  }
+  .sk-thead .skeleton-bar {
+    margin: 0 5px;
+  }
+  .sk-row .skeleton-bar {
+    margin: 0 5px;
+    width: max(0px, calc(100% - 10px));
+  }
   .sk-cards {
     grid-template-columns: 1fr;
   }
@@ -1650,6 +1891,14 @@ tbody tr:last-child td {
   }
   .sk-chip {
     width: 40px; /* .admin teks disembunyikan, ikon saja */
+  }
+  /* .page-header-row HP: header + tombol jadi kolom, tombol selebar */
+  .sk-head-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .sk-head-btn {
+    width: 100%;
   }
 }
 
@@ -1713,6 +1962,19 @@ tbody tr:last-child td {
 .vehicle-toolbar .btn {
   white-space: nowrap;
   max-width: 100%;
+}
+
+/* Kotak cari di dalam toolbar: fleksibel mengisi ruang sisa.
+   Tanpa ini input carinya punya lebar tetap 220px dan bisa
+   menabrak select / tombol di sebelahnya saat panel sempit. */
+.vehicle-toolbar .search-box {
+  flex: 1 1 220px;
+  min-width: 160px;
+  max-width: 100%;
+}
+
+.vehicle-toolbar .search-box input {
+  width: 100%;
 }
 
 /* Link "Lihat semua" di dalam toolbar */
@@ -1909,6 +2171,9 @@ th.cell-id-col {
 .action-buttons {
   display: flex;
   align-items: center;
+  /* Tombol aksi selalu berjajar ke samping (desktop & HP), tidak
+     turun ke bawah walau kolom Aksi sempit. */
+  flex-wrap: nowrap;
   gap: 6px;
 }
 
@@ -1922,6 +2187,8 @@ th.cell-id-col {
   cursor: pointer;
   transition: 0.2s;
   font-family: inherit;
+  flex: 0 0 auto;
+  white-space: nowrap;
 }
 
 .action-btn:hover {
@@ -2841,6 +3108,14 @@ textarea.form-control {
   .stats-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
+  /* Toolbar di layar sedang: select filter/urutkan boleh menciut
+     dan berbagi baris, supaya tidak memaksa 4 kontrol selebar
+     tetap berdiri sendiri-sendiri (tumpuk ke bawah). */
+  .vehicle-toolbar .filter-select {
+    flex: 1 1 150px;
+    width: auto;
+    min-width: 140px;
+  }
 }
 
 @media (max-width: 900px) {
@@ -2896,6 +3171,51 @@ textarea.form-control {
   .main {
     padding: 20px 16px;
   }
+  /* ===== Tabel di HP: sel rapat, teks tetap 1 baris =====
+     Di desktop tabel dipaksa min-width 640px (lihat .table-container
+     table) sehingga selalu lebih lebar dari layar. Di HP min-width
+     dilepas (tabel mengikuti lebar isinya) dan padding sel
+     dikecilkan (14px 16px → 6px 6px). Teks TETAP nowrap supaya
+     enak dibaca; kalau isinya memang panjang, tabel digeser ke
+     samping apa adanya (tidak dipaksa muat sampai terpotong-potong). */
+  .table-container table {
+    min-width: 0;
+    width: 100%;
+    font-size: 12px;
+  }
+  /* Di HP kolom terakhir tidak perlu menyerap sisa ruang; semua
+     kolom dibagi sesuai isi supaya tidak ada kolom yang melebar
+     sendiri. */
+  .table-container table th:last-child,
+  .table-container table td:last-child {
+    width: auto;
+  }
+  .table-container th,
+  .table-container td {
+    padding: 6px 6px;
+  }
+  .table-container th {
+    font-size: 10.5px;
+    letter-spacing: 0.2px;
+  }
+  /* Kolom "No" (nomor urut) dibuang di HP supaya kolom data lain
+     dapat ruang lebih. Baris kosong (.empty-row) tidak ikut karena
+     selnya memakai colspan. */
+  .table-container thead th:first-child,
+  .table-container tbody tr:not(.empty-row) td:first-child {
+    display: none;
+  }
+  .table-container .empty-row td {
+    padding: 20px 10px;
+  }
+  /* Tombol aksi di HP dirapatkan, tetap berjajar ke samping
+     (aturan nowrap-nya global, lihat .action-buttons). */
+  .table-container .action-buttons {
+    gap: 4px;
+  }
+  .table-container .action-btn {
+    padding: 5px 7px;
+  }
   .stats-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -2944,28 +3264,47 @@ textarea.form-control {
     width: 100%;
     min-width: 0;
   }
-  /* Cari + filter tetap SAMPINGAN di layar kecil */
+  /* Toolbar HP: grid 2 kolom. Filter status & urutan berdiri
+     sebaris (masing-masing 1 kolom), kotak cari dan tombol aksi
+     melebar penuh. Grid membuat tiap kontrol menempati selnya
+     sendiri, jadi tidak mungkin lagi saling menabrak/menumpuk
+     walau layar sangat sempit. */
   .vehicle-toolbar {
-    flex-wrap: nowrap;
-    align-items: stretch;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+  }
+  .vehicle-toolbar > * {
+    min-width: 0;
+    max-width: 100%;
+  }
+  .vehicle-toolbar .filter-select {
+    width: 100%;
+    min-width: 0;
+    max-width: none;
+  }
+  /* Toolbar yang isinya hanya satu select (mis. filter Mekanik di
+     dashboard) tetap memakai lebar penuh, bukan setengah kolom. */
+  .vehicle-toolbar > .filter-select:only-child {
+    grid-column: 1 / -1;
   }
   .vehicle-toolbar .search-box {
-    flex: 1 1 auto;
+    grid-column: 1 / -1;
     min-width: 0;
+    max-width: none;
   }
   .vehicle-toolbar .search-box input {
     width: 100%;
   }
-  .vehicle-toolbar .filter-select {
-    flex: 0 0 auto;
-    width: auto;
-    min-width: 108px;
-    max-width: 46%;
-  }
   .vehicle-toolbar .btn {
-    flex: 0 0 auto;
+    grid-column: 1 / -1;
+    width: 100%;
   }
+  .vehicle-toolbar .status-tabs,
   .panel-header > .vehicle-toolbar {
+    grid-column: 1 / -1;
     width: 100%;
   }
   .status-tabs {
@@ -3061,8 +3400,14 @@ textarea.form-control {
   .page-header-row .btn {
     width: 100%;
   }
+  /* Tabel di layar sangat kecil: baris lebih rapat lagi, bukan
+     dipaksa melebar 560px seperti sebelumnya. */
+  .table-container th,
+  .table-container td {
+    padding: 5px 5px;
+  }
   .table-container table {
-    min-width: 560px;
+    font-size: 11.5px;
   }
   .admin span {
     display: none;

@@ -39,7 +39,7 @@
       <i class="fa-solid fa-moon icon-moon" aria-hidden="true"></i>
     </button>
 
-    <main class="login-container">
+    <main class="login-container login-page">
       <section class="login-info">
         <div class="brand">
           <div class="brand-icon">
@@ -47,39 +47,56 @@
           </div>
           <span>Pytabengkel</span>
         </div>
-        <div class="info-content">
-          <h1 id="heroTitle">Kelola Bengkel Lebih Mudah.</h1>
-          <p id="heroText">
-            Kelola customer, kendaraan, service, mekanik, dan riwayat pekerjaan dalam satu sistem.
-          </p>
-          <div class="features" id="heroFeatures">
-            <div class="feature">
-              <span class="feature-icon"><i class="fa-solid fa-check" aria-hidden="true"></i></span>
-              <span>Kelola data customer dan kendaraan</span>
-            </div>
-            <div class="feature">
-              <span class="feature-icon"><i class="fa-solid fa-check" aria-hidden="true"></i></span>
-              <span>Pantau status service kendaraan</span>
-            </div>
-            <div class="feature">
-              <span class="feature-icon"><i class="fa-solid fa-check" aria-hidden="true"></i></span>
-              <span>Simpan riwayat service dengan mudah</span>
-            </div>
-          </div>
-        </div>
-        <div class="testimoni-section" id="testimoniSection" hidden>
-          <div class="testimoni-head">
-            <h3>
-              <i class="fa-solid fa-star" aria-hidden="true"></i>
-              Apa Kata Pelanggan
-            </h3>
-            <div class="testimoni-summary">
-              <span class="testimoni-rata" id="testimoniRata">-</span>
-              <span id="testimoniStars"></span>
-              <span class="testimoni-jumlah" id="testimoniJumlah"></span>
+        <!-- Konten tengah dalam area scroll: section ulasan yang panjang
+             tidak mengubah tinggi kartu login. brand & copyright tetap
+             menempel di atas & bawah panel. -->
+        <div class="info-scroll">
+          <div class="info-content">
+            <h1 id="heroTitle">Kelola Bengkel Lebih Mudah.</h1>
+            <p id="heroText">
+              Kelola customer, kendaraan, service, mekanik, dan riwayat pekerjaan dalam satu sistem.
+            </p>
+            <div class="features" id="heroFeatures">
+              <div class="feature">
+                <span class="feature-icon"><i class="fa-solid fa-check" aria-hidden="true"></i></span>
+                <span>Kelola data customer dan kendaraan</span>
+              </div>
+              <div class="feature">
+                <span class="feature-icon"><i class="fa-solid fa-check" aria-hidden="true"></i></span>
+                <span>Pantau status service kendaraan</span>
+              </div>
+              <div class="feature">
+                <span class="feature-icon"><i class="fa-solid fa-check" aria-hidden="true"></i></span>
+                <span>Simpan riwayat service dengan mudah</span>
+              </div>
             </div>
           </div>
-          <div class="testimoni-list" id="publicTestimoni"></div>
+          <div class="testimoni-section" id="testimoniSection" hidden>
+            <div class="testimoni-head">
+              <h3>
+                <i class="fa-solid fa-star" aria-hidden="true"></i>
+                Apa Kata Pelanggan
+              </h3>
+              <div class="testimoni-summary">
+                <span class="testimoni-rata" id="testimoniRata">-</span>
+                <span id="testimoniStars"></span>
+                <span class="testimoni-jumlah" id="testimoniJumlah"></span>
+              </div>
+            </div>
+            <!-- Filter bintang: tiap tombol memuat jumlah ulasannya. -->
+            <div
+              class="testimoni-filter"
+              id="testimoniFilter"
+              role="group"
+              aria-label="Filter ulasan berdasarkan bintang"
+            ></div>
+            <div class="testimoni-list" id="publicTestimoni"></div>
+            <button type="button" class="testimoni-more" id="testimoniMore" hidden>
+              <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
+              <span>Lihat semua ulasan</span>
+              <span class="testimoni-more-count" id="testimoniMoreCount"></span>
+            </button>
+          </div>
         </div>
 
         <div class="copyright">© 2026 Pytabengkel</div>
@@ -239,6 +256,38 @@
         </div>
       </section>
     </main>
+
+    <!-- Modal semua ulasan (dibuka tombol "Lihat semua ulasan") -->
+    <div class="testimoni-modal-overlay" id="testimoniModal" hidden>
+      <div
+        class="testimoni-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="testimoniModalTitle"
+      >
+        <div class="testimoni-modal-head">
+          <div>
+            <h2 id="testimoniModalTitle">Semua Ulasan</h2>
+            <p id="testimoniModalSub"></p>
+          </div>
+          <button
+            type="button"
+            class="testimoni-modal-close"
+            id="testimoniModalClose"
+            aria-label="Tutup"
+          >
+            <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+          </button>
+        </div>
+        <div
+          class="testimoni-filter"
+          id="testimoniModalFilter"
+          role="group"
+          aria-label="Filter ulasan berdasarkan bintang"
+        ></div>
+        <div class="testimoni-modal-list" id="testimoniModalList"></div>
+      </div>
+    </div>
 
     <script src="../js/db.js"></script>
     <script src="../js/auth.js"></script>
