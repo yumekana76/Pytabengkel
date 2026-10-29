@@ -115,6 +115,60 @@ function initTheme() {
    muncul.
    ========================================= */
 
+/* Pita kolom tabel: satu balok setiap kolom <th>, kolom pertama ("No")
+   dan kolom terakhir ("Aksi") lebih pendek seperti tabel aslinya. */
+function skRowBars(cols) {
+  return Array.from({ length: cols }, function (_, index) {
+    return `<span class="skeleton-bar${index === 0 ? " sk-col-no" : ""}${
+      index === cols - 1 ? " sk-col-action" : ""
+    }"></span>`;
+  }).join("");
+}
+
+/* Lebar grid baris tabel: sel "No" 44px + sisanya rata. */
+function skGridCols(cols) {
+  return cols > 1
+    ? `grid-template-columns: 44px repeat(${cols - 1}, minmax(0, 1fr));`
+    : "grid-template-columns: minmax(0, 1fr);";
+}
+
+/* Badan tabel: thead + baris isi + table-footer (info ± pagination),
+   jumlah kolom & baris mengikuti halaman aslinya. */
+function skTable(cols, rows, footer) {
+  return `
+        <div class="sk-thead" style="${skGridCols(cols)}">
+          ${skRowBars(cols)}
+        </div>
+        <div class="sk-rows">${Array.from(
+          { length: rows },
+          function () {
+            return `
+      <div class="sk-row" style="${skGridCols(cols)}">
+        ${skRowBars(cols)}
+      </div>`;
+          },
+        ).join("")}</div>
+        ${skTableFooter(footer)}`;
+}
+
+function skTableFooter(footer) {
+  if (!footer) return "";
+  return `
+        <div class="sk-footer">
+          <span class="skeleton-bar sk-footer-info"></span>
+          ${
+            footer === "pag"
+              ? `<div class="sk-pag">${Array.from(
+                  { length: 4 },
+                  function () {
+                    return `<span class="skeleton-bar sk-page"></span>`;
+                  },
+                ).join("")}</div>`
+              : ""
+          }
+        </div>`;
+}
+
 function showSkeleton() {
   if (document.getElementById("appSkeleton") || !document.body) {
     return;
@@ -227,32 +281,64 @@ function showSkeleton() {
                   <span class="skeleton-bar sk-panel-h"></span>
                   <span class="skeleton-bar sk-panel-p w30"></span>
                 </div>
-                <span class="skeleton-bar sk-panel-link"></span>
+                ${
+                  preset.dashCols
+                    ? `<span class="skeleton-bar sk-select sk-select-sm"></span>`
+                    : `<span class="skeleton-bar sk-panel-link"></span>`
+                }
               </div>
-              <div class="sk-rows sk-rows-sm">${Array.from(
-                { length: 3 },
-                function () {
-                  return `
-      <div class="sk-row">
-        <span class="skeleton-bar"></span>
-        <span class="skeleton-bar"></span>
-        <span class="skeleton-bar"></span>
-      </div>`;
-                },
-              ).join("")}</div>
+              ${
+                preset.dashCols
+                  ? skTable(preset.dashCols, 3, "info")
+                  : `<div class="sk-panel-body sk-info-list">${Array.from(
+                      { length: 5 },
+                      function () {
+                        return `<span class="skeleton-bar sk-info-row"></span>`;
+                      },
+                    ).join("")}</div>`
+              }
             </div>
           </div>`
     : "";
 
+  /* .chart — grafik pendapatan (keuangan admin): 12 kolom bar.
+     Tinggi bar disimulasikan beragam supaya mirip isi asli. */
+  const chartPanel = preset.chart
+    ? `<div class="sk-panel sk-chart-panel">
+            <div class="sk-panel-head">
+              <div class="sk-panel-title">
+                <span class="skeleton-bar sk-panel-h"></span>
+                <span class="skeleton-bar sk-panel-p w30"></span>
+              </div>
+              <span class="skeleton-bar sk-select sk-select-sm"></span>
+            </div>
+            <div class="sk-chart">${Array.from(
+              { length: 12 },
+              function (_, index) {
+                const heights = [64, 96, 76, 128, 56, 140, 88, 160, 104, 72, 120, 84];
+                return `
+        <div class="sk-chart-col">
+          <span class="skeleton-bar sk-chart-value"></span>
+          <span class="skeleton-bar sk-chart-bar" style="height:${heights[index]}px"></span>
+          <span class="skeleton-bar sk-chart-month"></span>
+        </div>`;
+              },
+            ).join("")}</div>
+          </div>`
+    : "";
+
   /* Toolbar panel: .filter-select (160px) + .search-box (220px),
-     jumlah select mengikuti halaman aslinya. */
+     jumlah select mengikuti halaman aslinya; search-box ikut ada
+     jika halaman aslinya punya (search: false = tanpa search-box). */
   const toolbar = preset.toolbar
     ? `<div class="sk-toolbar">${Array.from(
         { length: preset.toolbar },
         function () {
           return `<span class="skeleton-bar sk-select"></span>`;
         },
-      ).join("")}<span class="skeleton-bar sk-search"></span></div>`
+      ).join("")}${
+        preset.search === false ? "" : `<span class="skeleton-bar sk-search"></span>`
+      }</div>`
     : `<span class="skeleton-bar sk-panel-link"></span>`;
 
   /* .status-tabs — tab Lunas / Belum Lunas (riwayat & keuangan admin). */
@@ -295,24 +381,7 @@ function showSkeleton() {
               },
             ).join("")}</div>
           </div>`
-              : `<div class="sk-thead">
-            <span class="skeleton-bar w20"></span>
-            <span class="skeleton-bar w20"></span>
-            <span class="skeleton-bar w20"></span>
-            <span class="skeleton-bar w20"></span>
-          </div>
-          <div class="sk-rows">${Array.from(
-            { length: preset.rows },
-            function () {
-              return `
-      <div class="sk-row">
-        <span class="skeleton-bar"></span>
-        <span class="skeleton-bar"></span>
-        <span class="skeleton-bar"></span>
-        <span class="skeleton-bar"></span>
-      </div>`;
-            },
-          ).join("")}</div>`
+              : skTable(preset.cols, preset.rows, preset.footer)
           }
         </div>`;
 
@@ -390,6 +459,7 @@ function showSkeleton() {
         ${cards}
         ${profileCard}
         ${settingRows}
+        ${chartPanel}
         ${dashGrid}
         ${mainPanel}
         ${formPanels}
@@ -419,29 +489,50 @@ function skeletonPreset() {
   const isCustomer = key.indexOf("customers-page") !== -1;
 
   const presets = {
-    /* --- Portal admin (sidebar 10 menu) --- */
+    /* --- Portal admin (sidebar 10 menu) ---
+       cols  = jumlah kolom <th> tabelnya, footer = table-footer
+       ("info" = teks kiri saja, "pag" = + tombol pagination),
+       toolbar = jumlah select di panel-header. */
     "admin-page/dashboard.html": {
       cards: 6,
       headerBtn: true,
       dashGrid: true,
+      dashCols: 5, /* panel kanan: tabel mekanik 5 kolom */
       toolbar: 1,
+      cols: 13, /* panel kendaraan: 13 kolom, kolom "No" 44px */
+      footer: "pag",
     },
-    "admin-page/customers.html": { cards: 4, toolbar: 1 },
-    "admin-page/kendaraan.html": { cards: 6, toolbar: 1 },
-    "admin-page/keuangan.html": { cards: 5, tabs: 3, toolbar: 1 },
-    "admin-page/mekanik.html": { cards: 3, toolbar: 1 },
+    "admin-page/customers.html": { cards: 4, toolbar: 1, cols: 9, footer: "pag" },
+    "admin-page/kendaraan.html": { cards: 6, toolbar: 2, cols: 12, footer: "pag" },
+    "admin-page/keuangan.html": {
+      cards: 5,
+      chart: true, /* panel grafik pendapatan per bulan */
+      toolbar: 3,
+      tabs: 3,
+      cols: 9,
+      footer: "pag",
+    },
+    "admin-page/mekanik.html": { cards: 3, toolbar: 2, cols: 7, footer: "info" },
     "admin-page/pengaturan.html": { cards: 0, settingRows: 4 },
-    "admin-page/riwayat.html": { cards: 3, tabs: 3, toolbar: 1 },
-    "admin-page/service.html": { cards: 4, toolbar: 1 },
-    "admin-page/sparepart.html": { cards: 3, toolbar: 1 },
-    "admin-page/ulasan.html": { cards: 4, toolbar: 1 },
+    "admin-page/riwayat.html": {
+      cards: 3,
+      toolbar: 2,
+      tabs: 3,
+      cols: 10,
+      footer: "pag",
+    },
+    "admin-page/service.html": { cards: 4, toolbar: 2, cols: 11, footer: "info" },
+    "admin-page/sparepart.html": { cards: 3, toolbar: 2, cols: 6, footer: "info" },
+    "admin-page/ulasan.html": { cards: 4, toolbar: 2, cols: 8, footer: "pag" },
 
     /* --- Portal customer (sidebar 7 menu) --- */
     "customers-page/dashboard.html": {
       cards: 4,
       hero: true,
-      dashGrid: true,
-      toolbar: 1,
+      dashGrid: true, /* panel kanan: info-list bengkel */
+      toolbar: 0, /* panel riwayat: header pakai link "Lihat semua" */
+      cols: 8,
+      rows: 5,
     },
     "customers-page/kendaraan.html": {
       cards: 4,
@@ -449,7 +540,7 @@ function skeletonPreset() {
       toolbar: 2,
       vehicleCards: 3,
     },
-    "customers-page/keuangan.html": { cards: 4, toolbar: 1 },
+    "customers-page/keuangan.html": { cards: 4, toolbar: 3, cols: 9, footer: "pag" },
     "customers-page/pengaturan.html": { cards: 0, formPanels: 3 },
     "customers-page/profil.html": {
       cards: 0,
@@ -457,8 +548,8 @@ function skeletonPreset() {
       formPanels: 2,
     },
     "customers-page/register.html": { auth: true },
-    "customers-page/riwayat.html": { cards: 4, toolbar: 1 },
-    "customers-page/service.html": { cards: 4, toolbar: 1 },
+    "customers-page/riwayat.html": { cards: 4, toolbar: 2, cols: 10, footer: "pag" },
+    "customers-page/service.html": { cards: 4, toolbar: 2, cols: 9, footer: "info" },
   };
 
   return Object.assign(
@@ -466,6 +557,8 @@ function skeletonPreset() {
       cards: 4,
       nav: isCustomer ? 7 : 10,
       rows: 6,
+      cols: 9,
+      footer: "info",
       toolbar: 0,
       tabs: 0,
       hero: false,
@@ -473,8 +566,10 @@ function skeletonPreset() {
       profileCard: false,
       settingRows: 0,
       dashGrid: false,
+      dashCols: 0,
       vehicleCards: 0,
       formPanels: 0,
+      chart: false,
       auth: false,
     },
     presets[key] || {},
