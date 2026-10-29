@@ -136,18 +136,20 @@ function skGridCols(cols) {
    jumlah kolom & baris mengikuti halaman aslinya. */
 function skTable(cols, rows, footer) {
   return `
-        <div class="sk-thead" style="${skGridCols(cols)}">
-          ${skRowBars(cols)}
-        </div>
-        <div class="sk-rows">${Array.from(
-          { length: rows },
-          function () {
-            return `
+        <div class="sk-table-wrap">
+          <div class="sk-thead" style="${skGridCols(cols)}">
+            ${skRowBars(cols)}
+          </div>
+          <div class="sk-rows">${Array.from(
+            { length: rows },
+            function () {
+              return `
       <div class="sk-row" style="${skGridCols(cols)}">
         ${skRowBars(cols)}
       </div>`;
-          },
-        ).join("")}</div>
+            },
+          ).join("")}</div>
+        </div>
         ${skTableFooter(footer)}`;
 }
 
@@ -444,6 +446,7 @@ function showSkeleton() {
     ? auth
     : `
     <div class="sk-topbar">
+      <span class="skeleton-bar sk-burger"></span>
       <span class="skeleton-bar sk-logo"></span>
       <span class="sk-spacer"></span>
       <span class="skeleton-bar sk-chip"></span>
