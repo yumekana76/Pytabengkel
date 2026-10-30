@@ -91,6 +91,14 @@ function closeModal(id) {
     if (!document.querySelector(".modal-overlay.show")) {
       document.body.classList.remove("modal-open");
     }
+
+    /* Kembalikan fokus ke pemicu (dipasang confirmLogout) — berlaku
+       untuk semua jalur penutupan: tombol, klik area luar, dan ESC. */
+    const trigger = modal.__focusReturn;
+    if (trigger && trigger.isConnected) {
+      trigger.focus();
+      modal.__focusReturn = null;
+    }
   }
 }
 
@@ -746,9 +754,32 @@ var STATUS_ORDER = {
   Selesai: 3,
 };
 
+/* Urutan pembayaran: belum lunas dulu, lunas di paling bawah. */
+var PAYMENT_ORDER = {
+  "Belum Lunas": 0,
+  Lunas: 1,
+};
+
+/* Urutkan data service:
+   1. status  (Menunggu → Dikerjakan → Quality Check → Selesai)
+   2. pembayaran (Belum Lunas → Lunas), sehingga service Selesai + Lunas
+      selalu berada di paling bawah data yang lain
+   3. tanggal service (terbaru di atas), fallback ke id (baru → lama) */
 function compareStatusOrder(a, b) {
-  const order = (STATUS_ORDER[a.status] ?? 99) - (STATUS_ORDER[b.status] ?? 99);
-  if (order !== 0) return order;
+  const status =
+    (STATUS_ORDER[a.status] ?? 99) - (STATUS_ORDER[b.status] ?? 99);
+  if (status !== 0) return status;
+
+  const bayar =
+    (PAYMENT_ORDER[a.pembayaran || "Belum Lunas"] ?? 99) -
+    (PAYMENT_ORDER[b.pembayaran || "Belum Lunas"] ?? 99);
+  if (bayar !== 0) return bayar;
+
+  const tanggal = String(b.tanggalService || "").localeCompare(
+    String(a.tanggalService || ""),
+  );
+  if (tanggal !== 0) return tanggal;
+
   return Number(b.id) - Number(a.id);
 }
 
@@ -1355,6 +1386,103 @@ function initSidebar() {
   }
 }
 
+/* =========================================
+   KONFIRMASI KELUAR KE HALAMAN LOGIN
+   Dipakai semua tombol Keluar: ikon keluar di topbar (portal admin &
+   customer) serta tombol "Keluar dari Akun" di halaman Pengaturan
+   customer. Markup modal disuntik sekali lewat JS supaya tidak perlu
+   menambah HTML yang sama di 19 file halaman.
+   ========================================= */
+
+var LOGOUT_MODAL_ID = "logoutConfirmModal";
+
+function ensureLogoutModal() {
+  if (document.getElementById(LOGOUT_MODAL_ID)) return;
+
+  const overlay = document.createElement("div");
+  overlay.className = "modal-overlay";
+  overlay.id = LOGOUT_MODAL_ID;
+  overlay.innerHTML = `
+    <div
+      class="modal"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="logoutConfirmModal-title"
+      aria-describedby="logoutConfirmModal-desc"
+    >
+      <div class="modal-header">
+        <div>
+          <h3 id="logoutConfirmModal-title">Keluar dari akun?</h3>
+          <p id="logoutConfirmModal-desc">
+            Sesi akan diakhiri dan Anda kembali ke halaman masuk.
+          </p>
+        </div>
+        <button
+          type="button"
+          class="modal-close"
+          data-logout-dismiss
+          aria-label="Tutup"
+        >
+          ×
+        </button>
+      </div>
+      <div class="modal-body">
+        <p class="lock-note">
+          ⚠️ Anda perlu masuk kembali untuk mengakses halaman ini.
+        </p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-logout-dismiss>
+          Batal
+        </button>
+        <button type="button" class="btn btn-danger" data-logout-confirm>
+          <i class="fa-solid fa-right-from-bracket" aria-hidden="true"></i>
+          Ya, Keluar
+        </button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+
+  /* Klik area gelap di luar dialog = batal. */
+  overlay.addEventListener("click", function (event) {
+    if (event.target === overlay) closeModal(LOGOUT_MODAL_ID);
+  });
+
+  /* Tombol × dan "Batal" (ESC sudah ditangani global.js; pengembalian
+     fokus ke pemicu dilakukan closeModal). */
+  overlay.querySelectorAll("[data-logout-dismiss]").forEach(function (button) {
+    button.addEventListener("click", function () {
+      closeModal(LOGOUT_MODAL_ID);
+    });
+  });
+
+  overlay.querySelector("[data-logout-confirm]").addEventListener(
+    "click",
+    function () {
+      const onConfirm = overlay.__logoutConfirm;
+      overlay.__logoutConfirm = null;
+      closeModal(LOGOUT_MODAL_ID);
+
+      if (typeof onConfirm === "function") onConfirm();
+    },
+  );
+}
+
+/* Tampilkan dialog; onConfirm dipanggil hanya saat "Ya, Keluar". */
+function confirmLogout(options) {
+  const opts = options || {};
+
+  ensureLogoutModal();
+
+  const overlay = document.getElementById(LOGOUT_MODAL_ID);
+  overlay.__logoutConfirm = opts.onConfirm || null;
+  overlay.__focusReturn = document.activeElement;
+
+  openModal(LOGOUT_MODAL_ID);
+  overlay.querySelector("[data-logout-confirm]")?.focus();
+}
+
 /* TOPBAR: NAMA PENGGUNA, TOMBOL TEMA, LOGOUT */
 
 function initTopbar() {
@@ -1377,18 +1505,22 @@ function initTopbar() {
   }
 
   if (logoutButton) {
-    logoutButton.addEventListener("click", async function () {
-      if (typeof Auth !== "undefined") {
-        await Auth.signOut();
-      }
+    logoutButton.addEventListener("click", function () {
+      confirmLogout({
+        onConfirm: async function () {
+          if (typeof Auth !== "undefined") {
+            await Auth.signOut();
+          }
 
-      sessionStorage.removeItem("workshopLoggedIn");
-      sessionStorage.removeItem("workshopUserName");
-      sessionStorage.removeItem("workshopCustomerSession");
-      sessionStorage.removeItem("workshopCustomerName");
+          sessionStorage.removeItem("workshopLoggedIn");
+          sessionStorage.removeItem("workshopUserName");
+          sessionStorage.removeItem("workshopCustomerSession");
+          sessionStorage.removeItem("workshopCustomerName");
 
-      /* Fallback: root sudah di-rewrite ke halaman login di vercel.json. */
-      window.location.href = logoutButton.dataset.logoutTarget || "/";
+          /* Fallback: root sudah di-rewrite ke halaman login di vercel.json. */
+          window.location.href = logoutButton.dataset.logoutTarget || "/";
+        },
+      });
     });
   }
 }

@@ -1774,18 +1774,12 @@ function initCustomerSettings() {
     return;
   }
 
-  const saved = localStorage.getItem("workshop_theme");
-  const value = saved === "light" || saved === "dark" ? saved : "system";
+  /* Posisi aktif kartu tema diisi oleh syncThemeOptions() (dipanggil
+     dari updateThemeButtons) — satu sumber kebenaran untuk semua
+     pemicu perubahan tema. */
+  syncThemeOptions();
 
   container.querySelectorAll("[data-theme-value]").forEach((option) => {
-    const radio = option.querySelector("input");
-
-    if (radio) {
-      radio.checked = option.dataset.themeValue === value;
-    }
-
-    option.classList.toggle("active", option.dataset.themeValue === value);
-
     option.addEventListener("click", () => {
       const selected = option.dataset.themeValue;
 
@@ -1803,10 +1797,8 @@ function initCustomerSettings() {
         applyTheme(selected);
       }
 
-      container.querySelectorAll("[data-theme-value]").forEach((item) => {
-        item.classList.toggle("active", item === option);
-      });
-
+      /* updateThemeButtons() juga menyetel ulang kartu yang aktif di
+         sini dan tombol header (aria-pressed/label/tooltip). */
       updateThemeButtons();
       showPageNotice("Tampilan berhasil diperbarui.", "success");
     });
@@ -1868,7 +1860,15 @@ function initCustomerSettings() {
 
   document
     .getElementById("btnLogoutPage")
-    ?.addEventListener("click", customerLogout);
+    ?.addEventListener("click", function () {
+      /* Lewati dialog konfirmasi global (js/global.js) dulu; fallback
+         langsung kalau global.js gagal dimuat. */
+      if (typeof confirmLogout === "function") {
+        confirmLogout({ onConfirm: customerLogout });
+      } else {
+        customerLogout();
+      }
+    });
 }
 
 /* =========================================

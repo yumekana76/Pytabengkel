@@ -139,17 +139,27 @@
   .dashboard-grid {
     grid-template-columns: 1fr;
   }
+  /* Status service tetap kiri-kanan seperti desktop (tanpa digeser);
+     lingkaran & jarak dirapatkan supaya daftar status tetap muat. */
   .service-status {
-    gap: 18px;
-    padding: 18px;
-    flex-direction: column;
+    gap: 14px;
+    padding: 14px;
+    flex-direction: row;
+    flex-wrap: nowrap;
+  }
+  .progress-wrapper {
+    margin-inline: 0;
   }
   .progress-circle {
-    width: 126px;
-    height: 126px;
+    width: 112px;
+    height: 112px;
   }
   .progress-circle::before {
-    width: 91px;
-    height: 91px;
+    width: 81px;
+    height: 81px;
+  }
+  .status-item {
+    padding: 7px 8px;
+    gap: 8px;
   }
 }

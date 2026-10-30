@@ -280,9 +280,14 @@ function populateUnifiedRelations() {
 }
 
 function unifiedSparepartOptions(selectedId = "") {
+  /* Sparepart baru ditampilkan paling atas, yang lama turun ke bawah
+     (urutan kebalikan dari penyimpanan yang menambah id di akhir). */
+  const urutBaruDulu = [...getSparepart()].sort(
+    (a, b) => Number(b.id) - Number(a.id),
+  );
   return (
     '<option value="">-- Buat sparepart baru --</option>' +
-    getSparepart()
+    urutBaruDulu
       .map(
         (item) =>
           `<option value="${item.id}"${Number(item.id) === Number(selectedId) ? " selected" : ""}>${escapeHTML(

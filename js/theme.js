@@ -74,6 +74,29 @@ function updateThemeButtons() {
         ? "Mode gelap aktif — klik untuk terang"
         : "Mode terang aktif — klik untuk gelap";
   });
+
+  /* Kartu pilihan tema di halaman Pengaturan ikut disinkronkan tiap
+     kali tema berubah, dari mana pun datangnya (tombol header /
+     kartu pengaturan / preferensi sistem). */
+  syncThemeOptions();
+}
+
+/* Pilihan di #themeOptions (Pengaturan) selalu mengikuti kondisi
+   tema aktif: "light"/"dark" kalau sudah dipilih eksplisit, "system"
+   kalau belum ada pilihan tersimpan. */
+function syncThemeOptions() {
+  const container = document.getElementById("themeOptions");
+  if (!container) return;
+
+  const stored = getStoredTheme();
+  const value = stored === "light" || stored === "dark" ? stored : "system";
+
+  container.querySelectorAll("[data-theme-value]").forEach((option) => {
+    const active = option.dataset.themeValue === value;
+    option.classList.toggle("active", active);
+    const radio = option.querySelector("input");
+    if (radio) radio.checked = active;
+  });
 }
 
 function initTheme() {

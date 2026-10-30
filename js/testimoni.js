@@ -139,210 +139,33 @@ function buildTestimoniCard(item) {
   `;
 }
 
-/* =====================================================================
-   STATE & RENDER
-   ---------------------------------------------------------------------
-   - Panel login menampilkan MAKS 2 ulasan terbaru + tombol "Lihat
-     semua ulasan" yang membuka modal berisi seluruh ulasan.
-   - Filter bintang (Semua / 5..1) dipakai bersama oleh panel & modal;
-     tiap tombol memuat jumlah ulasannya sendiri.
-   ===================================================================== */
-
-/* Maksimal ulasan tampil di panel login; sisanya lewat modal. */
-var TESTIMONI_MAX_VISIBLE = 2;
-
-var TESTIMONI_STATE = {
-  reviews: [],
-  total: 0,
-  filter: "all", /* "all" | "1".."5" */
-  modalOpen: false,
-};
-
-function testimoniCounts(reviews) {
-  const counts = { all: reviews.length, 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
-
-  for (const item of reviews) {
-    const key = Math.min(5, Math.max(1, Number(item.rating) || 0));
-    counts[key] += 1;
-  }
-
-  return counts;
-}
-
-function testimoniFiltered() {
-  const { reviews, filter } = TESTIMONI_STATE;
-
-  if (filter === "all") return reviews;
-
-  return reviews.filter((item) => Number(item.rating) === Number(filter));
-}
-
-/* Chips filter: "Semua (n)" + bintang yang punya ulasan (>0). */
-function renderTestimoniChips(container) {
-  const counts = testimoniCounts(TESTIMONI_STATE.reviews);
-  const active = TESTIMONI_STATE.filter;
-
-  let html = `<button type="button" class="testimoni-chip${
-    active === "all" ? " active" : ""
-  }" data-filter="all" aria-pressed="${active === "all"}">
-    Semua <span class="testimoni-chip-count">${counts.all}</span>
-  </button>`;
-
-  for (let rating = 5; rating >= 1; rating--) {
-    if (!counts[rating]) continue;
-
-    html += `<button type="button" class="testimoni-chip${
-      active === String(rating) ? " active" : ""
-    }" data-filter="${rating}" aria-pressed="${active === String(rating)}">
-      <i class="fa-solid fa-star" aria-hidden="true"></i>${rating}
-      <span class="testimoni-chip-count">${counts[rating]}</span>
-    </button>`;
-  }
-
-  container.innerHTML = html;
-
-  for (const chip of container.querySelectorAll(".testimoni-chip")) {
-    chip.addEventListener("click", () =>
-      setTestimoniFilter(chip.dataset.filter),
-    );
-  }
-}
-
-/* Satu sumber filter: panel login & modal ikut berubah bersama. */
-function setTestimoniFilter(value) {
-  TESTIMONI_STATE.filter = value === "all" ? "all" : String(value);
-
-  for (const id of ["testimoniFilter", "testimoniModalFilter"]) {
-    const container = document.getElementById(id);
-
-    if (container) renderTestimoniChips(container);
-  }
-
-  renderMainTestimoni();
-
-  if (TESTIMONI_STATE.modalOpen) renderTestimoniModalList();
-}
-
-/* Panel login: maksimal 2 ulasan + tombol "lihat semua". */
-function renderMainTestimoni() {
-  const list = document.getElementById("publicTestimoni");
-  const moreBtn = document.getElementById("testimoniMore");
-
-  if (!list || !moreBtn) return;
-
-  const items = testimoniFiltered();
-
-  list.innerHTML = items.length
-    ? items.slice(0, TESTIMONI_MAX_VISIBLE).map(buildTestimoniCard).join("")
-    : `<p class="testimoni-kosong">Belum ada ulasan untuk filter ini.</p>`;
-
-  const moreCount = document.getElementById("testimoniMoreCount");
-
-  if (items.length > TESTIMONI_MAX_VISIBLE) {
-    moreBtn.hidden = false;
-
-    if (moreCount) {
-      moreCount.textContent = `(${items.length})`;
-    }
-  } else {
-    moreBtn.hidden = true;
-  }
-}
-
-/* Modal: seluruh ulasan sesuai filter yang aktif. */
-function renderTestimoniModalList() {
-  const modalList = document.getElementById("testimoniModalList");
-  const sub = document.getElementById("testimoniModalSub");
-
-  if (!modalList) return;
-
-  const items = testimoniFiltered();
-
-  modalList.innerHTML = items.length
-    ? items.map(buildTestimoniCard).join("")
-    : `<p class="testimoni-kosong">Belum ada ulasan untuk filter ini.</p>`;
-
-  if (sub) {
-    sub.textContent = items.length
-      ? `${items.length} dari ${TESTIMONI_STATE.total} ulasan ditemukan`
-      : `Dari ${TESTIMONI_STATE.total} ulasan`;
-  }
-}
-
-function openTestimoniModal() {
-  const modal = document.getElementById("testimoniModal");
-
-  if (!modal) return;
-
-  TESTIMONI_STATE.modalOpen = true;
-
-  const chips = document.getElementById("testimoniModalFilter");
-
-  if (chips) renderTestimoniChips(chips);
-
-  renderTestimoniModalList();
-  modal.hidden = false;
-}
-
-function closeTestimoniModal() {
-  const modal = document.getElementById("testimoniModal");
-
-  if (!modal) return;
-
-  TESTIMONI_STATE.modalOpen = false;
-  modal.hidden = true;
-}
-
 async function initPublicTestimoni() {
   const section = document.getElementById("testimoniSection");
   const list = document.getElementById("publicTestimoni");
 
   if (!section || !list) return;
 
+  initReviewsOverlay();
+
   try {
     const { items: reviews, total } = await loadPublicReviews();
 
-    /* Belum ada ulasan -> sembunyikan seluruh section. */
-    if (!reviews.length) {
-      section.hidden = true;
-      return;
-    }
-
+    /* Section SELALU tampil — termasuk saat 0 ulasan — supaya tinggi
+       konten halaman tidak pernah berubah mengikuti jumlah data. */
     section.hidden = false;
 
-    TESTIMONI_STATE.reviews = reviews;
-    TESTIMONI_STATE.total = total;
-
-    const rata = reviews.reduce((sum, item) => sum + item.rating, 0) / reviews.length;
+    const rata =
+      reviews.reduce((sum, item) => sum + item.rating, 0) / reviews.length;
 
     testimoniSetText("testimoniRata", rata.toFixed(1).replace(".", ","));
     testimoniSetHTML("testimoniStars", testimoniStars(Math.round(rata)));
-    testimoniSetText("testimoniJumlah", `${total} ulasan`);
+    testimoniSetText(
+      "testimoniJumlah",
+      `${total} ulasan${total > reviews.length ? " • terbaru ditampilkan" : ""}`,
+    );
 
-    renderTestimoniChips(document.getElementById("testimoniFilter"));
-    renderMainTestimoni();
-
-    /* Tombol "Lihat semua ulasan" -> modal seluruh ulasan. */
-    const moreBtn = document.getElementById("testimoniMore");
-
-    if (moreBtn) moreBtn.addEventListener("click", openTestimoniModal);
-
-    document
-      .getElementById("testimoniModalClose")
-      ?.addEventListener("click", closeTestimoniModal);
-
-    const modal = document.getElementById("testimoniModal");
-
-    modal?.addEventListener("click", (event) => {
-      if (event.target === modal) closeTestimoniModal();
-    });
-
-    /* Esc juga menutup modal. */
-    document.addEventListener("keydown", (event) => {
-      if (event.key === "Escape" && TESTIMONI_STATE.modalOpen) {
-        closeTestimoniModal();
-      }
-    });
+    /* Tampilkan maksimal 6 testimoni terbaru (daftarnya bisa di-scroll). */
+    list.innerHTML = reviews.slice(0, 6).map(buildTestimoniCard).join("");
   } catch (error) {
     console.warn("Gagal memuat testimoni:", error);
     section.hidden = true;
