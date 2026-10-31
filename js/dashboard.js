@@ -119,7 +119,7 @@ function renderMekanik() {
     return;
   }
 
-  const tampil = semua.slice(0, 8);
+  const tampil = semua;
 
   tampil.forEach((item, index) => {
     const options = MEKANIK_STATUS.map(

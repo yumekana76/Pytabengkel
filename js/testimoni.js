@@ -145,17 +145,56 @@ async function initPublicTestimoni() {
 
   if (!section || !list) return;
 
-  initReviewsOverlay();
 
   try {
     const { items: reviews, total } = await loadPublicReviews();
+  window.__publicReviews = reviews;
 
     /* Section SELALU tampil — termasuk saat 0 ulasan — supaya tinggi
        konten halaman tidak pernah berubah mengikuti jumlah data. */
     section.hidden = false;
 
+    const toggle = document.getElementById("reviewsToggle");
+    if (toggle && !toggle.__wired) {
+      toggle.__wired = true;
+      toggle.addEventListener("click", () => {
+        const modal = document.getElementById("testimoniModal");
+        const list = document.getElementById("testimoniModalList");
+        const filter = document.getElementById("testimoniModalFilter");
+        if (filter && !filter.__wired) {
+          filter.__wired = true;
+          filter.innerHTML = [0,5,4,3,2,1].map((n) => {
+            const label = n === 0 ? "Semua" : `${n}★`;
+            return `<button type="button" class="filter-btn" data-star="${n}">${label}</button>`;
+          }).join("");
+          filter.addEventListener("click", (e) => {
+            const btn = e.target.closest("button[data-star]");
+            if (!btn) return;
+            const star = Number(btn.dataset.star);
+            const reviews = (window.__publicReviews || []).filter((r) => star === 0 || r.rating === star);
+            if (list) list.innerHTML = reviews.map(buildTestimoniCard).join("") || "<p>Belum ada ulasan.</p>";
+          });
+        }
+        if (list) {
+          const reviews = window.__publicReviews || [];
+          list.innerHTML = reviews.map(buildTestimoniCard).join("") || "<p>Belum ada ulasan.</p>";
+        }
+        if (modal) modal.hidden = false;
+      });
+    }
+    const closeBtn = document.getElementById("testimoniModalClose");
+    if (closeBtn && !closeBtn.__wired) {
+      closeBtn.__wired = true;
+      closeBtn.addEventListener("click", () => {
+        const modal = document.getElementById("testimoniModal");
+        if (modal) modal.hidden = true;
+      });
+    }
+
     const rata =
-      reviews.reduce((sum, item) => sum + item.rating, 0) / reviews.length;
+      reviews.length > 0
+        ? reviews.reduce((sum, item) => sum + item.rating, 0) / reviews.length
+        : 0;
 
     testimoniSetText("testimoniRata", rata.toFixed(1).replace(".", ","));
     testimoniSetHTML("testimoniStars", testimoniStars(Math.round(rata)));

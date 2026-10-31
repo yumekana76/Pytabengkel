@@ -144,6 +144,11 @@ body {
   transition: 0.2s;
 }
 
+/* Tombol "lihat ulasan" (HP) diposisikan kiri toggle tema agar tidak menumpuk. */
+.reviews-toggle {
+  right: 72px;
+}
+
 .theme-toggle:hover {
   border-color: var(--primary);
   color: var(--primary);
@@ -980,3 +985,26 @@ body {
 .stars-small {
   font-size: 12px;
 }
+
+/* Modal semua ulasan (HP) */
+.testimoni-modal-overlay[hidden] { display: none !important; }
+.testimoni-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: var(--surface-overlay);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  z-index: 1000;
+}
+.testimoni-modal {
+  width: 100%;
+  max-width: 520px;
+  max-height: 85vh;
+  overflow-y: auto;
+  background: var(--surface);
+  border-radius: 16px;
+  padding: 20px;
+}
+.testimoni-modal-list { display: flex; flex-direction: column; gap: 12px; }
