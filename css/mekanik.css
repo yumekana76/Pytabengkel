@@ -47,3 +47,25 @@
     flex-wrap: wrap;
   }
 }
+
+/* --- Select status cepat (halaman Mekanik) --- */
+.status-quick {
+  text-align-last: center;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: var(--badge-radius, 8px);
+  padding: 6px 8px;
+  cursor: pointer;
+}
+
+.status-quick.aktif {
+  background: var(--badge-done-bg);
+  color: var(--badge-done-text);
+  border-color: transparent;
+}
+
+.status-quick.izin {
+  background: var(--badge-waiting-bg);
+  color: var(--badge-waiting-text);
+  border-color: transparent;
+}

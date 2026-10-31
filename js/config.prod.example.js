@@ -21,6 +21,4 @@ window.SUPABASE_CONFIG_OVERRIDE = {
   url: "https://GANTI-DENGAN-PROJECT-URL-SUPABASE.supabase.co",
   anonKey: "GANTI-DENGAN-ANON-PUBLIC-KEY-SUPABASE",
 
-  /* Email yang otomatis jadi admin saat mendaftar. */
-  adminEmail: "admin@workshop.com",
 };

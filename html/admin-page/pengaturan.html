@@ -161,6 +161,49 @@
           </div>
           <input type="file" id="restoreFile" accept="application/json" hidden />
         </section>
+
+        <section class="panel">
+          <div class="panel-header">
+            <div>
+              <h3>Riwayat Aktivitas</h3>
+              <p>Audit siapa mengubah apa dan kapan (tambah, edit, hapus, bayar).</p>
+            </div>
+            <div class="vehicle-toolbar">
+              <select
+                id="filterLogAksi"
+                class="form-control filter-select"
+                aria-label="Filter jenis aksi"
+              >
+                <option value="">Semua Aksi</option>
+                <option value="Tambah">Tambah</option>
+                <option value="Update">Update</option>
+                <option value="Hapus">Hapus</option>
+                <option value="Bayar">Bayar</option>
+              </select>
+              <div class="search-box">
+                <input type="search" id="searchLog" placeholder="Cari aktivitas..." />
+              </div>
+            </div>
+          </div>
+          <div class="table-container table-fit">
+            <table>
+              <caption class="sr-only">Riwayat aktivitas pengguna</caption>
+              <thead>
+                <tr>
+                  <th scope="col">Waktu</th>
+                  <th scope="col">Aktor</th>
+                  <th scope="col">Aksi</th>
+                  <th scope="col">Data</th>
+                  <th scope="col">Keterangan</th>
+                </tr>
+              </thead>
+              <tbody id="logTable"></tbody>
+            </table>
+          </div>
+          <div class="table-footer">
+            <span id="logInfo">—</span>
+          </div>
+        </section>
       </main>
     </div>
     <div class="modal-overlay" id="infoModal">

@@ -139,158 +139,33 @@ function buildTestimoniCard(item) {
   `;
 }
 
-/* =====================================================================
-   STATE & RENDER
-   ---------------------------------------------------------------------
-   - Panel login menampilkan MAKS 2 ulasan terbaru + tombol "Lihat
-     semua ulasan" yang membuka modal berisi seluruh ulasan.
-   - Filter bintang (Semua / 5..1) dipakai bersama oleh panel & modal;
-     tiap tombol memuat jumlah ulasannya sendiri.
-   ===================================================================== */
-
-/* Maksimal ulasan tampil di panel login; sisanya lewat modal. */
-var TESTIMONI_MAX_VISIBLE = 2;
-
-var TESTIMONI_STATE = {
-  reviews: [],
-  total: 0,
-  filter: "all", /* "all" | "1".."5" */
-  modalOpen: false,
-};
-
-function testimoniCounts(reviews) {
-  const counts = { all: reviews.length, 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
-
-  for (const item of reviews) {
-    const key = Math.min(5, Math.max(1, Number(item.rating) || 0));
-    counts[key] += 1;
-  }
-
-  return counts;
+/* Tombol filter bintang — dipakai panel login-info (desktop) dan
+   modal HP. Kontainer yang sudah diisi tidak diisi ulang (dataset.bound). */
+function buildTestimoniFilter(filterEl, listEl) {
+  if (!filterEl || filterEl.dataset.bound === "true") return;
+  filterEl.dataset.bound = "true";
+  filterEl.innerHTML = [0, 5, 4, 3, 2, 1]
+    .map((n) => {
+      const label = n === 0 ? "Semua" : `${n}★`;
+      return `<button type="button" class="filter-btn${n === 0 ? " active" : ""}" data-star="${n}">${label}</button>`;
+    })
+    .join("");
+  filterEl.addEventListener("click", (e) => {
+    const btn = e.target.closest("button[data-star]");
+    if (!btn) return;
+    filterEl
+      .querySelectorAll(".filter-btn")
+      .forEach((b) => b.classList.toggle("active", b === btn));
+    renderTestimoniList(listEl, Number(btn.dataset.star));
+  });
 }
 
-function testimoniFiltered() {
-  const { reviews, filter } = TESTIMONI_STATE;
-
-  if (filter === "all") return reviews;
-
-  return reviews.filter((item) => Number(item.rating) === Number(filter));
-}
-
-/* Chips filter: "Semua (n)" + bintang yang punya ulasan (>0). */
-function renderTestimoniChips(container) {
-  const counts = testimoniCounts(TESTIMONI_STATE.reviews);
-  const active = TESTIMONI_STATE.filter;
-
-  let html = `<button type="button" class="testimoni-chip${
-    active === "all" ? " active" : ""
-  }" data-filter="all" aria-pressed="${active === "all"}">
-    Semua <span class="testimoni-chip-count">${counts.all}</span>
-  </button>`;
-
-  for (let rating = 5; rating >= 1; rating--) {
-    if (!counts[rating]) continue;
-
-    html += `<button type="button" class="testimoni-chip${
-      active === String(rating) ? " active" : ""
-    }" data-filter="${rating}" aria-pressed="${active === String(rating)}">
-      <i class="fa-solid fa-star" aria-hidden="true"></i>${rating}
-      <span class="testimoni-chip-count">${counts[rating]}</span>
-    </button>`;
-  }
-
-  container.innerHTML = html;
-
-  for (const chip of container.querySelectorAll(".testimoni-chip")) {
-    chip.addEventListener("click", () =>
-      setTestimoniFilter(chip.dataset.filter),
-    );
-  }
-}
-
-/* Satu sumber filter: panel login & modal ikut berubah bersama. */
-function setTestimoniFilter(value) {
-  TESTIMONI_STATE.filter = value === "all" ? "all" : String(value);
-
-  for (const id of ["testimoniFilter", "testimoniModalFilter"]) {
-    const container = document.getElementById(id);
-
-    if (container) renderTestimoniChips(container);
-  }
-
-  renderMainTestimoni();
-
-  if (TESTIMONI_STATE.modalOpen) renderTestimoniModalList();
-}
-
-/* Panel login: maksimal 2 ulasan + tombol "lihat semua". */
-function renderMainTestimoni() {
-  const list = document.getElementById("publicTestimoni");
-  const moreBtn = document.getElementById("testimoniMore");
-
-  if (!list || !moreBtn) return;
-
-  const items = testimoniFiltered();
-
-  list.innerHTML = items.length
-    ? items.slice(0, TESTIMONI_MAX_VISIBLE).map(buildTestimoniCard).join("")
-    : `<p class="testimoni-kosong">Belum ada ulasan untuk filter ini.</p>`;
-
-  const moreCount = document.getElementById("testimoniMoreCount");
-
-  if (items.length > TESTIMONI_MAX_VISIBLE) {
-    moreBtn.hidden = false;
-
-    if (moreCount) {
-      moreCount.textContent = `(${items.length})`;
-    }
-  } else {
-    moreBtn.hidden = true;
-  }
-}
-
-/* Modal: seluruh ulasan sesuai filter yang aktif. */
-function renderTestimoniModalList() {
-  const modalList = document.getElementById("testimoniModalList");
-  const sub = document.getElementById("testimoniModalSub");
-
-  if (!modalList) return;
-
-  const items = testimoniFiltered();
-
-  modalList.innerHTML = items.length
-    ? items.map(buildTestimoniCard).join("")
-    : `<p class="testimoni-kosong">Belum ada ulasan untuk filter ini.</p>`;
-
-  if (sub) {
-    sub.textContent = items.length
-      ? `${items.length} dari ${TESTIMONI_STATE.total} ulasan ditemukan`
-      : `Dari ${TESTIMONI_STATE.total} ulasan`;
-  }
-}
-
-function openTestimoniModal() {
-  const modal = document.getElementById("testimoniModal");
-
-  if (!modal) return;
-
-  TESTIMONI_STATE.modalOpen = true;
-
-  const chips = document.getElementById("testimoniModalFilter");
-
-  if (chips) renderTestimoniChips(chips);
-
-  renderTestimoniModalList();
-  modal.hidden = false;
-}
-
-function closeTestimoniModal() {
-  const modal = document.getElementById("testimoniModal");
-
-  if (!modal) return;
-
-  TESTIMONI_STATE.modalOpen = false;
-  modal.hidden = true;
+/* Isi daftar ulasan sesuai filter bintang (0 = semua). */
+function renderTestimoniList(listEl, star = 0) {
+  if (!listEl) return;
+  const data = Array.isArray(window.__publicReviews) ? window.__publicReviews : [];
+  const filtered = star === 0 ? data : data.filter((r) => Number(r.rating) === star);
+  listEl.innerHTML = filtered.map(buildTestimoniCard).join("") || "<p>Belum ada ulasan.</p>";
 }
 
 async function initPublicTestimoni() {
@@ -299,50 +174,69 @@ async function initPublicTestimoni() {
 
   if (!section || !list) return;
 
+
   try {
     const { items: reviews, total } = await loadPublicReviews();
+    window.__publicReviews = Array.isArray(reviews) ? reviews.slice() : [];
 
-    /* Belum ada ulasan -> sembunyikan seluruh section. */
-    if (!reviews.length) {
-      section.hidden = true;
-      return;
-    }
-
+    /* Section SELALU tampil — termasuk saat 0 ulasan — supaya tinggi
+       konten halaman tidak pernah berubah mengikuti jumlah data. */
     section.hidden = false;
 
-    TESTIMONI_STATE.reviews = reviews;
-    TESTIMONI_STATE.total = total;
+    /* Panel login-info (desktop): daftar ulasan + filter bintang,
+       tampil seperti isi modal tombol ulasan. */
+    buildTestimoniFilter(document.getElementById("testimoniFilter"), list);
 
-    const rata = reviews.reduce((sum, item) => sum + item.rating, 0) / reviews.length;
+    const toggle = document.getElementById("reviewsToggle");
+    if (toggle && toggle.dataset.bound !== "true") {
+      toggle.dataset.bound = "true";
+      toggle.addEventListener("click", () => {
+        const modal = document.getElementById("testimoniModal");
+        const listEl = document.getElementById("testimoniModalList");
+        const filter = document.getElementById("testimoniModalFilter");
+        buildTestimoniFilter(filter, listEl);
+        /* Setiap kali dibuka, kembali ke filter "Semua". */
+        if (filter) {
+          filter
+            .querySelectorAll(".filter-btn")
+            .forEach((b) => b.classList.toggle("active", b.dataset.star === "0"));
+        }
+        renderTestimoniList(listEl, 0);
+        if (modal) modal.hidden = false;
+      });
+    }
+    const closeBtn = document.getElementById("testimoniModalClose");
+    if (closeBtn && closeBtn.dataset.bound !== "true") {
+      closeBtn.dataset.bound = "true";
+      closeBtn.addEventListener("click", () => {
+        const modal = document.getElementById("testimoniModal");
+        if (modal) modal.hidden = true;
+      });
+    }
+    const modalOverlay = document.getElementById("testimoniModal");
+    if (modalOverlay && modalOverlay.dataset.bound !== "true") {
+      modalOverlay.dataset.bound = "true";
+      modalOverlay.addEventListener("click", (e) => {
+        if (e.target === modalOverlay) {
+          modalOverlay.hidden = true;
+        }
+      });
+    }
+
+    const rata =
+      reviews.length > 0
+        ? reviews.reduce((sum, item) => sum + item.rating, 0) / reviews.length
+        : 0;
 
     testimoniSetText("testimoniRata", rata.toFixed(1).replace(".", ","));
     testimoniSetHTML("testimoniStars", testimoniStars(Math.round(rata)));
-    testimoniSetText("testimoniJumlah", `${total} ulasan`);
+    testimoniSetText(
+      "testimoniJumlah",
+      `${total} ulasan${total > reviews.length ? " • terbaru ditampilkan" : ""}`,
+    );
 
-    renderTestimoniChips(document.getElementById("testimoniFilter"));
-    renderMainTestimoni();
-
-    /* Tombol "Lihat semua ulasan" -> modal seluruh ulasan. */
-    const moreBtn = document.getElementById("testimoniMore");
-
-    if (moreBtn) moreBtn.addEventListener("click", openTestimoniModal);
-
-    document
-      .getElementById("testimoniModalClose")
-      ?.addEventListener("click", closeTestimoniModal);
-
-    const modal = document.getElementById("testimoniModal");
-
-    modal?.addEventListener("click", (event) => {
-      if (event.target === modal) closeTestimoniModal();
-    });
-
-    /* Esc juga menutup modal. */
-    document.addEventListener("keydown", (event) => {
-      if (event.key === "Escape" && TESTIMONI_STATE.modalOpen) {
-        closeTestimoniModal();
-      }
-    });
+    /* Semua ulasan tampil di panel (daftarnya bisa di-scroll). */
+    renderTestimoniList(list, 0);
   } catch (error) {
     console.warn("Gagal memuat testimoni:", error);
     section.hidden = true;

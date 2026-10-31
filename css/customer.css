@@ -263,10 +263,16 @@
 
 @media (max-width: 700px) {
   .customer-hero {
-    padding: 20px;
+    /* Padding dirapatkan di layar kecil (desktop tetap 24px 26px). */
+    padding: 14px;
   }
   .customer-hero h2 {
     font-size: 20px;
+  }
+  /* Kartu kendaraan & profil: padding lebih ringkas di HP */
+  .vehicle-card,
+  .profile-card {
+    padding: 14px;
   }
   .vehicle-cards {
     grid-template-columns: 1fr;

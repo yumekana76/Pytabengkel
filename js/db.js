@@ -494,6 +494,42 @@ function dbLoadFromLocal() {
   dbSyncKnown();
 }
 
+/* Akun demo mode lokal.
+   Credential diambil dari `js/config.js` (window.SUPABASE_CONFIG.localAccounts)
+   dan tidak pernah ditampilkan di halaman login. */
+function dbBuildDemoAccounts() {
+  const localAccounts = window.SUPABASE_CONFIG?.localAccounts || {};
+
+  const adminAccount = localAccounts.admin || {
+    email: "admin@workshop.com",
+    password: "admin123",
+  };
+
+  const customerAccount = localAccounts.customer || {
+    email: "customer@workshop.com",
+    password: "customer123",
+  };
+
+  return [
+    {
+      id: 1,
+      customerId: null,
+      nama: "Administrator Bengkel",
+      email: adminAccount.email,
+      password: adminAccount.password,
+      role: "admin",
+    },
+    {
+      id: 2,
+      customerId: null,
+      nama: "Customer",
+      email: customerAccount.email,
+      password: customerAccount.password,
+      role: "customer",
+    },
+  ];
+}
+
 function readLocalArray(key, fallback) {
   try {
     const raw = localStorage.getItem(key);

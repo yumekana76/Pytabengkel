@@ -34,3 +34,13 @@
     grid-column: 1 / -1;
   }
 }
+
+/* Tabel Service punya banyak kolom (11); padding bawaan 16px per sisi
+   membuat total lebar melebihi panel sehingga kolom Aksi terpotong.
+   Padding lebih ringkas supaya tabel muat penuh tanpa scroll di
+   desktop (1366px ke atas). */
+.table-fit table th,
+.table-fit table td {
+  padding-left: 10px;
+  padding-right: 10px;
+}

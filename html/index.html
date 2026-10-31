@@ -5,26 +5,18 @@
     <meta
       http-equiv="Content-Security-Policy"
       content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; font-src 'self' https://cdnjs.cloudflare.com; img-src 'self' data: https://*.supabase.co; connect-src 'self' https://*.supabase.co wss://*.supabase.co; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
-    />
+      />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Login | Pytabengkel</title>
-    <link rel="stylesheet" href="../css/login.css" />
+    <link 
+    rel="stylesheet" 
+    href="../css/login.css" 
+    />
     <link
       rel="stylesheet"
       href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
     />
 
-    <!-- WAJIB urut: theme -> config -> library -> lapisan auth supaya
-         db.js (panggil isSupabaseMode()) dan login.js (panggil Auth)
-         sudah menemukan definisinya saat dieksekusi. -->
-    <script src="../js/error-logger.js"></script>
-    <script src="../js/theme.js"></script>
-    <script src="../js/config.js"></script>
-    <script src="../js/vendor/supabase.min.js"></script>
-    <script src="../js/supabase.js"></script>
-    <script>
-      applyThemeBeforePaint();
-    </script>
   </head>
   <body>
     <button
@@ -39,7 +31,22 @@
       <i class="fa-solid fa-moon icon-moon" aria-hidden="true"></i>
     </button>
 
-    <main class="login-container login-page">
+    <!-- Akses ulasan di HP: panel kiri (termasuk testimoni) tersembunyi
+         pada layar kecil, jadi disediakan tombol khusus untuk membuka
+         daftar ulasan sebagai layar penuh. -->
+    <button
+      type="button"
+      class="theme-toggle reviews-toggle"
+      id="reviewsToggle"
+      aria-expanded="false"
+      aria-controls="loginInfo"
+      aria-label="Lihat ulasan pelanggan"
+      title="Lihat ulasan pelanggan"
+    >
+      <i class="fa-solid fa-star" aria-hidden="true"></i>
+    </button>
+
+    <main class="login-container">
       <section class="login-info">
         <div class="brand">
           <div class="brand-icon">
@@ -47,58 +54,47 @@
           </div>
           <span>Pytabengkel</span>
         </div>
-        <!-- Konten tengah dalam area scroll: section ulasan yang panjang
-             tidak mengubah tinggi kartu login. brand & copyright tetap
-             menempel di atas & bawah panel. -->
-        <div class="info-scroll">
-          <div class="info-content">
-            <h1 id="heroTitle">Kelola Bengkel Lebih Mudah.</h1>
-            <p id="heroText">
-              Kelola customer, kendaraan, service, mekanik, dan riwayat pekerjaan dalam satu sistem.
-            </p>
-            <div class="features" id="heroFeatures">
-              <div class="feature">
-                <span class="feature-icon"><i class="fa-solid fa-check" aria-hidden="true"></i></span>
-                <span>Kelola data customer dan kendaraan</span>
-              </div>
-              <div class="feature">
-                <span class="feature-icon"><i class="fa-solid fa-check" aria-hidden="true"></i></span>
-                <span>Pantau status service kendaraan</span>
-              </div>
-              <div class="feature">
-                <span class="feature-icon"><i class="fa-solid fa-check" aria-hidden="true"></i></span>
-                <span>Simpan riwayat service dengan mudah</span>
-              </div>
+        <div class="info-content">
+          <h1 id="heroTitle">Kelola Bengkel Lebih Mudah.</h1>
+          <p id="heroText">
+            Kelola customer, kendaraan, service, mekanik, dan riwayat pekerjaan dalam satu sistem.
+          </p>
+          <div class="features" id="heroFeatures">
+            <div class="feature">
+              <span class="feature-icon"><i class="fa-solid fa-check" aria-hidden="true"></i></span>
+              <span>Kelola data customer dan kendaraan</span>
             </div>
-          </div>
-          <div class="testimoni-section" id="testimoniSection" hidden>
-            <div class="testimoni-head">
-              <h3>
-                <i class="fa-solid fa-star" aria-hidden="true"></i>
-                Apa Kata Pelanggan
-              </h3>
-              <div class="testimoni-summary">
-                <span class="testimoni-rata" id="testimoniRata">-</span>
-                <span id="testimoniStars"></span>
-                <span class="testimoni-jumlah" id="testimoniJumlah"></span>
-              </div>
+            <div class="feature">
+              <span class="feature-icon"><i class="fa-solid fa-check" aria-hidden="true"></i></span>
+              <span>Pantau status service kendaraan</span>
             </div>
-            <!-- Filter bintang: tiap tombol memuat jumlah ulasannya. -->
-            <div
-              class="testimoni-filter"
-              id="testimoniFilter"
-              role="group"
-              aria-label="Filter ulasan berdasarkan bintang"
-            ></div>
-            <div class="testimoni-list" id="publicTestimoni"></div>
-            <button type="button" class="testimoni-more" id="testimoniMore" hidden>
-              <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
-              <span>Lihat semua ulasan</span>
-              <span class="testimoni-more-count" id="testimoniMoreCount"></span>
-            </button>
+            <div class="feature">
+              <span class="feature-icon"><i class="fa-solid fa-check" aria-hidden="true"></i></span>
+              <span>Simpan riwayat service dengan mudah</span>
+            </div>
           </div>
         </div>
-
+        <div class="testimoni-section" id="testimoniSection" hidden>
+          <div class="testimoni-head">
+            <h3>
+              <i class="fa-solid fa-star" aria-hidden="true"></i>
+              Apa Kata Pelanggan
+            </h3>
+            <div class="testimoni-summary">
+              <span class="testimoni-rata" id="testimoniRata">-</span>
+              <span id="testimoniStars"></span>
+              <span class="testimoni-jumlah" id="testimoniJumlah"></span>
+            </div>
+          </div>
+          <div
+            class="testimoni-filter testimoni-panel-filter"
+            id="testimoniFilter"
+            role="group"
+            aria-label="Filter ulasan berdasarkan bintang"
+          ></div>
+          <div class="testimoni-list" id="publicTestimoni"></div>
+        </div>
+        <br>
         <div class="copyright">© 2026 Pytabengkel</div>
       </section>
 
@@ -280,7 +276,7 @@
           </button>
         </div>
         <div
-          class="testimoni-filter"
+          class="testimoni-filter testimoni-modal-filter"
           id="testimoniModalFilter"
           role="group"
           aria-label="Filter ulasan berdasarkan bintang"
@@ -289,6 +285,15 @@
       </div>
     </div>
 
+    <!-- WAJIB urut: theme -> config -> library -> lapisan auth supaya
+         db.js (panggil isSupabaseMode()) dan login.js (panggil Auth)
+         sudah menemukan definisinya saat dieksekusi. -->
+    <script src="../js/error-logger.js"></script>
+    <script src="../js/theme.js"></script>
+    <script src="../js/config.js"></script>
+    <script src="../js/vendor/supabase.min.js"></script>
+    <script src="../js/supabase.js"></script>
+    <script>applyThemeBeforePaint();</script>
     <script src="../js/db.js"></script>
     <script src="../js/auth.js"></script>
     <script src="../js/login.js"></script>

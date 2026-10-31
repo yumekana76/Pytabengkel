@@ -38,13 +38,23 @@ function renderMekanikPage(search = "") {
 
   table.innerHTML = "";
   if (!mekanik.length) {
-    table.innerHTML =
-      '<tr><td colspan="7" style="text-align: center; padding: 30px;">Tidak ada data mekanik.</td></tr>';
+    /* Kosong gara-gara cari/filter? Jangan menawarkan tombol tambah. */
+    const tersaring = Boolean(keyword || statusFilter);
+    table.innerHTML = tersaring
+      ? '<tr><td colspan="7" style="text-align: center; padding: 30px;">Tidak ada data yang cocok dengan pencarian / filter.</td></tr>'
+      : '<tr><td colspan="7" style="text-align: center; padding: 30px;">Belum ada data mekanik. <button type="button" class="action-btn" data-empty-cta>+ Tambah Mekanik</button></td></tr>';
+    const cta = table.querySelector("[data-empty-cta]");
+    if (cta) {
+      cta.addEventListener("click", () =>
+        document.getElementById("btnTambahMekanik")?.click(),
+      );
+    }
     setText("mekanikInfo", "Tidak ada data");
     return;
   }
 
   mekanik.forEach((item, index) => {
+    const statusClass = item.status === "Izin" ? "izin" : "aktif";
     table.innerHTML += `
       <tr>
         <td>${index + 1}</td>
@@ -52,7 +62,12 @@ function renderMekanikPage(search = "") {
         <td><strong>${escapeHTML(item.nama)}</strong></td>
         <td>${escapeHTML(item.spesialisasi)}</td>
         <td>${escapeHTML(item.telepon || "-")}</td>
-        <td>${escapeHTML(item.status)}</td>
+        <td>
+          <select class="form-control row-select status-quick ${statusClass}" data-quick-status="${item.id}" aria-label="Status ${escapeHTML(item.nama)}">
+            <option value="Aktif"${item.status === "Aktif" ? " selected" : ""}>Aktif</option>
+            <option value="Izin"${item.status === "Izin" ? " selected" : ""}>Izin</option>
+          </select>
+        </td>
         <td><div class="action-buttons">
           <button type="button" class="action-btn" data-edit-mekanik="${item.id}">Edit</button>
           <button type="button" class="action-btn danger" data-delete-mekanik="${item.id}">Hapus</button>
@@ -70,7 +85,38 @@ function renderMekanikPage(search = "") {
       deleteMekanik(button.dataset.deleteMekanik, button),
     );
   });
+  table.querySelectorAll("[data-quick-status]").forEach((select) => {
+    select.addEventListener("change", () =>
+      quickSetMekanikStatus(select.dataset.quickStatus, select.value),
+    );
+  });
   setText("mekanikInfo", `Menampilkan ${mekanik.length} mekanik`);
+}
+
+/* Ubah status mekanik langsung dari tabel (tanpa modal). */
+function quickSetMekanikStatus(id, status) {
+  if (!["Aktif", "Izin"].includes(status)) return;
+
+  const mekanik = getMekanik();
+  const item = mekanik.find((entry) => Number(entry.id) === Number(id));
+  if (!item) return;
+
+  const statusSebelumnya = item.status;
+  item.status = status;
+  saveMekanik(mekanik);
+
+  addLog(
+    "Update",
+    "Mekanik",
+    `Status ${item.nama}: ${statusSebelumnya} → ${status}`,
+    getKode("mekanik", item),
+  );
+
+  if (typeof renderMekanikPage === "function")
+    renderMekanikPage(document.getElementById("searchMekanik")?.value || "");
+  if (typeof updateMekanikStats === "function") updateMekanikStats();
+  if (typeof renderMekanik === "function") renderMekanik();
+  showPageNotice(`Status ${item.nama} diubah menjadi ${status}.`, "success");
 }
 
 function resetMekanikForm() {
