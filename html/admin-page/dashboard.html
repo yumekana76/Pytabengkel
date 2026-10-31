@@ -199,21 +199,27 @@
             <div class="panel-header">
               <div>
                 <h3>Mekanik</h3>
-                <p>Ubah status langsung dari sini</p>
+                <p>Ubah status &amp; rekap service per hari</p>
               </div>
               <div class="vehicle-toolbar">
+                <input
+                  type="date"
+                  id="filterMekanikTanggal"
+                  class="form-control filter-date"
+                  aria-label="Tanggal rekap service mekanik"
+                />
                 <select
                   id="filterMekanikDashboard"
                   class="form-control filter-select"
                   aria-label="Filter status mekanik"
                 >
-                  <option value="">Semua Status</option>
+                  <option value="">Semua</option>
                   <option value="Aktif">Aktif</option>
                   <option value="Izin">Izin</option>
                 </select>
               </div>
             </div>
-            <div class="table-container">
+            <div class="table-container table-fit">
               <table>
                 <caption class="sr-only">Daftar mekanik dan beban kerja</caption>
                 <thead>
@@ -269,8 +275,7 @@
                   <th scope="col">Pelanggan</th>
                   <th scope="col">Keluhan</th>
                   <th scope="col">Mekanik</th>
-                  <th scope="col">Biaya Jasa</th>
-                  <th scope="col">Total Tagihan</th>
+                  <th scope="col">Tagihan</th>
                   <th scope="col">Tanggal</th>
                   <th scope="col">Status</th>
                   <th scope="col">Aksi</th>
@@ -317,6 +322,20 @@
             <div class="form-grid">
               <div class="form-group form-full">
                 <div class="form-section-title">Customer</div>
+              </div>
+              <div class="form-group form-full">
+                <label for="unifiedCustomerSearch">Cari Customer Terdaftar</label>
+                <input
+                  type="search"
+                  id="unifiedCustomerSearch"
+                  class="form-control"
+                  placeholder="Ketik nama customer..."
+                  autocomplete="off"
+                />
+                <p class="form-hint" id="unifiedCustomerSearchHint">
+                  Hasil pencarian otomatis terpilih di dropdown bawah &amp;
+                  mengisi isian customer.
+                </p>
               </div>
               <div class="form-group">
                 <label for="unifiedCustomerId">Customer Terdaftar</label>

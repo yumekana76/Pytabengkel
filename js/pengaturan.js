@@ -161,6 +161,80 @@ function initPengaturanPage() {
       window.location.href = "dashboard.html";
     }, 400);
   });
+
+  /* ---------------- RIWAYAT AKTIVITAS ---------------- */
+  renderAktivitasTable();
+  document
+    .getElementById("filterLogAksi")
+    ?.addEventListener("change", () => renderAktivitasTable());
+  document
+    .getElementById("searchLog")
+    ?.addEventListener("input", () => renderAktivitasTable());
+}
+
+/* Badge warna untuk jenis aksi pada tabel riwayat aktivitas. */
+const LOG_AKSI_BADGE = {
+  Tambah: "done",
+  Update: "working",
+  Hapus: "danger",
+  Bayar: "done",
+};
+
+/* Tabel riwayat aktivitas (audit) di halaman Pengaturan. */
+function renderAktivitasTable() {
+  const table = document.getElementById("logTable");
+  if (!table) return;
+
+  const aksiFilter = document.getElementById("filterLogAksi")?.value || "";
+  const keyword = (
+    document.getElementById("searchLog")?.value || ""
+  )
+    .toLowerCase()
+    .trim();
+
+  const logs = getLogs()
+    .filter((log) => !aksiFilter || log.aksi === aksiFilter)
+    .filter((log) =>
+      [log.aktor, log.role, log.aksi, log.entitas, log.kode, log.keterangan].some(
+        (value) =>
+          String(value || "")
+            .toLowerCase()
+            .includes(keyword),
+      ),
+    )
+    .sort((a, b) => String(b.waktu || "").localeCompare(String(a.waktu || "")));
+
+  table.innerHTML = "";
+  if (!logs.length) {
+    table.innerHTML =
+      '<tr><td colspan="5" style="text-align: center; padding: 30px;">Tidak ada aktivitas tercatat.</td></tr>';
+    setText("logInfo", "Tidak ada data");
+    return;
+  }
+
+  table.innerHTML = logs
+    .slice(0, 200)
+    .map((log) => {
+      const badgeClass = LOG_AKSI_BADGE[log.aksi] || "waiting";
+      const waktu = new Date(log.waktu);
+      const waktuTeks = Number.isNaN(waktu.getTime())
+        ? String(log.waktu || "-")
+        : waktu.toLocaleString("id-ID");
+      return `
+      <tr>
+        <td>${escapeHTML(waktuTeks)}</td>
+        <td><strong>${escapeHTML(log.aktor || "-")}</strong> <span style="color: var(--secondary); font-size: 12px;">(${escapeHTML(log.role || "-")})</span></td>
+        <td><span class="badge ${badgeClass}">${escapeHTML(log.aksi || "-")}</span></td>
+        <td>${escapeHTML(log.entitas || "-")}${log.kode ? ` <span class="cell-id">${escapeHTML(log.kode)}</span>` : ""}</td>
+        <td>${escapeHTML(log.keterangan || "-")}</td>
+      </tr>`;
+    })
+    .join("");
+
+  setText(
+    "logInfo",
+    `Menampilkan ${Math.min(logs.length, 200)} dari ${getLogs().length} aktivitas`,
+  );
 }
 
 /* ---------------------------------------------------------------------

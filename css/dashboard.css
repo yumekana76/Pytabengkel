@@ -130,6 +130,36 @@
   padding: 8px 12px;
 }
 
+/* --- Tabel Mekanik (dashboard): select status & rekap harian --- */
+/* (.row-select, .table-fit/min-width filter kini di css/global.css) */
+
+/* Input tanggal + filter status sebelahan di toolbar panel Mekanik.
+   Selector id dipakai supaya mengalahkan .form-control { width:100% }
+   yang membuat select melebar 100% dan toolbar membungkus. */
+#filterMekanikTanggal {
+  width: 132px;
+  min-width: 132px;
+}
+#filterMekanikDashboard {
+  width: auto;
+  min-width: 96px;
+}
+
+/* Rekap service per hari: jumlah + rincian status per mekanik */
+.rekap-harian {
+  display: grid;
+  gap: 5px;
+}
+.rekap-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.rekap-badges .badge {
+  padding: 3px 8px;
+  font-size: 10px;
+}
+
 @media (max-width: 900px) {
   .dashboard-grid {
     grid-template-columns: 1fr;

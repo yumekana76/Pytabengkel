@@ -1,0 +1,339 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; font-src 'self' https://cdnjs.cloudflare.com; img-src 'self' data: https://*.supabase.co; connect-src 'self' https://*.supabase.co wss://*.supabase.co; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+    />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Pytabengkel - Service</title>
+    <link rel="stylesheet" href="../../css/global.css" />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
+    />
+    <link rel="stylesheet" href="../../css/service.css" />
+    <script>
+      window.SUPABASE_CONFIG_OVERRIDE = { url: "", anonKey: "" };
+      localStorage.setItem("workshop_mekanik", JSON.stringify([
+        { id: 1, kode: "MKN-001", nama: "Fajri", spesialisasi: "Mesin", telepon: "081234567890", status: "Aktif" }
+      ]));
+      localStorage.setItem("workshop_kendaraan", JSON.stringify([
+        { id: 1, kode: "KND-001", polisi: "D 1111 AA", pelanggan: "Budi", pelangganId: 1, jenis: "Mobil", merk: "Avanza", keluhan: "Ganti oli", status: "Dikerjakan", mekanikId: 1, mekanik: "Fajri", biayaJasa: 100000, spareparts: [], tanggalService: new Date().toISOString().slice(0,10), pembayaran: "Belum Lunas" },
+        { id: 2, kode: "KND-002", polisi: "D 2222 BB", pelanggan: "Citra", pelangganId: 2, jenis: "Mobil", merk: "Brio", keluhan: "Servis rutin", status: "Selesai", mekanikId: 1, mekanik: "Fajri", biayaJasa: 250000, spareparts: [], tanggalService: new Date().toISOString().slice(0,10), pembayaran: "Lunas" }
+      ]));
+      localStorage.setItem("workshop_customers", JSON.stringify([
+        { id: 1, kode: "CUS-001", nama: "Budi Santoso", telepon: "0811111111", email: "", alamat: "", catatan: "", registeredAt: "2026-10-01", registeredVia: "admin" }
+      ]));
+      localStorage.setItem("workshop_sparepart", JSON.stringify([
+        { id: 1, kode: "SPR-001", nama: "Oli Mesin", kategori: "Oli", harga: 120000, stok: 10 }
+      ]));
+    </script>
+    <script src="../../js/error-logger.js"></script>
+    <script src="../../js/theme.js"></script>
+    <script src="../../js/config.js"></script>
+    <script src="../../js/vendor/supabase.min.js"></script>
+    <script src="../../js/supabase.js"></script>
+    <script>
+      applyThemeBeforePaint();
+      window.__APP_ROLE = "admin";
+    </script>
+  </head>
+  <body>
+    <!-- Skeleton dipasang SEBELUM paint pertama (lihat js/theme.js) -->
+    <script>showSkeleton();</script>
+    <header class="topbar">
+      <button
+        type="button"
+        class="burger"
+        id="burgerBtn"
+        aria-label="Buka menu"
+        aria-expanded="false"
+        aria-controls="sidebar"
+      >
+        <i class="fa-solid fa-bars" aria-hidden="true"></i>
+        <i class="fa-solid fa-times icon-close" aria-hidden="true"></i>
+      </button>
+      <div class="brand">
+        <h1>Pytabengkel</h1>
+      </div>
+      <div class="topbar-actions">
+        <button
+          type="button"
+          class="icon-btn theme-toggle"
+          data-theme-toggle
+          aria-label="Aktifkan mode gelap"
+          aria-pressed="false"
+          title="Ganti tema terang / gelap"
+        >
+          <i class="fa-solid fa-sun icon-sun" aria-hidden="true"></i>
+          <i class="fa-solid fa-moon icon-moon" aria-hidden="true"></i>
+        </button>
+        <div class="admin" id="userChip" hidden>
+          <i class="fa-solid fa-user-shield" aria-hidden="true"></i>
+          <span id="userChipName">Administrator</span>
+        </div>
+        <button
+          type="button"
+          class="icon-btn logout-btn"
+          id="btnLogout"
+          data-logout-target="/html/index.html?role=admin"
+          aria-label="Keluar"
+          title="Keluar"
+        >
+          <i class="fa-solid fa-right-from-bracket" aria-hidden="true"></i>
+        </button>
+      </div>
+    </header>
+    <div class="layout">
+      <aside class="sidebar" id="sidebar">
+        <nav class="nav">
+          <a href="dashboard.html" class="nav-link"
+            ><i class="fa-solid fa-gauge nav-icon" aria-hidden="true"></i>
+            Dashboard
+          </a>
+          <a href="customers.html" class="nav-link"
+            ><i class="fa-solid fa-users nav-icon" aria-hidden="true"></i>
+            Customers
+          </a>
+          <a href="kendaraan.html" class="nav-link"
+            ><i class="fa-solid fa-car nav-icon" aria-hidden="true"></i>
+            Kendaraan
+          </a>
+          <a href="service.html" class="nav-link active" aria-current="page"
+            ><i class="fa-solid fa-screwdriver-wrench nav-icon" aria-hidden="true"></i>
+            Service
+          </a>
+          <a href="riwayat.html" class="nav-link"
+            ><i class="fa-solid fa-clock-rotate-left nav-icon" aria-hidden="true"></i>
+            Riwayat
+          </a>
+          <a href="ulasan.html" class="nav-link"
+            ><i class="fa-solid fa-star nav-icon" aria-hidden="true"></i>
+            Ulasan
+          </a>
+          <a href="keuangan.html" class="nav-link"
+            ><i class="fa-solid fa-wallet nav-icon" aria-hidden="true"></i>
+            Keuangan
+          </a>
+          <a href="mekanik.html" class="nav-link"
+            ><i class="fa-solid fa-user-gear nav-icon" aria-hidden="true"></i>
+            Mekanik
+          </a>
+          <a href="sparepart.html" class="nav-link"
+            ><i class="fa-solid fa-gears nav-icon" aria-hidden="true"></i>
+            Sparepart
+          </a>
+          <a href="pengaturan.html" class="nav-link"
+            ><i class="fa-solid fa-gear nav-icon" aria-hidden="true"></i>
+            Pengaturan
+          </a>
+        </nav>
+      </aside>
+      <main class="main">
+        <div class="page-header">
+          <h2>Service</h2>
+          <p>Proses dan pantau service kendaraan pelanggan.</p>
+        </div>
+        <section class="stats-grid">
+          <div class="stat-card">
+            <i class="fa-solid fa-clipboard-list stat-icon" aria-hidden="true"></i
+            ><span class="stat-number" id="totalService">0</span
+            ><span class="stat-label">Total Service</span>
+          </div>
+          <div class="stat-card">
+            <i class="fa-solid fa-hourglass-half stat-icon" aria-hidden="true"></i
+            ><span class="stat-number" id="serviceMenunggu">0</span
+            ><span class="stat-label">Menunggu</span>
+          </div>
+          <div class="stat-card">
+            <i class="fa-solid fa-wrench stat-icon" aria-hidden="true"></i
+            ><span class="stat-number" id="serviceDikerjakan">0</span
+            ><span class="stat-label">Dikerjakan</span>
+          </div>
+          <div class="stat-card">
+            <i class="fa-solid fa-circle-check stat-icon" aria-hidden="true"></i
+            ><span class="stat-number" id="serviceSelesai">0</span
+            ><span class="stat-label">Selesai</span>
+          </div>
+        </section>
+        <section class="panel vehicle-panel">
+          <div class="panel-header">
+            <div>
+              <h3>Daftar Service</h3>
+              <p>Setiap kendaraan terdaftar dapat diproses sebagai service.</p>
+            </div>
+            <div class="vehicle-toolbar">
+              <select
+                id="filterStatusService"
+                class="form-control filter-select"
+                aria-label="Filter status"
+              >
+                <option value="">Semua Status</option>
+                <option value="Menunggu">Menunggu</option>
+                <option value="Dikerjakan">Dikerjakan</option>
+                <option value="Quality Check">Quality Check</option>
+                <option value="Selesai">Selesai</option>
+              </select>
+              <select
+                id="sortService"
+                class="form-control filter-select"
+                aria-label="Urutkan service"
+              >
+                <option value="">Urutkan: Status (default)</option>
+                <option value="tanggalService:desc">Tanggal terbaru</option>
+                <option value="tanggalService:asc">Tanggal terlama</option>
+                <option value="polisi:asc">No. Polisi</option>
+                <option value="pelanggan:asc">Pelanggan</option>
+                <option value="total:desc">Total tertinggi</option>
+              </select>
+              <div class="search-box">
+                <input type="search" id="searchService" placeholder="Cari service..." />
+              </div>
+              <button type="button" class="btn btn-primary" id="btnProsesService">
+                <i class="fa-solid fa-plus" aria-hidden="true"></i> Proses Service
+              </button>
+            </div>
+          </div>
+          <div class="table-container table-fit">
+            <table>
+              <caption class="sr-only">Daftar proses service</caption>
+              <thead>
+                <tr>
+                  <th scope="col">No</th>
+                  <th scope="col" class="cell-id-col">ID</th>
+                  <th scope="col">No. Polisi</th>
+                  <th scope="col">Pelanggan</th>
+                  <th scope="col">Keluhan</th>
+                  <th scope="col">Mekanik</th>
+                  <th scope="col">Status</th>
+                  <th scope="col">Pembayaran</th>
+                  <th scope="col">Total</th>
+                  <th scope="col">Tanggal</th>
+                  <th scope="col">Aksi</th>
+                </tr>
+              </thead>
+              <tbody id="serviceTable"></tbody>
+            </table>
+          </div>
+          <div class="table-footer"><span id="serviceInfo"></span></div>
+        </section>
+      </main>
+    </div>
+    <div class="modal-overlay" id="serviceModal">
+
+      <div
+        class="modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="serviceModalTitle"
+      >
+        <div class="modal-header">
+          <div>
+            <h3 id="serviceModalTitle">Proses Service</h3>
+            <p>Tugaskan mekanik dan perbarui status service.</p>
+          </div>
+          <button
+            type="button"
+            class="modal-close"
+            data-close-modal="serviceModal"
+            aria-label="Tutup"
+          >
+            ×
+          </button>
+        </div>
+        <form id="serviceForm">
+          <div class="modal-body">
+            <div class="form-grid">
+              <div class="form-group form-full">
+                <label for="serviceVehicle">Kendaraan</label
+                ><select id="serviceVehicle" class="form-control" required></select>
+              </div>
+              <div class="form-group">
+                <label for="serviceMekanik">Mekanik</label
+                ><select id="serviceMekanik" class="form-control" required></select>
+              </div>
+              <div class="form-group">
+                <label for="serviceStatus">Status</label
+                ><select id="serviceStatus" class="form-control">
+                  <option value="Menunggu">Menunggu</option>
+                  <option value="Dikerjakan">Dikerjakan</option>
+                  <option value="Quality Check">Quality Check</option>
+                  <option value="Selesai">Selesai</option>
+                </select>
+              </div>
+              <div class="form-group form-full">
+                <label for="serviceTanggal">Tanggal Service</label
+                ><input type="date" id="serviceTanggal" class="form-control" required />
+              </div>
+              <div class="form-group">
+                <label for="serviceBiayaJasa">Biaya Jasa</label
+                ><input
+                  type="number"
+                  id="serviceBiayaJasa"
+                  class="form-control"
+                  min="0"
+                  placeholder="0"
+                  required
+                />
+              </div>
+              <div class="form-group">
+                <label for="servicePembayaran">Status Pembayaran</label
+                ><select id="servicePembayaran" class="form-control">
+                  <option value="Belum Lunas">Belum Lunas</option>
+                  <option value="Lunas">Lunas</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="serviceTotalPreview">Total Tagihan</label
+                ><output id="serviceTotalPreview" class="total-preview">Rp0</output>
+              </div>
+              <div class="form-group form-full">
+                <div class="form-label-action">
+                  <label>Sparepart yang Dipakai</label
+                  ><button type="button" class="action-btn" id="btnTambahServiceSparepart">
+                    <i class="fa-solid fa-plus" aria-hidden="true"></i> Tambah Sparepart
+                  </button>
+                </div>
+                <div id="serviceSparepartList" class="service-part-list"></div>
+              </div>
+              <div class="form-group form-full" id="servicePhotoZone" hidden>
+                <label>Foto Service</label>
+                <div class="photo-upload-zone">
+                  <div id="servicePhotoList"></div>
+                  <input type="file" id="servicePhotoInput" accept="image/*" multiple />
+                  <span class="photo-upload-hint"
+                    >Unggah foto kerusakan / hasil kerja (maks 5 MB per file, maks
+                    8 foto). Klik foto untuk memperbesar.</span
+                  >
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-close-modal="serviceModal">
+              Batal</button
+            ><button
+              type="button"
+              class="btn btn-secondary"
+              id="btnCetakStrukService"
+              hidden
+            >
+              <i class="fa-solid fa-print" aria-hidden="true"></i> Cetak Struk
+            </button
+            ><button type="submit" class="btn btn-primary">Simpan</button>
+          </div>
+        </form>
+      </div>
+    </div>
+    <script>
+      window.Auth = window.Auth || {};
+      Auth.restoreSession = async () => ({ role: "admin", nama: "Tester" });
+    </script>
+    <script src="../../js/db.js"></script>
+    <script src="../../js/auth.js"></script>
+    <script src="../../js/global.js"></script>
+    <script src="../../js/service.js"></script>
+  </body>
+</html>

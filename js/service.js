@@ -1,3 +1,60 @@
+function editService(id, button = null) {
+  const service = getKendaraan().find((item) => Number(item.id) === Number(id));
+  if (!service) return;
+  if (!confirmUnlock(service, "memproses", button)) return;
+  clearFormError("serviceForm");
+  resetServiceForm();
+  activeServiceId = service.id;
+  document.getElementById("serviceVehicle").value = service.id;
+  document.getElementById("serviceVehicle").disabled = true;
+  const mekanikSelect = document.getElementById("serviceMekanik");
+  if (
+    service.mekanikId &&
+    ![...mekanikSelect.options].some(
+      (option) => Number(option.value) === Number(service.mekanikId),
+    )
+  ) {
+    const current = getMekanik().find(
+      (item) => Number(item.id) === Number(service.mekanikId),
+    );
+    const option = document.createElement("option");
+    option.value = service.mekanikId;
+    option.textContent = current
+      ? `${current.nama} — ${current.spesialisasi} (${current.status})`
+      : `${service.mekanik || "Mekanik"} (tidak terdaftar)`;
+    mekanikSelect.appendChild(option);
+  }
+  mekanikSelect.value = service.mekanikId || "";
+  document.getElementById("serviceStatus").value = service.status;
+  document.getElementById("servicePembayaran").value =
+    service.pembayaran || "Belum Lunas";
+  document.getElementById("serviceTanggal").value =
+    service.tanggalService || "";
+  document.getElementById("serviceBiayaJasa").value =
+    Number(service.biayaJasa) || "";
+  (service.spareparts || []).forEach((item) =>
+    addServiceSparepartRow(item.sparepartId, item.jumlah),
+  );
+  document.getElementById("serviceModalTitle").textContent =
+    `Proses ${service.polisi}`;
+
+  /* Zona foto service (admin, mode Supabase). */
+  if (typeof showServicePhotoSection === "function") { try { showServicePhotoSection(service.id); } catch(e) {} }
+
+  /* Struk hanya bisa dicetak kalau service sudah selesai. */
+  const cetakButton = document.getElementById("btnCetakStrukService");
+
+  if (cetakButton) {
+    cetakButton.hidden = service.status !== "Selesai";
+    cetakButton.title =
+      service.status === "Selesai"
+        ? "Cetak struk invoice"
+        : "Struk bisa dicetak setelah service selesai";
+  }
+
+  openModal("serviceModal");
+}
+
 function renderServicePage(search = "") {
   const table = document.getElementById("serviceTable");
   if (!table) return;
@@ -37,8 +94,16 @@ function renderServicePage(search = "") {
 
   table.innerHTML = "";
   if (!servicesSorted.length) {
-    table.innerHTML =
-      '<tr class="empty-row"><td colspan="11" style="text-align: center; padding: 30px;">Tidak ada data service.</td></tr>';
+    const tersaring = Boolean(keyword);
+    table.innerHTML = tersaring
+      ? '<tr class="empty-row"><td colspan="11" style="text-align: center; padding: 30px;">Tidak ada data yang cocok dengan pencarian / filter.</td></tr>'
+      : `<tr class="empty-row"><td colspan="11" style="text-align: center; padding: 30px;">Belum ada data service. <button type="button" class="action-btn" data-empty-cta>+ Proses Service</button></td></tr>`;
+    const cta = table.querySelector("[data-empty-cta]");
+    if (cta) {
+      cta.addEventListener("click", () =>
+        document.getElementById("btnProsesService")?.click(),
+      );
+    }
     setText("serviceInfo", "Tidak ada data");
     return;
   }
@@ -58,7 +123,16 @@ function renderServicePage(search = "") {
         <td><span class="badge ${pembayaran === "Lunas" ? "done" : "waiting"}">${escapeHTML(pembayaran)}</span></td>
         <td>${formatRupiah(getServiceTotal(item))}</td>
         <td>${escapeHTML(item.tanggalService || "-")}</td>
-        <td><button type="button" class="action-btn" data-edit-service="${item.id}">${item.status === "Selesai" ? "🔒 Proses" : "Proses"}</button></td>
+        <td>
+          <div class="action-buttons">
+            ${
+              pembayaran !== "Lunas"
+                ? `<button type="button" class="action-btn" data-bayar-service="${item.id}" title="Tandai transaksi ${escapeHTML(item.polisi)} lunas">💰 Lunas</button>`
+                : ""
+            }
+            <button type="button" class="action-btn" data-edit-service="${item.id}" title="Ubah status & mekanik">${item.status === "Selesai" ? "🔒 Ubah" : "✏️ Ubah"}</button>
+          </div>
+        </td>
       </tr>`;
   });
 
@@ -66,6 +140,39 @@ function renderServicePage(search = "") {
     button.addEventListener("click", () =>
       editService(button.dataset.editService, button),
     );
+  });
+
+  /* Aksi cepat "Lunas" — konfirmasi dua klik supaya tidak salah. */
+  table.querySelectorAll("[data-bayar-service]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const id = button.dataset.bayarService;
+      if (
+        !armConfirmButton(button, "Klik lagi untuk tandai lunas")
+      ) {
+        showPageNotice(
+          "Klik Lunas sekali lagi untuk menandai transaksi ini lunas.",
+          "error",
+        );
+        return;
+      }
+      const item = getKendaraan().find(
+        (row) => Number(row.id) === Number(id),
+      );
+      if (!item) return;
+      if (!setServicePaid(id)) {
+        showPageNotice("Transaksi ini sudah berstatus lunas.", "error");
+        return;
+      }
+      addLog(
+        "Bayar",
+        "Service",
+        `Transaksi ${item.polisi} ditandai lunas`,
+        getKode("kendaraan", item),
+      );
+      renderServicePage(document.getElementById("searchService")?.value || "");
+      updateServiceStats();
+      showPageNotice("Transaksi ditandai lunas.", "success");
+    });
   });
   setText("serviceInfo", `Menampilkan ${services.length} service`);
 }
@@ -223,62 +330,7 @@ function resetServiceForm() {
 
 var activeServiceId = null;
 
-function editService(id, button = null) {
-  const service = getKendaraan().find((item) => Number(item.id) === Number(id));
-  if (!service) return;
-  if (!confirmUnlock(service, "memproses", button)) return;
-  clearFormError("serviceForm");
-  resetServiceForm();
-  activeServiceId = service.id;
-  document.getElementById("serviceVehicle").value = service.id;
-  document.getElementById("serviceVehicle").disabled = true;
-  const mekanikSelect = document.getElementById("serviceMekanik");
-  if (
-    service.mekanikId &&
-    ![...mekanikSelect.options].some(
-      (option) => Number(option.value) === Number(service.mekanikId),
-    )
-  ) {
-    const current = getMekanik().find(
-      (item) => Number(item.id) === Number(service.mekanikId),
-    );
-    const option = document.createElement("option");
-    option.value = service.mekanikId;
-    option.textContent = current
-      ? `${current.nama} — ${current.spesialisasi} (${current.status})`
-      : `${service.mekanik || "Mekanik"} (tidak terdaftar)`;
-    mekanikSelect.appendChild(option);
-  }
-  mekanikSelect.value = service.mekanikId || "";
-  document.getElementById("serviceStatus").value = service.status;
-  document.getElementById("servicePembayaran").value =
-    service.pembayaran || "Belum Lunas";
-  document.getElementById("serviceTanggal").value =
-    service.tanggalService || "";
-  document.getElementById("serviceBiayaJasa").value =
-    Number(service.biayaJasa) || "";
-  (service.spareparts || []).forEach((item) =>
-    addServiceSparepartRow(item.sparepartId, item.jumlah),
-  );
-  document.getElementById("serviceModalTitle").textContent =
-    `Proses ${service.polisi}`;
 
-  /* Zona foto service (admin, mode Supabase). */
-  showServicePhotoSection(service.id);
-
-  /* Struk hanya bisa dicetak kalau service sudah selesai. */
-  const cetakButton = document.getElementById("btnCetakStrukService");
-
-  if (cetakButton) {
-    cetakButton.hidden = service.status !== "Selesai";
-    cetakButton.title =
-      service.status === "Selesai"
-        ? "Cetak struk invoice"
-        : "Struk bisa dicetak setelah service selesai";
-  }
-
-  openModal("serviceModal");
-}
 
 /* Cetak struk invoice service yang sedang diproses. */
 function printServiceStruk() {

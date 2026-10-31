@@ -70,6 +70,24 @@ function updateDashboard() {
 
 /* TABEL MEKANIK */
 
+/* Tanggal rekap mekanik (input date), default hari ini. */
+function getMekanikTanggal() {
+  const input = document.getElementById("filterMekanikTanggal");
+  const value = input?.value || "";
+  return value || new Date().toISOString().slice(0, 10);
+}
+
+/* "2026-10-14..." -> "14 Okt 2026" */
+function formatTanggalRekap(value) {
+  const date = new Date(String(value || "").slice(0, 10));
+  if (Number.isNaN(date.getTime())) return "";
+  return new Intl.DateTimeFormat("id-ID", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  }).format(date);
+}
+
 function renderMekanik() {
   const table = document.getElementById("mekanikTable");
 
@@ -78,24 +96,20 @@ function renderMekanik() {
   }
 
   const MEKANIK_STATUS = ["Aktif", "Izin"];
+  const SERVICE_STATUS = ["Menunggu", "Dikerjakan", "Quality Check", "Selesai"];
   const statusFilter =
     document.getElementById("filterMekanikDashboard")?.value || "";
+  const tanggal = getMekanikTanggal();
 
   const semua = getMekanik().filter(
     (item) => !statusFilter || item.status === statusFilter,
   );
 
-  let beban = [];
+  let kendaraan = [];
   try {
-    const kendaraan = getKendaraan();
-    beban = semua.map(
-      (item) =>
-        kendaraan.filter(
-          (vehicle) => Number(vehicle.mekanikId) === Number(item.id),
-        ).length,
-    );
+    kendaraan = getKendaraan();
   } catch (error) {
-    beban = semua.map(() => 0);
+    kendaraan = [];
   }
 
   table.innerHTML = "";
@@ -119,13 +133,31 @@ function renderMekanik() {
     return;
   }
 
-  const tampil = semua;
-
-  tampil.forEach((item, index) => {
+  semua.forEach((item, index) => {
     const options = MEKANIK_STATUS.map(
       (status) =>
         `<option value="${status}"${item.status === status ? " selected" : ""}>${status}</option>`,
     ).join("");
+
+    /* Rekap service mekanik pada tanggal terpilih + rincian statusnya. */
+    const harian = kendaraan.filter(
+      (vehicle) =>
+        Number(vehicle.mekanikId) === Number(item.id) &&
+        String(vehicle.tanggalService || "").slice(0, 10) === tanggal,
+    );
+    const rincian = SERVICE_STATUS.map((status) => ({
+      status,
+      jumlah: harian.filter((vehicle) => vehicle.status === status).length,
+    })).filter((entry) => entry.jumlah > 0);
+    const rincianHtml = rincian.length
+      ? `<div class="rekap-badges">${rincian
+          .map(
+            (entry) =>
+              `<span class="badge ${getStatusClass(entry.status)}">${entry.jumlah} ${escapeHTML(entry.status)}</span>`,
+          )
+          .join("")}</div>`
+      : '<span class="rating-empty">Tidak ada service</span>';
+
     table.innerHTML += `
         <tr>
 
@@ -155,7 +187,10 @@ function renderMekanik() {
           </td>
 
           <td>
-            ${beban[semua.indexOf(item)]} service
+            <div class="rekap-harian">
+              <strong>${harian.length} service</strong>
+              ${rincianHtml}
+            </div>
           </td>
 
         </tr>
@@ -164,7 +199,7 @@ function renderMekanik() {
 
   setText(
     "mekanikDashboardInfo",
-    `Menampilkan ${tampil.length} dari ${semua.length} mekanik`,
+    `Menampilkan ${semua.length} mekanik • rekap ${formatTanggalRekap(tanggal)}`,
   );
 }
 
@@ -196,6 +231,24 @@ function updateMekanikStatus(id, status) {
 }
 
 /* Input Data DASHBOARD */
+
+/* Kunci isian manual customer (nama/telepon/email/alamat).
+   Saat customer terdaftar dipilih, isian tidak bisa diedit —
+   mencegah user mengetik ulang nama yang sudah ada (data duplikat). */
+function setCustomerManualLock(locked) {
+  [
+    "unifiedCustomerNama",
+    "unifiedCustomerTelepon",
+    "unifiedCustomerEmail",
+    "unifiedCustomerAlamat",
+  ].forEach((id) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.disabled = locked;
+    if (locked) el.title = "Sudah terisi dari customer terdaftar";
+    else el.removeAttribute("title");
+  });
+}
 
 function refreshUnifiedVehicles(customerId) {
   const vehicleSelect = document.getElementById("unifiedVehicleId");
@@ -231,6 +284,11 @@ function populateUnifiedRelations() {
           )} — ${escapeHTML(item.nama)}</option>`,
       )
       .join("");
+  /* Simpan salinan opsi awal supaya pencarian bisa menyaring lalu
+     mengembalikan daftar lengkapnya. */
+  customerSelect.__allOptions = [...customerSelect.options].map((opt) =>
+    opt.cloneNode(true),
+  );
   mekanikSelect.innerHTML =
     '<option value="">-- Buat mekanik baru --</option>' +
     getMekanikAktif()
@@ -248,7 +306,11 @@ function populateUnifiedRelations() {
       (item) => Number(item.id) === Number(customerSelect.value),
     );
     refreshUnifiedVehicles(customer ? customer.id : "");
-    if (!customer) return;
+    if (!customer) {
+      /* Kembali ke mode "customer baru": isian manual dibuka lagi. */
+      setCustomerManualLock(false);
+      return;
+    }
     document.getElementById("unifiedCustomerNama").value = customer.nama || "";
     document.getElementById("unifiedCustomerTelepon").value =
       customer.telepon || "";
@@ -256,6 +318,8 @@ function populateUnifiedRelations() {
       customer.email || "";
     document.getElementById("unifiedCustomerAlamat").value =
       customer.alamat || "";
+    /* Customer terdaftar dipilih: kunci isian manual. */
+    setCustomerManualLock(true);
   };
   mekanikSelect.onchange = () => {
     const mekanik = getMekanik().find(
@@ -277,6 +341,30 @@ function populateUnifiedRelations() {
       document.getElementById("unifiedMerk").value = vehicle.merk || "";
     };
   }
+}
+
+/* Saring opsi <select> sesuai kata kunci pencarian. Opsi pertama
+   (default, value kosong) selalu ditampilkan. Mengembalikan true
+   bila pilihan yang sedang aktif tersaring keluar dari daftar. */
+function filterDropdown(selectEl, keyword) {
+  if (!selectEl || !Array.isArray(selectEl.__allOptions)) return false;
+  const key = String(keyword || "").toLowerCase().trim();
+  const current = selectEl.value;
+  selectEl.innerHTML = "";
+  selectEl.__allOptions.forEach((opt) => {
+    if (
+      opt.value === "" ||
+      !key ||
+      opt.textContent.toLowerCase().includes(key)
+    ) {
+      selectEl.appendChild(opt.cloneNode(true));
+    }
+  });
+  const masihDipilih = [...selectEl.options].some(
+    (opt) => opt.value === current,
+  );
+  if (masihDipilih) selectEl.value = current;
+  return !masihDipilih && current !== "";
 }
 
 function unifiedSparepartOptions(selectedId = "") {
@@ -305,6 +393,7 @@ function addUnifiedSparepartRow(selectedId = "", jumlah = "", preset = {}) {
   row.className = "part-row-box";
   row.innerHTML = `
     <div class="part-row-head">
+      <input type="search" class="form-control" data-part-search placeholder="Cari sparepart..." aria-label="Cari sparepart" autocomplete="off" />
       <select class="form-control" data-part-select aria-label="Sparepart terdaftar">
         ${unifiedSparepartOptions(selectedId)}
       </select>
@@ -329,6 +418,31 @@ function addUnifiedSparepartRow(selectedId = "", jumlah = "", preset = {}) {
       </div>
     </div>`;
   const select = row.querySelector("[data-part-select]");
+  /* Cache opsi awal supaya kotak cari bisa menyaring daftar sparepart. */
+  select.__allOptions = [...select.options].map((opt) => opt.cloneNode(true));
+  row.querySelector("[data-part-search]").addEventListener("input", (event) => {
+    const kata = event.target.value.trim();
+    const hilang = filterDropdown(select, kata);
+    if (hilang) {
+      /* Pilihan tersaring keluar: kosongkan isian yang terisi otomatis
+         supaya tidak ikut terkirim sebagai sparepart baru. */
+      select.value = "";
+      row.querySelector("[data-part-nama]").value = "";
+      row.querySelector("[data-part-stok]").value = "";
+      row.querySelector("[data-part-harga]").value = "";
+      updateUnifiedTotalPreview();
+    }
+    /* Auto-pilih hasil pertama supaya pengguna langsung melihat
+       nama & harga sparepart terisi (bukan diam saja). */
+    if (kata && !hilang && select.value === "" && select.options.length > 1) {
+      select.value = select.options[1].value;
+      select.dispatchEvent(new Event("change"));
+    }
+  });
+  /* Enter pada kotak cari tidak boleh menyubmit form. */
+  row.querySelector("[data-part-search]").addEventListener("keydown", (event) => {
+    if (event.key === "Enter") event.preventDefault();
+  });
   select.addEventListener("change", () => {
     const part = getSparepart().find(
       (item) => Number(item.id) === Number(select.value),
@@ -372,6 +486,11 @@ function updateUnifiedTotalPreview() {
 function resetUnifiedForm() {
   document.getElementById("unifiedForm")?.reset();
   clearFormError("unifiedForm");
+  /* Kotak cari customer dikosongkan; populasinya diisi ulang oleh
+     populateUnifiedRelations() di bawah. Isian manual dibuka lagi. */
+  const cariCustomer = document.getElementById("unifiedCustomerSearch");
+  if (cariCustomer) cariCustomer.value = "";
+  setCustomerManualLock(false);
   populateUnifiedRelations();
   const list = document.getElementById("unifiedSparepartList");
   if (list) {
@@ -667,6 +786,68 @@ function initDashboardInput() {
     ?.addEventListener("change", () => {
       if (typeof renderMekanik === "function") renderMekanik();
     });
+  const tanggalMekanik = document.getElementById("filterMekanikTanggal");
+  if (tanggalMekanik && !tanggalMekanik.value) {
+    tanggalMekanik.value = new Date().toISOString().slice(0, 10);
+  }
+  tanggalMekanik?.addEventListener("change", () => {
+    if (typeof renderMekanik === "function") renderMekanik();
+  });
+
+  /* Pencarian customer pada modal Input Data: menyaring dropdown
+     "Customer Terdaftar" sambil mengetik, lalu LANGSUNG memilih
+     hasil pertamanya — jadi pengguna langsung melihat isian customer
+     terisi otomatis, bukan hanya dropdown yang berubah diam-diam. */
+  const cariCustomer = document.getElementById("unifiedCustomerSearch");
+  const hintCariCustomer = document.getElementById(
+    "unifiedCustomerSearchHint",
+  );
+  const setHintCariCustomer = (teks) => {
+    if (hintCariCustomer) hintCariCustomer.textContent = teks;
+  };
+  cariCustomer?.addEventListener("input", (event) => {
+    const customerSelect = document.getElementById("unifiedCustomerId");
+    const kata = event.target.value.trim();
+    const hilang = filterDropdown(customerSelect, kata);
+    if (hilang) {
+      /* Pilihan tersaring keluar: kembali ke mode "customer baru"
+         supaya isian manual tidak menampilkan data customer lama. */
+      customerSelect.value = "";
+      setCustomerManualLock(false);
+      [
+        "unifiedCustomerNama",
+        "unifiedCustomerTelepon",
+        "unifiedCustomerEmail",
+        "unifiedCustomerAlamat",
+      ].forEach((id) => {
+        const el = document.getElementById(id);
+        if (el) el.value = "";
+      });
+      refreshUnifiedVehicles("");
+    }
+    if (!kata) {
+      setHintCariCustomer(
+        "Hasil pencarian otomatis terpilih di dropdown bawah & mengisi isian customer.",
+      );
+      return;
+    }
+    const jumlah =
+      [...customerSelect.options].filter((opt) => opt.value !== "").length;
+    if (jumlah > 0 && customerSelect.value === "") {
+      /* Auto-pilih hasil pertama + isi isian customer otomatis. */
+      customerSelect.value = customerSelect.options[1].value;
+      customerSelect.onchange?.();
+    }
+    setHintCariCustomer(
+      jumlah === 0
+        ? `Tidak ada customer cocok dengan "${kata}" — data baru akan dibuat.`
+        : `${jumlah} customer cocok dengan "${kata}" — otomatis dipilih yang pertama.`,
+    );
+  });
+  /* Enter pada kotak cari tidak boleh menyubmit form Input Data. */
+  cariCustomer?.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") event.preventDefault();
+  });
   resetUnifiedForm();
   button.addEventListener("click", () => {
     resetUnifiedForm();

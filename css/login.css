@@ -46,6 +46,7 @@
   --success-bg: #dcfce7;
   --success-border: #bbf7d0;
   --success-text: #15803d;
+  --warning-text: #92400e;
 
   --focus-ring: rgba(37, 99, 235, 0.1);
   --shadow: 0 15px 40px rgba(0, 0, 0, 0.08);
@@ -82,6 +83,7 @@
   --success-bg: rgba(22, 163, 74, 0.2);
   --success-border: rgba(22, 163, 74, 0.35);
   --success-text: #86efac;
+  --warning-text: #fcd34a;
 
   --shadow-sm: 0 10px 26px rgba(0, 0, 0, 0.35);
   --shadow-md: 0 12px 30px rgba(0, 0, 0, 0.45);
@@ -144,9 +146,18 @@ body {
   transition: 0.2s;
 }
 
-/* Tombol "lihat ulasan" (HP) diposisikan kiri toggle tema agar tidak menumpuk. */
+/* Tombol "lihat ulasan": HANYA tampil di mode HP (≤800px), saat panel
+   login-info (termasuk testimoni) disembunyikan. Di desktop ulasan
+   cukup dibaca langsung dari panel login-info — tombol tidak dipakai. */
 .reviews-toggle {
   right: 72px;
+  display: none;
+}
+
+@media (max-width: 800px) {
+  .reviews-toggle {
+    display: inline-flex;
+  }
 }
 
 .theme-toggle:hover {
@@ -801,9 +812,17 @@ body {
   }
   .theme-toggle {
     top: 10px;
-    right: 10px;
     width: 38px;
     height: 38px;
+  }
+  /* Toggle tema & toggle ulasan sama-sama .theme-toggle; tanpa
+     pemisahan ini keduanya berhenti di right:10px dan saling
+     menutupi (tombol ulasan menutupi tombol tema). */
+  .theme-toggle:not(.reviews-toggle) {
+    right: 10px;
+  }
+  .reviews-toggle {
+    right: 56px;
   }
 }
 
@@ -1009,6 +1028,45 @@ body {
 }
 .testimoni-modal-list { display: flex; flex-direction: column; gap: 12px; }
 
+/* Kepala modal: judul di kiri, tombol silang di kanan */
+.testimoni-modal-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.testimoni-modal-head h2 {
+  margin: 0 0 4px;
+  font-size: 18px;
+  color: var(--heading);
+}
+.testimoni-modal-head p {
+  margin: 0;
+  font-size: 13px;
+  color: var(--secondary);
+}
+
+/* Kartu ulasan di modal memakai permukaan terang/gelap (ikut tema),
+   bukan gaya panel kiri yang selalu gelap — kalau tidak, nama
+   pelanggan (putih) hilang di latar putih. */
+.testimoni-modal .testimoni-card {
+  background: var(--surface-2);
+  border-color: var(--border);
+}
+.testimoni-modal .testimoni-nama {
+  color: var(--text);
+}
+.testimoni-modal .testimoni-nama .fa-circle-user {
+  color: var(--primary);
+}
+.testimoni-modal .testimoni-teks {
+  color: var(--text);
+}
+.testimoni-modal .testimoni-rating-label {
+  color: var(--warning-text);
+}
+
 
 /* Filter bintang modal ulasan */
 .testimoni-modal-filter { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
@@ -1025,4 +1083,56 @@ body {
 .testimoni-modal-filter .filter-btn:hover {
   border-color: var(--primary);
   color: var(--primary);
+}
+.testimoni-modal-filter .filter-btn.active {
+  border-color: var(--primary);
+  background: var(--primary-soft);
+  color: var(--primary);
+}
+
+/* Filter bintang panel login-info (desktop) — panel kiri selalu gelap */
+.testimoni-panel-filter {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.testimoni-panel-filter .filter-btn {
+  padding: 4px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.06);
+  color: #d1d5db;
+  border-radius: 999px;
+  cursor: pointer;
+  font-size: 11px;
+  font-family: inherit;
+  transition: 0.15s;
+}
+.testimoni-panel-filter .filter-btn:hover {
+  border-color: #93c5fd;
+  color: #fff;
+}
+.testimoni-panel-filter .filter-btn.active {
+  border-color: #3b82f6;
+  background: rgba(59, 130, 246, 0.25);
+  color: #fff;
+}
+
+/* Tombol silang modal ulasan */
+.testimoni-modal-close {
+  width: 36px;
+  height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface-2);
+  color: var(--text);
+  cursor: pointer;
+  transition: .15s;
+}
+.testimoni-modal-close:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+  background: var(--primary-soft);
 }

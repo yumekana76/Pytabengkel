@@ -512,7 +512,7 @@ function buildPrintInvoice(service) {
       ${baris("Status Bayar", escapeHTML(pembayaran))}
 
       <div class="struk-footer">
-        <div>Terima kasih telah-li 🤝</div>
+        <div>Terima kasih telah berkunjung</div>
         <div>Barang yang sudah dibeli tidak dapat ditukar</div>
         <div>Dicetak: ${escapeHTML(new Date().toLocaleString("id-ID"))}</div>
       </div>
@@ -1019,7 +1019,15 @@ function renderKendaraan(search = "", page = 1) {
   table.innerHTML = "";
 
   if (hasilSorted.length === 0) {
-    const colspan = isDashboard ? 13 : 12;
+    const colspan = 12;
+
+    /* Kosong gara-gara cari/filter? Jangan menawarkan tombol tambah. */
+    const tersaring = Boolean(keyword || statusFilter);
+
+    const ctaDashboard =
+      '<button type="button" class="action-btn" data-empty-cta="btnInputTerpadu">+ Input Data</button>';
+    const ctaKendaraan =
+      '<button type="button" class="action-btn" data-empty-cta="btnTambahKendaraan">+ Tambah Kendaraan</button>';
 
     table.innerHTML = `
       <tr>
@@ -1030,10 +1038,21 @@ function renderKendaraan(search = "", page = 1) {
             padding:30px;
           "
         >
-          Tidak ada data kendaraan
+          ${
+            tersaring
+              ? "Tidak ada data yang cocok dengan pencarian / filter."
+              : `Belum ada data kendaraan. ${isDashboard ? ctaDashboard : ctaKendaraan}`
+          }
         </td>
       </tr>
     `;
+
+    const emptyCta = table.querySelector("[data-empty-cta]");
+    if (emptyCta) {
+      emptyCta.addEventListener("click", () => {
+        document.getElementById(emptyCta.dataset.emptyCta)?.click();
+      });
+    }
 
     setText("kendaraanInfo", "Menampilkan 0 kendaraan");
 
@@ -1083,10 +1102,6 @@ function renderKendaraan(search = "", page = 1) {
 
             <td>
               ${escapeHTML(getMekanikNama(item.mekanikId))}
-            </td>
-
-            <td>
-              ${formatRupiah(item.biayaJasa || 0)}
             </td>
 
             <td>
