@@ -1008,3 +1008,21 @@ body {
   padding: 20px;
 }
 .testimoni-modal-list { display: flex; flex-direction: column; gap: 12px; }
+
+
+/* Filter bintang modal ulasan */
+.testimoni-modal-filter { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+.testimoni-modal-filter .filter-btn {
+  padding: 6px 12px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text);
+  border-radius: 999px;
+  cursor: pointer;
+  font-size: 13px;
+  transition: .15s;
+}
+.testimoni-modal-filter .filter-btn:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+}
