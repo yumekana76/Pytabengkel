@@ -140,6 +140,14 @@
               <p>Riwayat tercatat otomatis saat service berstatus selesai.</p>
             </div>
             <div class="vehicle-toolbar">
+              <div class="toolbar-field">
+                <label for="filterBulanRiwayatCustomer">Bulan</label>
+                <input
+                  type="month"
+                  id="filterBulanRiwayatCustomer"
+                  class="form-control filter-select"
+                />
+              </div>
               <select
                 id="filterRiwayatStatus"
                 class="form-control filter-select"
@@ -217,6 +225,8 @@
         </div>
         <div class="modal-body">
           <div class="detail-grid" id="riwayatDetailContent"></div>
+          <h4 class="detail-section">Foto Service</h4>
+          <div id="riwayatDetailPhotos"></div>
           <h4 class="detail-section">Ulasan & Rating</h4>
           <div id="customerReviewSection"></div>
           <h4 class="detail-section">Riwayat Status Service</h4>

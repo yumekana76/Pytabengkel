@@ -135,6 +135,11 @@ document.querySelectorAll(".role-tab").forEach((tab) => {
 const urlRole = new URLSearchParams(window.location.search).get("role");
 setRole(urlRole === "customer" ? "customer" : "admin");
 
+/* Pesan setelah customer menghapus akunnya sendiri. */
+if (urlRole === "customer" && new URLSearchParams(window.location.search).get("accountDeleted") === "1") {
+  showSuccess("Akun Anda berhasil dihapus.");
+}
+
 /* =========================================
    TAMPILKAN / SEMBUNYIKAN PASSWORD
    ========================================= */

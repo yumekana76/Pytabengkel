@@ -449,6 +449,77 @@ var Auth = {
     authState.profile = null;
   },
 
+  /* Hapus akun yang sedang login.
+     - Mode lokal   : hapus dari daftar akun customer di localStorage.
+     - Mode Supabase: panggil RPC delete_my_account() (security definer),
+                      lalu bersihkan sesi. Data customer/service TIDAK
+                      dihapus — hanya akun login-nya. */
+  async deleteAccount() {
+    const profile = getCurrentProfile();
+
+    if (profile?.role === "admin") {
+      return {
+        ok: false,
+        error: "Akun administrator tidak dapat dihapus dari halaman customer.",
+      };
+    }
+
+    if (!isSupabaseMode()) {
+      const email = String(profile?.email || "")
+        .trim()
+        .toLowerCase();
+      const accounts = getCustomerAccounts();
+      const target = accounts.find(
+        (account) =>
+          (account.role || "customer") !== "admin" &&
+          (String(account.email || "").trim().toLowerCase() === email ||
+            (profile?.id && String(account.id) === String(profile.id))),
+      );
+
+      if (!target) {
+        return { ok: false, error: "Akun login tidak ditemukan." };
+      }
+
+      saveCustomerAccounts(
+        accounts.filter((account) => account !== target),
+      );
+
+      await this.signOut();
+      return { ok: true };
+    }
+
+    const { error } = await supabaseClient.rpc("delete_my_account");
+
+    if (error) {
+      const pesan = String(error.message || "");
+      const belumAktif =
+        pesan.toLowerCase().includes("could not find the function") ||
+        pesan.toLowerCase().includes("does not exist");
+
+      return {
+        ok: false,
+        error: belumAktif
+          ? "Fitur hapus akun belum aktif di server. Jalankan ulang supabase/schema.sql."
+          : pesan || "Gagal menghapus akun.",
+      };
+    }
+
+    try {
+      await this.signOut();
+    } catch (signOutError) {
+      /* Akun sudah terhapus; sesi lokal tetap harus dibersihkan. */
+      sessionStorage.removeItem("workshopLoggedIn");
+      sessionStorage.removeItem("workshopUserName");
+      sessionStorage.removeItem("workshopCustomerSession");
+      sessionStorage.removeItem("workshopCustomerName");
+      sessionStorage.removeItem(LOCAL_SESSION_KEY);
+      authState.user = null;
+      authState.profile = null;
+    }
+
+    return { ok: true };
+  },
+
   /* Ambil baris profile user dari tabel profiles. */
   async loadProfile(user) {
     if (!user) {

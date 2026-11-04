@@ -862,6 +862,18 @@ tbody tr:last-child td {
   font-size: 13px;
   background: var(--surface-input);
   color: var(--text);
+  -webkit-appearance: none;
+  appearance: none;
+  opacity: 1;
+}
+
+input[type="search"] {
+  -webkit-appearance: none;
+  appearance: none;
+}
+input[type="search"]::-webkit-search-decoration,
+input[type="search"]::-webkit-search-cancel-button {
+  -webkit-appearance: none;
 }
 
 .search-box input:focus {
@@ -1139,6 +1151,8 @@ tbody tr:last-child td {
   gap: var(--space-lg);
   padding: var(--space-lg) var(--space-xl);
   border-bottom: 1px solid var(--border);
+  flex-wrap: wrap;
+  min-width: 0;
 }
 
 .sk-panel-title {
@@ -1177,6 +1191,42 @@ tbody tr:last-child td {
 .sk-thead,
 .sk-row {
   min-width: 640px;
+}
+
+/* Tabel mekanik dashboard memakai .table-fit (tanpa min-width). */
+.sk-table-fit .sk-thead,
+.sk-table-fit .sk-row {
+  min-width: 0;
+}
+
+@media (max-width: 768px) {
+  /* Sama seperti .dashboard-grid .table-fit asli: tabel mekanik
+     berubah menjadi kartu bertumpuk, bukan tabel 5 kolom sempit. */
+  .sk-table-fit .sk-thead {
+    display: none;
+  }
+  .sk-table-fit .sk-rows {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 10px 12px;
+  }
+  .sk-table-fit .sk-row {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 12px 14px;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+  }
+  .sk-table-fit .sk-row .skeleton-bar {
+    width: 100%;
+    margin: 0;
+  }
+  .sk-table-fit .sk-row .skeleton-bar:first-child {
+    display: none;
+  }
 }
 
 /* Header tabel (th): padding 14px 16px, latar --surface-3 */
@@ -1290,9 +1340,9 @@ tbody tr:last-child td {
 
 .sk-avatar {
   flex-shrink: 0;
-  width: 56px;
-  height: 56px;
-  border-radius: 50%;
+  width: 72px;
+  height: 72px;
+  border-radius: 20px;
 }
 
 .sk-profile-text {
@@ -1394,6 +1444,14 @@ tbody tr:last-child td {
   width: 160px;
   height: 38px;
   border-radius: 10px;
+}
+
+/* .btn di toolbar (Tambah Customer, Proses Service, Cetak Rekap, dst.) */
+.sk-btn {
+  width: 132px;
+  height: 38px;
+  border-radius: 10px;
+  flex-shrink: 0;
 }
 
 .sk-search {
@@ -1508,6 +1566,20 @@ tbody tr:last-child td {
   margin-bottom: var(--space-xl);
 }
 
+/* Panel dashboard setengah lebar: judul lebih ringkas dan toolbar
+   boleh turun ke baris berikutnya seperti .panel-header asli. */
+.sk-dash-grid .sk-panel-title {
+  flex: 1 1 140px;
+}
+
+.sk-dash-grid .sk-panel-head > .sk-toolbar {
+  margin-left: auto;
+}
+
+.sk-dash-grid .sk-select-sm {
+  width: 120px;
+}
+
 /* Panel ringkasan: padding .service-status = var(--space-2xl) 24px */
 .sk-dash-body {
   display: flex;
@@ -1581,6 +1653,10 @@ tbody tr:last-child td {
   min-width: 0;
 }
 
+.sk-field-full {
+  grid-column: 1 / -1;
+}
+
 .sk-field-label {
   width: 90px;
   height: 14px;
@@ -1589,6 +1665,43 @@ tbody tr:last-child td {
 .sk-field-input {
   height: 38px;
   border-radius: 10px;
+}
+
+/* Pengaturan customer: pilihan tema, detail akun, dan tombol sesi. */
+.sk-theme-options {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px;
+}
+
+.sk-theme-option {
+  height: 66px;
+  border-radius: 14px;
+}
+
+.sk-detail-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.sk-detail-item {
+  display: grid;
+  gap: 8px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface-2);
+}
+
+.sk-detail-label {
+  width: 55%;
+  height: 13px;
+}
+
+.sk-detail-value {
+  width: 75%;
+  height: 16px;
 }
 
 /* Jarak antar panel form meniru jarak antar section halaman asli */
@@ -1726,22 +1839,32 @@ tbody tr:last-child td {
   }
 
   /* Toolbar HP: skeleton mengikuti .vehicle-toolbar asli
-     (grid 2 kolom: filter sebaris, kotak cari selebar panel). */
+     (filter berbagi baris, kotak cari selebar panel di bawah). */
   .sk-toolbar {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    display: flex;
+    flex-wrap: wrap;
     align-items: center;
     gap: 10px;
     width: 100%;
   }
   .sk-toolbar .sk-select {
+    flex: 1 1 140px;
+    width: auto;
+    min-width: 0;
+    max-width: 100%;
+  }
+  .sk-toolbar .sk-search {
+    flex: 1 1 100%;
+    order: 10;
     width: 100%;
     min-width: 0;
   }
-  .sk-toolbar .sk-search {
-    grid-column: 1 / -1;
+
+  /* .vehicle-toolbar .btn HP: selebar panel dan turun paling bawah. */
+  .sk-toolbar .sk-btn {
+    flex: 1 1 100%;
+    order: 20;
     width: 100%;
-    min-width: 0;
   }
 
   /* .customer-hero HP: padding 20px */
@@ -1749,21 +1872,22 @@ tbody tr:last-child td {
     padding: 20px;
   }
 
-  /* .service-status HP: jadi kolom, gap 18px, padding 18px */
+  /* .service-status HP: tetap kiri-kanan seperti desktop, circle 112px. */
   .sk-dash-body {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 18px;
-    padding: 18px;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: 14px;
+    padding: 14px;
   }
 
-  /* .progress-wrapper HP: margin-inline auto → circle di tengah */
   .sk-circle {
-    width: 126px;
-    height: 126px;
+    width: 112px;
+    height: 112px;
   }
-  .sk-dash-body {
-    gap: 20px;
+
+  .sk-status-list {
+    gap: 15px;
   }
 }
 
@@ -1787,6 +1911,9 @@ tbody tr:last-child td {
   }
   .sk-nav-item {
     height: 38px; /* .nav-link padding 11px 12px */
+  }
+  .sk-dash-grid {
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 
@@ -1840,6 +1967,26 @@ tbody tr:last-child td {
   .sk-panel-link {
     align-self: flex-start;
   }
+
+  /* Panel dengan judul + "Lihat semua" tetap sebaris seperti aslinya. */
+  .sk-panel-head-inline {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: nowrap;
+  }
+  .sk-panel-head-inline .sk-panel-title {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+  .sk-panel-head-inline > .sk-toolbar {
+    width: auto;
+    flex: 0 0 auto;
+    margin-left: 0;
+  }
+  .sk-panel-head-inline .sk-panel-link {
+    align-self: center;
+  }
   /* Ikuti padding panel asli yang dirapatkan di breakpoint ini
      supaya tidak ada lompatan saat skeleton diganti konten asli. */
   .sk-panel-head,
@@ -1850,14 +1997,26 @@ tbody tr:last-child td {
   .sk-profile-card {
     padding: 14px;
   }
+
+  .sk-avatar {
+    width: 58px;
+    height: 58px;
+    border-radius: 20px;
+  }
+
+  .sk-detail-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 450px) {
   .sk-main {
     padding: 12px;
   }
+  /* Kartu statistik asli TETAP 2 kolom sampai 450px (lihat rule
+     .stats-grid di breakpoint 700px), jadi skeleton juga 2 kolom. */
   .sk-cards {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
   .sk-title {
     height: 26px; /* .page-header h2 font-size 22px */
@@ -1939,6 +2098,8 @@ tbody tr:last-child td {
 .vehicle-toolbar .btn {
   white-space: nowrap;
   max-width: 100%;
+  /* Samakan tinggi dengan .filter-select / .search-box (38px). */
+  min-height: 38px;
 }
 
 /* Kotak cari di dalam toolbar: fleksibel mengisi ruang sisa.
@@ -1953,6 +2114,27 @@ tbody tr:last-child td {
 
 .vehicle-toolbar .search-box input {
   width: 100%;
+}
+
+/* Filter dengan label terlihat (mis. input bulan di Riwayat). */
+.toolbar-field {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.toolbar-field > label {
+  flex-shrink: 0;
+  color: var(--secondary);
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.toolbar-field .filter-select {
+  min-width: 0;
 }
 
 /* Link "Lihat semua" di dalam toolbar */
@@ -2093,12 +2275,16 @@ th.cell-id-col {
   font-family: inherit;
   white-space: nowrap;
   max-width: 100%;
+  -webkit-appearance: none;
+  appearance: none;
+  opacity: 1;
 }
 
 .btn-primary {
   background: var(--primary);
   color: #fff;
   box-shadow: var(--shadow-primary);
+  opacity: 1;
 }
 
 .btn-primary:hover {
@@ -2179,6 +2365,15 @@ th.cell-id-col {
   border-color: var(--danger);
   color: var(--danger);
   background: var(--danger-soft-bg);
+}
+
+.action-btn:disabled,
+.action-btn:disabled:hover {
+  border-color: var(--border);
+  color: var(--secondary);
+  background: var(--surface);
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .action-btn.armed {
@@ -3248,6 +3443,29 @@ textarea.form-control {
   .panel-header a {
     align-self: flex-start;
   }
+  /* Panel header yang hanya berisi judul & "Lihat semua" tetap satu baris sejajar */
+  .panel-header-inline,
+  .panel-header:has(.toolbar-link:only-child) {
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    flex-wrap: nowrap !important;
+  }
+  .panel-header-inline > div:first-child,
+  .panel-header:has(.toolbar-link:only-child) > div:first-child {
+    flex: 1 1 auto !important;
+    min-width: 0;
+  }
+  .panel-header-inline > .vehicle-toolbar,
+  .panel-header:has(.toolbar-link:only-child) > .vehicle-toolbar {
+    width: auto !important;
+    flex: 0 0 auto !important;
+    margin: 0 !important;
+  }
+  .panel-header-inline a,
+  .panel-header:has(.toolbar-link:only-child) a {
+    align-self: center !important;
+  }
   .search-box,
   .search-box input,
   .filter-select,
@@ -3256,27 +3474,53 @@ textarea.form-control {
     width: 100%;
     min-width: 0;
   }
-  /* Cari + filter tetap SAMPINGAN di layar kecil */
+  /* Cari + filter di layar kecil: filter berbagi baris (2 kolom bila
+     muat), kotak cari selalu selebar panel. Ini mencegah toolbar
+     dengan 3 filter + pencarian meluber keluar layar. */
   .vehicle-toolbar {
-    flex-wrap: nowrap;
+    flex-wrap: wrap;
     align-items: stretch;
   }
   .vehicle-toolbar .search-box {
-    flex: 1 1 auto;
+    flex: 1 1 100%;
     min-width: 0;
     max-width: none;
+    order: 10;
   }
   .vehicle-toolbar .search-box input {
     width: 100%;
+    min-height: 40px;
+    background: var(--surface-input);
+    border: 1px solid var(--border-input);
+    color: var(--text);
+    -webkit-appearance: none;
+    appearance: none;
+    opacity: 1;
   }
   .vehicle-toolbar .filter-select {
-    flex: 0 0 auto;
+    flex: 1 1 140px;
     width: auto;
-    min-width: 108px;
-    max-width: 46%;
+    min-width: 0;
+    max-width: 100%;
   }
+  /* Tombol tambah/proses selalu selebar panel dan turun paling bawah,
+     jadi tap targetnya konsisten dan tidak berdesakan dengan filter. */
   .vehicle-toolbar .btn {
-    flex: 0 0 auto;
+    flex: 1 1 100%;
+    width: 100%;
+    order: 20;
+    min-height: 40px;
+    justify-content: center;
+    -webkit-appearance: none;
+    appearance: none;
+    opacity: 1;
+  }
+  .toolbar-field {
+    flex: 1 1 150px;
+  }
+  .toolbar-field .filter-select {
+    flex: 1 1 auto;
+    width: auto;
   }
   .vehicle-toolbar .status-tabs,
   .panel-header > .vehicle-toolbar {
@@ -3287,15 +3531,56 @@ textarea.form-control {
     width: 100%;
     overflow-x: auto;
   }
-  .modal {
-    max-height: 92vh;
+  /* Modal HP: tata letak flex-column dengan sticky footer aman dari keyboard & browser UI */
+  .modal-overlay {
+    align-items: flex-start;
+    padding: calc(10px + env(safe-area-inset-top)) 12px
+      max(24px, calc(16px + env(safe-area-inset-bottom)));
   }
-  .modal-header,
-  .modal-body {
+  .modal {
+    max-height: calc(100vh - 24px);
+    max-height: calc(
+      100dvh - 20px - env(safe-area-inset-top) - env(safe-area-inset-bottom)
+    );
+    overscroll-behavior: contain;
+    display: flex;
+    flex-direction: column;
+  }
+  .modal > form {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: hidden;
+  }
+  /* Cegah Safari iOS memperbesar halaman saat kolom isian difokuskan. */
+  .modal .form-control {
+    font-size: 16px;
+  }
+  .modal-header {
+    flex-shrink: 0;
     padding: 16px;
+  }
+  .modal-body {
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    flex: 1 1 auto;
+    min-height: 0;
+    padding: 16px;
+    padding-bottom: max(24px, env(safe-area-inset-bottom));
+  }
+  .modal-footer {
+    flex-shrink: 0;
+    position: sticky;
+    bottom: 0;
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    z-index: 10;
+    padding: 12px 16px max(14px, env(safe-area-inset-bottom));
   }
   .modal-footer .btn {
     flex: 1 1 140px;
+    min-height: 40px;
   }
   .setting-btn {
     flex-direction: column;
@@ -3808,4 +4093,42 @@ textarea.form-control {
 
 .photo-upload-zone input[type="file"] {
   font-size: 13px;
+}
+
+/* Pratinjau lokal foto yang dipilih sebelum upload selesai. */
+.photo-preview {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.photo-preview[hidden] {
+  display: none;
+}
+
+.photo-preview-item {
+  margin: 0;
+  width: 120px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--surface);
+  line-height: 0;
+}
+
+.photo-preview-item img {
+  display: block;
+  width: 120px;
+  height: 90px;
+  object-fit: cover;
+}
+
+.photo-preview-item figcaption {
+  padding: 4px 6px;
+  color: var(--secondary);
+  font-size: 10px;
+  line-height: 1.3;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }

@@ -140,11 +140,34 @@
               <p>Klik Detail untuk melihat rincian service dan tagihannya.</p>
             </div>
             <div class="vehicle-toolbar">
-              <select
-                id="filterTahunKeuangan"
-                class="form-control filter-select"
-                aria-label="Filter tahun"
-              ></select>
+              <div class="toolbar-field">
+                <label for="filterTahunKeuangan">Tahun</label>
+                <select
+                  id="filterTahunKeuangan"
+                  class="form-control filter-select"
+                ></select>
+              </div>
+              <div class="toolbar-field">
+                <label for="filterBulanKeuangan">Bulan</label>
+                <select
+                  id="filterBulanKeuangan"
+                  class="form-control filter-select"
+                >
+                  <option value="">Semua Bulan</option>
+                  <option value="01">Januari</option>
+                  <option value="02">Februari</option>
+                  <option value="03">Maret</option>
+                  <option value="04">April</option>
+                  <option value="05">Mei</option>
+                  <option value="06">Juni</option>
+                  <option value="07">Juli</option>
+                  <option value="08">Agustus</option>
+                  <option value="09">September</option>
+                  <option value="10">Oktober</option>
+                  <option value="11">November</option>
+                  <option value="12">Desember</option>
+                </select>
+              </div>
               <select
                 id="filterStatusKeuangan"
                 class="form-control filter-select"

@@ -27,6 +27,7 @@
   --background: #f4f6f8;
   --surface: #ffffff;
   --surface-2: #f3f4f6;
+  --surface-overlay: rgba(15, 23, 42, 0.45);
 
   --text: #1f2937;
   --heading: #111827;
@@ -64,6 +65,7 @@
   --background: #0b1220;
   --surface: #111a2b;
   --surface-2: #162034;
+  --surface-overlay: rgba(2, 6, 15, 0.62);
 
   --text: #dbe4f0;
   --heading: #f1f5f9;
@@ -127,12 +129,28 @@ body {
   border-radius: 6px;
 }
 
+.login-form-container {
+  position: relative;
+  padding: var(--space-3xl);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.login-top-actions {
+  position: absolute;
+  top: 20px;
+  right: 24px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  z-index: 20;
+}
+
 .theme-toggle {
-  position: fixed;
-  top: 18px;
-  right: 18px;
-  width: 42px;
-  height: 42px;
+  position: static;
+  width: 40px;
+  height: 40px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -142,7 +160,6 @@ body {
   color: var(--secondary);
   font-size: 16px;
   cursor: pointer;
-  z-index: 50;
   transition: 0.2s;
 }
 
@@ -150,7 +167,6 @@ body {
    login-info (termasuk testimoni) disembunyikan. Di desktop ulasan
    cukup dibaca langsung dari panel login-info — tombol tidak dipakai. */
 .reviews-toggle {
-  right: 72px;
   display: none;
 }
 
@@ -773,8 +789,12 @@ body {
     display: none;
   }
   .login-form-container {
-    padding: 32px 26px;
+    padding: 60px 26px 32px;
     min-height: 0;
+  }
+  .login-top-actions {
+    top: 14px;
+    right: 18px;
   }
   .login-form-wrap {
     max-width: 100%;
@@ -790,7 +810,11 @@ body {
     border-radius: 16px;
   }
   .login-form-container {
-    padding: 24px 18px;
+    padding: 56px 18px 24px;
+  }
+  .login-top-actions {
+    top: 12px;
+    right: 14px;
   }
   .login-header h2 {
     font-size: 24px;
@@ -811,18 +835,9 @@ body {
     display: none;
   }
   .theme-toggle {
-    top: 10px;
-    width: 38px;
-    height: 38px;
-  }
-  /* Toggle tema & toggle ulasan sama-sama .theme-toggle; tanpa
-     pemisahan ini keduanya berhenti di right:10px dan saling
-     menutupi (tombol ulasan menutupi tombol tema). */
-  .theme-toggle:not(.reviews-toggle) {
-    right: 10px;
-  }
-  .reviews-toggle {
-    right: 56px;
+    width: 36px;
+    height: 36px;
+    font-size: 15px;
   }
 }
 
@@ -1014,8 +1029,27 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 20px;
+  padding: max(20px, env(safe-area-inset-top)) 20px
+    max(20px, env(safe-area-inset-bottom));
   z-index: 1000;
+  overscroll-behavior: contain;
+  touch-action: none;
+}
+/* Cegah halaman di belakang ikut tergulir atau diinteraksikan saat modal terbuka. */
+html.testimoni-modal-open,
+body.testimoni-modal-open {
+  overflow: hidden !important;
+  touch-action: none;
+  height: 100%;
+}
+body.testimoni-modal-open .login-container {
+  pointer-events: none;
+  user-select: none;
+}
+.testimoni-modal-close:focus-visible,
+.testimoni-modal .filter-btn:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
 }
 .testimoni-modal {
   width: 100%;
@@ -1025,6 +1059,9 @@ body {
   background: var(--surface);
   border-radius: 16px;
   padding: 20px;
+  touch-action: pan-y;
+  overscroll-behavior: contain;
+  outline: none;
 }
 .testimoni-modal-list { display: flex; flex-direction: column; gap: 12px; }
 

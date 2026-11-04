@@ -132,16 +132,29 @@
             <span class="stat-number" id="statSelesai">0</span>
             <span class="stat-label"> Service Selesai </span>
           </div>
-          <a class="stat-card stat-card-link" href="keuangan.html">
+          <a
+            class="stat-card stat-card-link"
+            href="keuangan.html"
+            title="Lihat rincian tagihan yang sudah lunas"
+          >
             <i class="fa-solid fa-sack-dollar stat-icon" aria-hidden="true"></i>
-            <span class="stat-number money" id="statTagihan">Rp0</span>
-            <span class="stat-label"> Total Tagihan </span>
+            <span class="stat-number money" id="statTagihanLunas">Rp0</span>
+            <span class="stat-label"> Sudah Lunas </span>
+          </a>
+          <a
+            class="stat-card stat-card-link"
+            href="keuangan.html"
+            title="Lihat rincian tagihan yang belum lunas"
+          >
+            <i class="fa-solid fa-file-invoice stat-icon" aria-hidden="true"></i>
+            <span class="stat-number money" id="statBelumLunas">Rp0</span>
+            <span class="stat-label"> Belum Lunas </span>
           </a>
         </section>
 
         <section class="dashboard-grid">
           <div class="panel">
-            <div class="panel-header">
+            <div class="panel-header panel-header-inline">
               <div>
                 <h3>Status Service</h3>
                 <p>Ringkasan progress service kendaraan Anda</p>
@@ -199,7 +212,7 @@
         </section>
 
         <section class="panel vehicle-panel">
-          <div class="panel-header">
+          <div class="panel-header panel-header-inline">
             <div>
               <h3>Riwayat Service Terbaru</h3>
               <p>5 service terakhir yang tercatat untuk Anda</p>

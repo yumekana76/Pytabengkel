@@ -138,103 +138,248 @@ function initPengaturanPage() {
   /* Reset lewat modal konfirmasi (gaya Input Data), bukan popup confirm(). */
 
   resetButton.addEventListener("click", () => {
+    populateResetAccountOptions();
     openModal("resetModal");
   });
 
-  document.getElementById("btnConfirmReset")?.addEventListener("click", () => {
-    /* Lewat lapisan data (save*), BUKAN localStorage langsung:
-       - mode lokal : cache + mirror localStorage ikut dikosongkan
-       - mode Supabase : baris di server ikut terhapus (fungsi save*)
-         sehingga reset benar-benar berlaku, bukan hanya "kelihatan" sukses */
-    saveCustomers([]);
-    saveKendaraan([]);
-    saveMekanik([]);
-    saveSparepart([]);
-    saveCustomerAccounts([]);
-
-    closeModal("resetModal");
-    showPageNotice(
-      "Data harian berhasil dikosongkan. Membuka dashboard…",
-      "success",
-    );
-    window.setTimeout(() => {
-      window.location.href = "dashboard.html";
-    }, 400);
-  });
-
-  /* ---------------- RIWAYAT AKTIVITAS ---------------- */
-  renderAktivitasTable();
   document
-    .getElementById("filterLogAksi")
-    ?.addEventListener("change", () => renderAktivitasTable());
-  document
-    .getElementById("searchLog")
-    ?.addEventListener("input", () => renderAktivitasTable());
+    .getElementById("btnConfirmReset")
+    ?.addEventListener("click", async () => {
+      /* Lewat lapisan data (save*), BUKAN localStorage langsung:
+         - mode lokal : cache + mirror localStorage ikut dikosongkan
+         - mode Supabase : baris di server ikut terhapus (fungsi save*)
+           sehingga reset benar-benar berlaku, bukan hanya "kelihatan" sukses
+
+         Akun admin & customer TIDAK ikut dihapus. Data customer yang
+         tertaut ke akun juga dipertahankan supaya customer_id pada sesi
+         tetap valid dan portal customer tidak menolak login setelah reset.
+         Karena itu saveCustomerAccounts([]) tidak boleh dipanggil di sini. */
+      const accounts = await dbReloadCustomerAccounts();
+
+      /* Kalau daftar akun gagal dimuat, jangan lanjut: tanpa data akun
+         kita tidak bisa membedakan customer yang tertaut dari yang bukan,
+         sehingga reset berisiko menghapus data customer milik akun. */
+      if (accounts === null) {
+        showPageNotice(
+          "Reset dibatalkan: daftar akun tidak bisa dimuat. Coba lagi setelah koneksi pulih.",
+          "error",
+        );
+        return;
+      }
+
+      const selectedScope =
+        document.getElementById("resetAccount")?.value || "admin";
+      const customers = getCustomers();
+      const accountCustomerIds = new Set(
+        accounts
+          .map((account) => Number(account.customerId))
+          .filter((id) => Number.isFinite(id) && id > 0),
+      );
+      const accountEmails = new Set(
+        accounts
+          .map((account) => String(account.email || "").toLowerCase())
+          .filter(Boolean),
+      );
+      const retainedCustomers = customers.filter(
+        (customer) =>
+          accountCustomerIds.has(Number(customer.id)) ||
+          (customer.email &&
+            accountEmails.has(String(customer.email).toLowerCase())),
+      );
+
+      /* ADMIN / SEMUA CUSTOMER:
+         hapus seluruh data, bukan hanya kendaraan/service. Akun tetap
+         tersimpan. Baris customer yang tertaut ke akun dipertahankan
+         supaya akun customer tetap punya customer_id dan bisa login. */
+      if (
+        selectedScope === "admin" ||
+        selectedScope === "all-customers"
+      ) {
+        saveCustomers(retainedCustomers);
+        saveKendaraan([]);
+        saveReviews([]);
+
+        if (selectedScope === "admin") {
+          saveMekanik([]);
+          saveSparepart([]);
+
+          /* Log aktivitas bukan data operasional akun, tapi ikut
+             dibersihkan saat reset penuh dari sisi Admin. */
+          if (typeof clearActivityLogs === "function") {
+            await clearActivityLogs();
+          }
+        }
+
+        closeModal("resetModal");
+        showPageNotice(
+          selectedScope === "admin"
+            ? "Semua data bengkel berhasil dihapus. Akun admin/customer dan data customer yang tertaut tetap tersimpan."
+            : "Semua data customer berhasil dihapus. Akun dan data customer yang tertaut tetap tersimpan.",
+          "success",
+        );
+        window.setTimeout(() => {
+          window.location.href = "dashboard.html";
+        }, 400);
+        return;
+      }
+
+      /* SATU AKUN CUSTOMER:
+         hapus semua data milik akun tersebut (kendaraan/service dan
+         ulasannya). Akun & baris customer tetap ada. */
+      const account = accounts.find(
+        (item) => String(item.id) === String(selectedScope),
+      );
+      const targetCustomer = findCustomerForAccount(account, customers);
+
+      if (!account || !targetCustomer) {
+        showPageNotice(
+          "Data customer untuk akun yang dipilih tidak ditemukan. Reset dibatalkan.",
+          "error",
+        );
+        return;
+      }
+
+      const removedServices = getKendaraan().filter(
+        (service) =>
+          Number(service.pelangganId) === Number(targetCustomer.id),
+      );
+      const removedServiceIds = new Set(
+        removedServices.map((service) => Number(service.id)),
+      );
+      const remainingServices = getKendaraan().filter(
+        (service) =>
+          Number(service.pelangganId) !== Number(targetCustomer.id),
+      );
+
+      saveKendaraan(remainingServices);
+
+      if (removedServiceIds.size) {
+        saveReviews(
+          getReviews().filter(
+            (review) => !removedServiceIds.has(Number(review.serviceId)),
+          ),
+        );
+      }
+
+      closeModal("resetModal");
+      showPageNotice(
+        `Data operasional akun ${targetCustomer.nama} berhasil dihapus. Akun dan data customer tetap tersimpan.`,
+        "success",
+      );
+      window.setTimeout(() => {
+        window.location.href = "dashboard.html";
+      }, 400);
+    });
 }
 
-/* Badge warna untuk jenis aksi pada tabel riwayat aktivitas. */
-const LOG_AKSI_BADGE = {
-  Tambah: "done",
-  Update: "working",
-  Hapus: "danger",
-  Bayar: "done",
-};
+/* Cari baris customer yang tertaut ke sebuah akun (berdasarkan id atau
+   email). Dipakai saat admin memilih akun pada modal Reset Data. */
+function findCustomerForAccount(account, customers) {
+  if (!account) {
+    return null;
+  }
 
-/* Tabel riwayat aktivitas (audit) di halaman Pengaturan. */
-function renderAktivitasTable() {
-  const table = document.getElementById("logTable");
-  if (!table) return;
+  const customerId = Number(account.customerId);
+  const email = String(account.email || "")
+    .trim()
+    .toLowerCase();
 
-  const aksiFilter = document.getElementById("filterLogAksi")?.value || "";
-  const keyword = (
-    document.getElementById("searchLog")?.value || ""
-  )
-    .toLowerCase()
-    .trim();
+  if (Number.isFinite(customerId) && customerId > 0) {
+    const byId = customers.find(
+      (customer) => Number(customer.id) === customerId,
+    );
 
-  const logs = getLogs()
-    .filter((log) => !aksiFilter || log.aksi === aksiFilter)
-    .filter((log) =>
-      [log.aktor, log.role, log.aksi, log.entitas, log.kode, log.keterangan].some(
-        (value) =>
-          String(value || "")
-            .toLowerCase()
-            .includes(keyword),
-      ),
-    )
-    .sort((a, b) => String(b.waktu || "").localeCompare(String(a.waktu || "")));
+    if (byId) {
+      return byId;
+    }
+  }
 
-  table.innerHTML = "";
-  if (!logs.length) {
-    table.innerHTML =
-      '<tr><td colspan="5" style="text-align: center; padding: 30px;">Tidak ada aktivitas tercatat.</td></tr>';
-    setText("logInfo", "Tidak ada data");
+  if (!email) {
+    return null;
+  }
+
+  return (
+    customers.find(
+      (customer) =>
+        customer.email &&
+        String(customer.email).trim().toLowerCase() === email,
+    ) || null
+  );
+}
+
+/* Isi pilihan pada modal Reset Data: Admin (semua data bengkel), semua
+   data customer, lalu akun customer satu per satu. Akun admin tidak
+   ditampilkan sebagai akun terpisah karena reset Admin bersifat global. */
+function populateResetAccountOptions() {
+  const select = document.getElementById("resetAccount");
+
+  if (!select) {
     return;
   }
 
-  table.innerHTML = logs
-    .slice(0, 200)
-    .map((log) => {
-      const badgeClass = LOG_AKSI_BADGE[log.aksi] || "waiting";
-      const waktu = new Date(log.waktu);
-      const waktuTeks = Number.isNaN(waktu.getTime())
-        ? String(log.waktu || "-")
-        : waktu.toLocaleString("id-ID");
-      return `
-      <tr>
-        <td>${escapeHTML(waktuTeks)}</td>
-        <td><strong>${escapeHTML(log.aktor || "-")}</strong> <span style="color: var(--secondary); font-size: 12px;">(${escapeHTML(log.role || "-")})</span></td>
-        <td><span class="badge ${badgeClass}">${escapeHTML(log.aksi || "-")}</span></td>
-        <td>${escapeHTML(log.entitas || "-")}${log.kode ? ` <span class="cell-id">${escapeHTML(log.kode)}</span>` : ""}</td>
-        <td>${escapeHTML(log.keterangan || "-")}</td>
-      </tr>`;
-    })
-    .join("");
+  const previousValue = select.value;
+  const customers = getCustomers();
+  const options = [];
+  const seenCustomerIds = new Set();
 
-  setText(
-    "logInfo",
-    `Menampilkan ${Math.min(logs.length, 200)} dari ${getLogs().length} aktivitas`,
+  getCustomerAccounts()
+    .filter((account) => (account.role || "customer") !== "admin")
+    .forEach((account) => {
+      const customer = findCustomerForAccount(account, customers);
+
+      if (!customer) {
+        return;
+      }
+
+      const customerId = Number(customer.id);
+
+      if (seenCustomerIds.has(customerId)) {
+        return;
+      }
+
+      seenCustomerIds.add(customerId);
+      options.push({ account, customer });
+    });
+
+  options.sort((a, b) =>
+    String(a.customer.nama || "").localeCompare(
+      String(b.customer.nama || ""),
+      "id",
+    ),
   );
+
+  select.innerHTML = "";
+
+  const adminOption = document.createElement("option");
+  adminOption.value = "admin";
+  adminOption.textContent = "Admin — semua data bengkel";
+  select.appendChild(adminOption);
+
+  const allOption = document.createElement("option");
+  allOption.value = "all-customers";
+  allOption.textContent = "Semua data customer";
+  select.appendChild(allOption);
+
+  options.forEach(({ account, customer }) => {
+    const option = document.createElement("option");
+    option.value = String(account.id);
+    option.textContent = `${customer.nama || "Customer"} — ${
+      account.email || customer.email || "-"
+    }`;
+    select.appendChild(option);
+  });
+
+  if ([...select.options].some((option) => option.value === previousValue)) {
+    select.value = previousValue;
+  }
+
+  const hint = document.getElementById("resetAccountHint");
+
+  if (hint) {
+    hint.textContent = options.length
+      ? "Pilih Admin untuk semua data bengkel, semua data customer, atau satu akun customer tertentu."
+      : "Belum ada akun customer yang tertaut ke data customer. Pilih Admin untuk menghapus semua data bengkel.";
+  }
 }
 
 /* ---------------------------------------------------------------------

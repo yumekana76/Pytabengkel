@@ -287,7 +287,7 @@ function initCustomerVehicles() {
     ?.addEventListener("click", openRequestModal);
 
   document
-    .getElementById("requestMode")
+    .getElementById("requestVehicle")
     ?.addEventListener("change", toggleRequestVehicleFields);
 
   document
@@ -354,7 +354,7 @@ function renderVehicleCards() {
   }
 
   groups.sort((a, b) => {
-    if (!sort.key) return 0;
+    if (!sort.key) return compareStatusOrder(a.latest, b.latest);
     return compareBy(sort.key, sort.direction)(a.latest, b.latest);
   });
 
@@ -489,27 +489,23 @@ function openRequestModal() {
 
   const groups = customerVehiclesByPlate(getCustomerVehicles());
 
-  select.innerHTML = groups.length
-    ? groups
-        .map(
-          (group) =>
-            `<option value="${escapeHTML(group.polisi)}">${escapeHTML(
-              group.polisi,
-            )} — ${escapeHTML(group.merk || "")}</option>`,
-        )
-        .join("")
-    : '<option value="">-- Tambah kendaraan baru --</option>';
+  select.innerHTML =
+    groups
+      .map(
+        (group) =>
+          `<option value="${escapeHTML(group.polisi)}">${escapeHTML(
+            group.polisi,
+          )} — ${escapeHTML(group.merk || group.jenis || "Kendaraan")}</option>`,
+      )
+      .join("") + `<option value="__new__">+ Tambah kendaraan baru</option>`;
 
-  const mode = document.getElementById("requestMode");
-
-  if (!groups.length && mode) {
-    mode.value = "new";
-  }
+  /* Tanpa kendaraan terdaftar, langsung arahkan ke formulir kendaraan baru. */
+  select.value = groups.length ? String(groups[0].polisi) : "__new__";
 
   const tanggal = document.getElementById("requestTanggal");
 
   if (tanggal && !tanggal.value) {
-    tanggal.value = new Date().toISOString().slice(0, 10);
+    tanggal.value = getTodayLocalDate();
   }
 
   const error = document.getElementById("requestError");
@@ -523,8 +519,8 @@ function openRequestModal() {
 }
 
 function toggleRequestVehicleFields() {
-  const mode = document.getElementById("requestMode")?.value || "existing";
-  const isNew = mode === "new";
+  const selected = document.getElementById("requestVehicle")?.value || "__new__";
+  const isNew = selected === "__new__";
 
   const toggle = (id, visible) => {
     const element = document.getElementById(id);
@@ -534,7 +530,6 @@ function toggleRequestVehicleFields() {
     }
   };
 
-  toggle("existingVehicleGroup", !isNew);
   toggle("newVehicleGroup", isNew);
   toggle("newJenisGroup", isNew);
   toggle("newMerkGroup", isNew);
@@ -557,11 +552,13 @@ function submitServiceRequest(event) {
     return;
   }
 
-  const mode = document.getElementById("requestMode")?.value || "existing";
+  const selectedVehicle =
+    document.getElementById("requestVehicle")?.value || "__new__";
+  const isNewVehicle = selectedVehicle === "__new__";
   const keluhan = document.getElementById("requestKeluhan").value.trim();
   const tanggal =
     document.getElementById("requestTanggal").value ||
-    new Date().toISOString().slice(0, 10);
+    getTodayLocalDate();
 
   if (!keluhan) {
     showError("Tuliskan keluhan kendaraan Anda.");
@@ -574,7 +571,7 @@ function submitServiceRequest(event) {
   let jenis = "";
   let merk = "";
 
-  if (mode === "new") {
+  if (isNewVehicle) {
     polisi = document
       .getElementById("requestPolisi")
       .value.trim()
@@ -598,7 +595,7 @@ function submitServiceRequest(event) {
       return;
     }
   } else {
-    polisi = document.getElementById("requestVehicle").value;
+    polisi = selectedVehicle;
 
     if (!polisi) {
       showError("Pilih kendaraan terlebih dahulu.");
@@ -640,6 +637,7 @@ function submitServiceRequest(event) {
 
   closeModal("requestModal");
   document.getElementById("requestForm").reset();
+  toggleRequestVehicleFields();
 
   showPageNotice(
     "Permintaan service terkirim. Bengkel akan segera menghubungi Anda.",
@@ -712,7 +710,8 @@ function renderCustomerServiceTable() {
           .includes(keyword),
       );
     })
-    .map((item) => ({ ...item, total: getServiceTotal(item) }));
+    .map((item) => ({ ...item, total: getServiceTotal(item) }))
+    .sort(compareStatusOrder);
 
   const sorted = sortRows(data, sort.key, sort.direction);
 
@@ -833,6 +832,12 @@ function showServiceDetail(id) {
     `;
   }
 
+  const photos = document.getElementById("serviceDetailPhotos");
+  if (photos) {
+    photos.innerHTML = "";
+    renderServicePhotos(photos, item.id);
+  }
+
   openModal("serviceDetailModal");
 }
 
@@ -855,6 +860,10 @@ function initCustomerHistory() {
 
   document
     .getElementById("filterRiwayatStatus")
+    ?.addEventListener("change", () => renderCustomerHistoryTable(1));
+
+  document
+    .getElementById("filterBulanRiwayatCustomer")
     ?.addEventListener("change", () => renderCustomerHistoryTable(1));
 
   document
@@ -883,9 +892,20 @@ function renderCustomerHistoryTable(page = 1) {
   const paymentFilter =
     document.getElementById("filterRiwayatStatus")?.value || "";
 
+  const bulanFilter =
+    document.getElementById("filterBulanRiwayatCustomer")?.value || "";
+
   const sort = getSortValue("sortRiwayat");
 
-  const data = selesai
+  /* Ringkasan kartu mengikuti periode bulan yang dipilih, bukan seluruh
+     riwayat. Pencarian & filter pembayaran hanya menyaring tabel. */
+  const periode = selesai.filter(
+    (item) =>
+      !bulanFilter ||
+      String(item.tanggalService || "").slice(0, 7) === bulanFilter,
+  );
+
+  const data = periode
     .filter((item) => {
       const pembayaran = item.pembayaran || "Belum Lunas";
 
@@ -909,22 +929,25 @@ function renderCustomerHistoryTable(page = 1) {
 
   const sorted = sortRows(data, sort.key, sort.direction);
 
-  const totalBelanja = selesai.reduce(
+  const totalBelanja = periode.reduce(
     (sum, item) => sum + getServiceTotal(item),
     0,
   );
 
-  const belumLunas = selesai
+  const belumLunas = periode
     .filter((item) => (item.pembayaran || "Belum Lunas") !== "Lunas")
     .reduce((sum, item) => sum + getServiceTotal(item), 0);
 
-  setText("statRiwayat", selesai.length);
+  const terbaru = [...periode].sort((a, b) =>
+    String(b.tanggalService || "").localeCompare(
+      String(a.tanggalService || ""),
+    ),
+  )[0];
+
+  setText("statRiwayat", periode.length);
   setText("statTotalBelanja", formatRupiah(totalBelanja));
   setText("statBelumLunas", formatRupiah(belumLunas));
-  setText(
-    "statServiceTerakhir",
-    selesai.length ? selesai[0].tanggalService || "-" : "-",
-  );
+  setText("statServiceTerakhir", terbaru?.tanggalService || "-");
 
   if (!sorted.length) {
     table.innerHTML = `
@@ -1016,7 +1039,7 @@ function renderCustomerHistoryTable(page = 1) {
     `Menampilkan ${start + 1}-${Math.min(
       start + perPage,
       sorted.length,
-    )} dari ${selesai.length} service selesai`,
+    )} dari ${periode.length} service selesai`,
   );
 
   renderTablePagination("customerRiwayatPagination", page, totalPages, (next) =>
@@ -1054,6 +1077,12 @@ function showCustomerServiceDetail(id) {
 
   if (invoice) {
     invoice.innerHTML = buildServiceInvoice(item);
+  }
+
+  const photos = document.getElementById("riwayatDetailPhotos");
+  if (photos) {
+    photos.innerHTML = "";
+    renderServicePhotos(photos, item.id);
   }
 
   const overhaul = document.getElementById("riwayatOverhaul");
@@ -1310,6 +1339,10 @@ function initCustomerFinance() {
   }
 
   document
+    .getElementById("filterBulanKeuangan")
+    ?.addEventListener("change", () => renderCustomerFinanceTable(1));
+
+  document
     .getElementById("filterStatusKeuangan")
     ?.addEventListener("change", () => renderCustomerFinanceTable(1));
 
@@ -1336,6 +1369,7 @@ function renderCustomerFinanceTable(page = 1) {
   );
 
   const tahun = document.getElementById("filterTahunKeuangan")?.value || "";
+  const bulan = document.getElementById("filterBulanKeuangan")?.value || "";
   const statusFilter =
     document.getElementById("filterStatusKeuangan")?.value || "";
   const keyword = String(
@@ -1345,12 +1379,18 @@ function renderCustomerFinanceTable(page = 1) {
     .trim();
   const sort = getSortValue("sortKeuangan");
 
-  const data = selesai
-    .filter((item) => {
-      if (tahun && String(item.tanggalService || "").slice(0, 4) !== tahun) {
-        return false;
-      }
+  const periode = selesai.filter((item) => {
+    const tanggal = String(item.tanggalService || "");
 
+    if (tahun && tanggal.slice(0, 4) !== tahun) {
+      return false;
+    }
+
+    return !bulan || tanggal.slice(5, 7) === bulan;
+  });
+
+  const data = periode
+    .filter((item) => {
       const pembayaran = item.pembayaran || "Belum Lunas";
 
       if (statusFilter && pembayaran !== statusFilter) {
@@ -1368,23 +1408,23 @@ function renderCustomerFinanceTable(page = 1) {
 
   const sorted = sortRows(data, sort.key, sort.direction);
 
-  const totalTagihan = selesai.reduce(
+  const totalTagihan = periode.reduce(
     (sum, item) => sum + getServiceTotal(item),
     0,
   );
 
-  const totalLunas = selesai
+  const totalLunas = periode
     .filter((item) => (item.pembayaran || "Belum Lunas") === "Lunas")
     .reduce((sum, item) => sum + getServiceTotal(item), 0);
 
-  const totalBelumLunas = selesai
+  const totalBelumLunas = periode
     .filter((item) => (item.pembayaran || "Belum Lunas") !== "Lunas")
     .reduce((sum, item) => sum + getServiceTotal(item), 0);
 
   setText("statTotalTagihan", formatRupiah(totalTagihan));
   setText("statTagihanLunas", formatRupiah(totalLunas));
   setText("statTagihanBelumLunas", formatRupiah(totalBelumLunas));
-  setText("statJumlahTagihan", selesai.length);
+  setText("statJumlahTagihan", periode.length);
 
   if (!sorted.length) {
     table.innerHTML = `
@@ -1453,7 +1493,7 @@ function renderCustomerFinanceTable(page = 1) {
     `Menampilkan ${start + 1}-${Math.min(
       start + perPage,
       sorted.length,
-    )} dari ${selesai.length} tagihan • Total ${formatRupiah(total)}`,
+    )} dari ${periode.length} tagihan • Total ${formatRupiah(total)}`,
   );
 
   renderTablePagination("customerKeuanganPagination", page, totalPages, (next) =>
@@ -1868,6 +1908,37 @@ function initCustomerSettings() {
       } else {
         customerLogout();
       }
+    });
+
+  /* Hapus akun customer sendiri (bukan hanya keluar sesi). */
+  document.getElementById("btnDeleteAccount")?.addEventListener("click", () => {
+    openModal("deleteAccountModal");
+  });
+
+  document
+    .getElementById("btnConfirmDeleteAccount")
+    ?.addEventListener("click", async () => {
+      const button = document.getElementById("btnConfirmDeleteAccount");
+
+      if (!button || button.disabled) {
+        return;
+      }
+
+      button.disabled = true;
+      const result = await Auth.deleteAccount();
+
+      if (!result.ok) {
+        button.disabled = false;
+        showPageNotice(
+          result.error || "Gagal menghapus akun. Coba lagi.",
+          "error",
+        );
+        return;
+      }
+
+      closeModal("deleteAccountModal");
+      clearCustomerSession();
+      window.location.replace("/html/index.html?role=customer&accountDeleted=1");
     });
 }
 

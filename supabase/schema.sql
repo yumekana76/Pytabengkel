@@ -707,6 +707,30 @@ $$;
 grant execute on function public.public_reviews() to anon, authenticated;
 
 -- ---------------------------------------------------------------------
+--  HAPUS AKUN SENDIRI (CUSTOMER)
+--  Menghapus baris auth.users milik user yang sedang login. Profil ikut
+--  terhapus lewat ON DELETE CASCADE, sedangkan data customer/service
+--  tetap tersimpan untuk riwayat bengkel.
+-- ---------------------------------------------------------------------
+create or replace function public.delete_my_account()
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if auth.uid() is null then
+    raise exception 'Harus login untuk menghapus akun';
+  end if;
+
+  delete from auth.users where id = auth.uid();
+end;
+$$;
+
+revoke all on function public.delete_my_account() from public;
+grant execute on function public.delete_my_account() to authenticated;
+
+-- ---------------------------------------------------------------------
 --  KOLOM TAMBAHAN UNTUK TABEL YANG SUDAH ADA
 --  Jalankan sekali kalau tabel dibuat sebelum versi ini.
 -- ---------------------------------------------------------------------

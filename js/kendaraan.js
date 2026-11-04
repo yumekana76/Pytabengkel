@@ -245,6 +245,24 @@ function saveKendaraanForm(event) {
     ? kendaraan.find((item) => Number(item.id) === Number(id)) || null
     : null;
   const tanggalInput = value("vehicleTanggal");
+  const status = document.getElementById("vehicleStatus").value;
+  const biayaJasa = Number(value("vehicleBiayaJasa")) || 0;
+  const spareparts = existingVehicle?.spareparts || [];
+
+  const statusError =
+    status === (existingVehicle?.status || "")
+      ? ""
+      : validateServiceStatus(status, {
+          mekanikId: mekanik.id,
+          mekanik: mekanik.nama,
+          biayaJasa,
+          spareparts,
+        });
+  if (statusError) {
+    showFormError("vehicleForm", statusError);
+    return;
+  }
+
   const data = {
     polisi,
     pelanggan: customer.nama,
@@ -252,17 +270,17 @@ function saveKendaraanForm(event) {
     jenis: document.getElementById("vehicleJenis").value,
     merk,
     keluhan: value("vehicleKeluhan"),
-    status: document.getElementById("vehicleStatus").value,
+    status,
     mekanikId: mekanik.id,
     mekanik: mekanik.nama,
-    biayaJasa: Number(value("vehicleBiayaJasa")) || 0,
+    biayaJasa,
     /* Sparepart dikelola di halaman Service, jadi di sini
        data sparepart lama tetap dipertahankan. */
-    spareparts: existingVehicle?.spareparts || [],
+    spareparts,
     tanggalService:
       tanggalInput ||
       existingVehicle?.tanggalService ||
-      new Date().toISOString().slice(0, 10),
+      getTodayLocalDate(),
   };
 
   if (id) {

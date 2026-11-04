@@ -1,5 +1,9 @@
 /* Halaman Riwayat Service — gaya khusus */
 
+.riwayat-panel {
+  margin-bottom: 20px;
+}
+
 .riwayat-list {
   display: grid;
   gap: 12px;

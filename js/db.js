@@ -1049,6 +1049,36 @@ function saveCustomerAccounts(accounts) {
   /* Di mode Supabase akun dibuat lewat Supabase Auth, bukan tabel ini. */
 }
 
+/* Muat ulang daftar akun dari server sebelum operasi destruktif (mis.
+   Reset Data). Tujuannya supaya tautan akun -> customer selalu yang
+   terbaru, sehingga tidak ada data customer milik akun yang ikut
+   terhapus. Mengembalikan `null` kalau gagal — pemanggil harus
+   membatalkan operasi daripada mengambil risiko menghapus akun. */
+async function dbReloadCustomerAccounts() {
+  if (!supabaseClient || !dbIsAdmin()) {
+    return getCustomerAccounts();
+  }
+
+  const { data, error } = await supabaseClient
+    .from("profiles")
+    .select("id, customer_id, email, nama, role");
+
+  if (error) {
+    dbLog("Gagal memuat ulang daftar akun:", error.message);
+    return null;
+  }
+
+  DB.cache.accounts = (data || []).map((row) => ({
+    id: row.id,
+    customerId: row.customer_id ? Number(row.customer_id) : null,
+    email: row.email,
+    nama: row.nama,
+    role: row.role,
+  }));
+
+  return DB.cache.accounts;
+}
+
 function findCustomerAccountByEmail(email) {
   const target = String(email || "")
     .trim()
@@ -1123,6 +1153,27 @@ async function dbLoadLogs() {
 
 function getLogs() {
   return DB.cache.logs || [];
+}
+
+/* Kosongkan riwayat aktivitas (dipakai Reset Data Admin). Berbeda dari
+   saveLogs([]) yang hanya menyimpan daftar kosong, fungsi ini benar-benar
+   menghapus baris di server. */
+async function clearActivityLogs() {
+  DB.cache.logs = [];
+  dbPersistLocal("workshop_activity_logs", []);
+
+  if (!supabaseClient || !dbIsAdmin()) {
+    return;
+  }
+
+  const { error } = await supabaseClient
+    .from("activity_logs")
+    .delete()
+    .neq("id", 0);
+
+  if (error) {
+    dbLog("Gagal membersihkan aktivitas:", error.message);
+  }
 }
 
 function saveLogs(logs) {

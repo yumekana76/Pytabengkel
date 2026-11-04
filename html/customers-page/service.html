@@ -156,7 +156,7 @@
                 class="form-control filter-select"
                 aria-label="Urutkan service"
               >
-                <option value="id:asc">Urutkan: ID</option>
+                <option value="">Urutkan: Status (default)</option>
                 <option value="tanggalService:desc">Terbaru</option>
                 <option value="tanggalService:asc">Terlama</option>
                 <option value="total:desc">Total tertinggi</option>
@@ -218,6 +218,8 @@
         <div class="modal-body">
           <div id="serviceDetailSteps"></div>
           <div class="detail-grid" id="serviceDetailContent"></div>
+          <h4 class="detail-section">Foto Service</h4>
+          <div id="serviceDetailPhotos"></div>
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" data-close-modal="serviceDetailModal">

@@ -313,7 +313,149 @@ function resetCustomerForm() {
 
   toggleCustomerAccountFields();
 
+  const searchGroup = document.getElementById("customerSearchLookupGroup");
+  if (searchGroup) searchGroup.hidden = false;
+  const searchInput = document.getElementById("customerSearchLookup");
+  if (searchInput) searchInput.value = "";
+  hideCustomerLookupResults();
+  const lookupHint = document.getElementById("customerSearchLookupHint");
+  if (lookupHint) {
+    lookupHint.textContent =
+      "Ketik nama customer untuk memeriksa atau menyalin data customer yang sudah ada.";
+  }
+
   setText("customerModalTitle", "Tambah Customer");
+}
+
+/* =========================================
+   PENCARIAN CUSTOMER TERDAFTAR (TAMBAH CUSTOMER)
+   ========================================= */
+
+function hideCustomerLookupResults() {
+  const box = document.getElementById("customerLookupResults");
+  if (box) {
+    box.hidden = true;
+    box.innerHTML = "";
+  }
+}
+
+function getCustomerLookupMatches(keyword) {
+  const term = String(keyword || "").toLowerCase().trim();
+
+  if (term.length < 2) {
+    return [];
+  }
+
+  return getCustomers()
+    .filter((customer) => {
+      return [
+        customer.nama,
+        customer.telepon,
+        customer.email,
+        customer.kode,
+        customer.id,
+      ].some((value) =>
+        String(value || "")
+          .toLowerCase()
+          .includes(term),
+      );
+    })
+    .slice(0, 6);
+}
+
+function renderCustomerLookupResults(keyword) {
+  const group = document.getElementById("customerSearchLookupGroup");
+  const input = document.getElementById("customerSearchLookup");
+
+  if (!group || !input) return;
+
+  const term = String(keyword || "").trim();
+
+  if (term.length < 2) {
+    hideCustomerLookupResults();
+    return;
+  }
+
+  let box = document.getElementById("customerLookupResults");
+
+  if (!box) {
+    box = document.createElement("div");
+    box.id = "customerLookupResults";
+    box.className = "customer-lookup";
+    box.setAttribute("role", "listbox");
+    box.setAttribute("aria-label", "Customer terdaftar");
+    input.insertAdjacentElement("afterend", box);
+  }
+
+  const matches = getCustomerLookupMatches(term);
+
+  if (!matches.length) {
+    box.hidden = false;
+    box.innerHTML =
+      '<p class="customer-lookup-empty">Tidak ada customer yang cocok. Lanjutkan mengisi data baru.</p>';
+    return;
+  }
+
+  box.hidden = false;
+  box.innerHTML = matches
+    .map((customer) => {
+      const kendaraan = getCustomerVehicleCount(customer.id);
+      return `
+        <button
+          type="button"
+          class="customer-lookup-item"
+          role="option"
+          data-customer-lookup="${customer.id}"
+        >
+          <span class="customer-lookup-name">${escapeHTML(customer.nama)}</span>
+          <span class="customer-lookup-meta">
+            ${escapeHTML(customer.telepon || "-")} • ${kendaraan} kendaraan
+          </span>
+        </button>
+      `;
+    })
+    .join("");
+
+  box.querySelectorAll("[data-customer-lookup]").forEach((button) => {
+    button.addEventListener("click", () => {
+      selectCustomerLookup(button.dataset.customerLookup);
+    });
+  });
+}
+
+function selectCustomerLookup(id) {
+  const customer = getCustomers().find(
+    (item) => Number(item.id) === Number(id),
+  );
+
+  if (!customer) return;
+
+  const fields = {
+    customerNama: customer.nama || "",
+    customerTelepon: customer.telepon || "",
+    customerEmail: customer.email || "",
+    customerAlamat: customer.alamat || "",
+    customerCatatan: customer.catatan || "",
+  };
+
+  Object.keys(fields).forEach((fieldId) => {
+    const field = document.getElementById(fieldId);
+    if (field) field.value = fields[fieldId];
+  });
+
+  const input = document.getElementById("customerSearchLookup");
+  if (input) input.value = customer.nama || "";
+
+  hideCustomerLookupResults();
+
+  const kendaraan = getCustomerVehicleCount(customer.id);
+  const hint = document.getElementById("customerSearchLookupHint");
+
+  if (hint) {
+    hint.textContent = `Data ${customer.nama} sudah terdaftar (${kendaraan} kendaraan) dan telah disalin ke form. Simpan akan membuat entri baru — untuk mengubah data lama, tutup modal lalu pilih tombol Edit pada tabel.`;
+  }
+
+  document.getElementById("customerNama")?.focus();
 }
 
 /* Tampilkan / sembunyikan kolom akun login sesuai checkbox. */
@@ -373,6 +515,11 @@ function editCustomer(id) {
   if (akunPassword) akunPassword.value = "";
 
   toggleCustomerAccountFields();
+
+  /* Saat mengedit, pencarian customer terdaftar tidak relevan. */
+  const searchGroup = document.getElementById("customerSearchLookupGroup");
+  if (searchGroup) searchGroup.hidden = true;
+  hideCustomerLookupResults();
 
   setText("customerModalTitle", "Edit Customer");
 
@@ -1050,6 +1197,45 @@ function initCustomerPage() {
     search.addEventListener("input", () => {
       if (typeof renderCustomers === "function")
         renderCustomers(search.value, 1);
+    });
+  }
+
+  /* Pencarian customer terdaftar di modal Tambah Customer. */
+  const lookup = document.getElementById("customerSearchLookup");
+
+  if (lookup) {
+    lookup.addEventListener("input", () => {
+      renderCustomerLookupResults(lookup.value);
+    });
+
+    lookup.addEventListener("focus", () => {
+      if (lookup.value.trim().length >= 2) {
+        renderCustomerLookupResults(lookup.value);
+      }
+    });
+
+    lookup.addEventListener("keydown", (event) => {
+      if (event.key === "Escape") {
+        hideCustomerLookupResults();
+        return;
+      }
+
+      if (event.key === "ArrowDown") {
+        const first = document.querySelector(
+          "#customerLookupResults .customer-lookup-item",
+        );
+        if (first) {
+          event.preventDefault();
+          first.focus();
+        }
+      }
+    });
+
+    /* Klik di luar area pencarian menutup daftar saran. */
+    document.addEventListener("click", (event) => {
+      if (!event.target.closest("#customerSearchLookupGroup")) {
+        hideCustomerLookupResults();
+      }
     });
   }
 

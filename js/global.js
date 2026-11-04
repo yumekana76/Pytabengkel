@@ -30,6 +30,16 @@ function formatRupiah(value) {
   }).format(Number(value) || 0);
 }
 
+/* Tanggal lokal (YYYY-MM-DD) — jangan pakai toISOString() karena itu
+   UTC dan bisa menghasilkan tanggal kemarin pada dini hari WIB. */
+function getTodayLocalDate() {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
 /* STATUS */
 
 function getStatusClass(status) {
@@ -49,6 +59,45 @@ function getStatusClass(status) {
     default:
       return "";
   }
+}
+
+/* Status Quality Check / Selesai baru boleh dipakai setelah data service
+   lengkap: mekanik ditugaskan, biaya jasa diisi, dan minimal satu
+   sparepart dipakai. Dipakai semua form yang bisa mengubah status. */
+function getServiceMissingRequirements(service) {
+  const missing = [];
+
+  if (
+    !service?.mekanikId &&
+    !String(service?.mekanik || "").trim()
+  ) {
+    missing.push("mekanik");
+  }
+
+  if (!(Number(service?.biayaJasa) > 0)) {
+    missing.push("biaya jasa");
+  }
+
+  if (
+    !Array.isArray(service?.spareparts) ||
+    !service.spareparts.some((part) => Number(part?.jumlah) > 0)
+  ) {
+    missing.push("sparepart");
+  }
+
+  return missing;
+}
+
+function validateServiceStatus(status, service) {
+  if (status !== "Quality Check" && status !== "Selesai") return "";
+
+  const missing = getServiceMissingRequirements(service);
+  if (!missing.length) return "";
+
+  return (
+    `Status ${status} belum bisa dipilih. Lengkapi ${missing.join(", ")} ` +
+    "terlebih dahulu."
+  );
 }
 
 /* HELPER */
@@ -72,13 +121,62 @@ function escapeHTML(value) {
 
 /* MODAL */
 
+/* Kumpulkan elemen yang bisa difokus di dalam modal (urutan tab). */
+function getModalFocusable(modal) {
+  if (!modal) return [];
+
+  const selector =
+    'a[href], button:not([disabled]):not([hidden]), input:not([disabled]):not([type="hidden"]):not([hidden]), select:not([disabled]):not([hidden]), textarea:not([disabled]):not([hidden]), [tabindex]:not([tabindex="-1"]):not([hidden])';
+
+  return [...modal.querySelectorAll(selector)].filter((element) => {
+    return (
+      element.getClientRects().length > 0 &&
+      element.getAttribute("aria-hidden") !== "true"
+    );
+  });
+}
+
+/* Fokuskan kontrol pertama (atau modal itu sendiri bila kosong). */
+function focusModal(modal) {
+  if (!modal) return;
+
+  const field = [
+    ...modal.querySelectorAll(
+      'input:not([type="hidden"]):not([disabled]), select:not([disabled]), textarea:not([disabled])',
+    ),
+  ].find((element) => element.getClientRects().length > 0);
+
+  const target =
+    modal.querySelector("[autofocus]") || field || getModalFocusable(modal)[0];
+
+  if (target) {
+    target.focus({ preventScroll: true });
+  } else {
+    modal.setAttribute("tabindex", "-1");
+    modal.focus({ preventScroll: true });
+  }
+}
+
 function openModal(id) {
   const modal = document.getElementById(id);
 
-  if (modal) {
-    modal.classList.add("show");
-    document.body.classList.add("modal-open");
+  if (!modal || modal.classList.contains("show")) {
+    return;
   }
+
+  /* Simpan pemicu supaya fokus bisa kembali saat modal ditutup. */
+  if (
+    document.activeElement instanceof HTMLElement &&
+    document.activeElement !== document.body
+  ) {
+    modal.__focusReturn = document.activeElement;
+  }
+
+  modal.classList.add("show");
+  document.body.classList.add("modal-open");
+
+  /* Tunggu satu frame agar modal sudah terlihat sebelum difokuskan. */
+  window.requestAnimationFrame(() => focusModal(modal));
 }
 
 function closeModal(id) {
@@ -99,6 +197,44 @@ function closeModal(id) {
       trigger.focus();
       modal.__focusReturn = null;
     }
+  }
+}
+
+/* Jebakan fokus (focus trap) untuk modal yang sedang terbuka:
+   Tab / Shift+Tab tidak bisa keluar ke halaman di belakang. */
+function trapModalFocus(event) {
+  if (event.key !== "Tab") return;
+
+  const terbuka = [...document.querySelectorAll(".modal-overlay.show")];
+  if (!terbuka.length) return;
+
+  const overlay = terbuka[terbuka.length - 1];
+  const modal = overlay.querySelector(".modal") || overlay;
+  const focusable = getModalFocusable(modal);
+
+  if (!focusable.length) {
+    event.preventDefault();
+    modal.setAttribute("tabindex", "-1");
+    modal.focus({ preventScroll: true });
+    return;
+  }
+
+  const first = focusable[0];
+  const last = focusable[focusable.length - 1];
+  const active = document.activeElement;
+
+  if (!modal.contains(active)) {
+    event.preventDefault();
+    first.focus({ preventScroll: true });
+    return;
+  }
+
+  if (event.shiftKey && active === first) {
+    event.preventDefault();
+    last.focus({ preventScroll: true });
+  } else if (!event.shiftKey && active === last) {
+    event.preventDefault();
+    first.focus({ preventScroll: true });
   }
 }
 
@@ -169,6 +305,7 @@ function setServicePaid(id) {
   const index = kendaraan.findIndex((item) => Number(item.id) === Number(id));
 
   if (index === -1) return false;
+  if (kendaraan[index].status !== "Selesai") return false;
   if ((kendaraan[index].pembayaran || "Belum Lunas") === "Lunas") return false;
 
   kendaraan[index] = { ...kendaraan[index], pembayaran: "Lunas" };
@@ -968,8 +1105,27 @@ function renderKendaraan(search = "", page = 1) {
 
   const sort = getSortValue("sortKendaraan");
 
+  const isDashboard = !document.getElementById("btnTambahKendaraan");
+  const hariIni = getTodayLocalDate();
+
   const hasil = kendaraan
     .filter((item) => {
+      if (isDashboard) {
+        const tanggal = String(item.tanggalService || "").slice(0, 10);
+        const belumSelesai = item.status !== "Selesai";
+        const dariHariSebelumnya = !tanggal || tanggal < hariIni;
+
+        /* Dashboard menampilkan kendaraan hari ini + service yang belum
+           selesai dari hari sebelumnya supaya pekerjaan tidak hilang
+           saat berganti hari. */
+        if (
+          tanggal !== hariIni &&
+          (!belumSelesai || !dariHariSebelumnya)
+        ) {
+          return false;
+        }
+      }
+
       if (statusFilter && item.status !== statusFilter) return false;
       return [
         item.kode,
@@ -996,8 +1152,6 @@ function renderKendaraan(search = "", page = 1) {
 
   const hasilSorted = sortRows(hasilWithTotal, sort.key, sort.direction);
 
-  const isDashboard = !document.getElementById("btnTambahKendaraan");
-
   const perPage = isDashboard ? 5 : 10;
 
   const totalPages = Math.max(1, Math.ceil(hasilSorted.length / perPage));
@@ -1019,7 +1173,7 @@ function renderKendaraan(search = "", page = 1) {
   table.innerHTML = "";
 
   if (hasilSorted.length === 0) {
-    const colspan = 12;
+    const colspan = isDashboard ? 13 : 12;
 
     /* Kosong gara-gara cari/filter? Jangan menawarkan tombol tambah. */
     const tersaring = Boolean(keyword || statusFilter);
@@ -1063,6 +1217,8 @@ function renderKendaraan(search = "", page = 1) {
 
   dataHalaman.forEach((item, index) => {
     const statusClass = getStatusClass(item.status);
+
+    const pembayaran = item.pembayaran || "Belum Lunas";
 
     const nomor = startIndex + index + 1;
 
@@ -1123,14 +1279,51 @@ function renderKendaraan(search = "", page = 1) {
             </td>
 
             <td>
-              <button
-                type="button"
-                class="action-btn"
-                data-dashboard-edit="${item.id}"
-                title="Ubah status & mekanik"
-              >
-                Ubah
-              </button>
+              <span class="badge ${pembayaran === "Lunas" ? "done" : "waiting"}">
+                ${escapeHTML(pembayaran)}
+              </span>
+            </td>
+
+            <td>
+              <div class="action-buttons">
+                ${
+                  pembayaran !== "Lunas"
+                    ? `<button
+                        type="button"
+                        class="action-btn"
+                        data-dashboard-paid="${item.id}"
+                        ${item.status === "Selesai" ? "" : "disabled"}
+                        title="${
+                          item.status === "Selesai"
+                            ? `Tandai transaksi ${escapeHTML(item.polisi)} lunas`
+                            : "Service harus berstatus Selesai sebelum bisa dilunasi"
+                        }"
+                      >
+                        💰 Lunas
+                      </button>`
+                    : ""
+                }
+                ${
+                  item.status === "Selesai"
+                    ? `<button
+                        type="button"
+                        class="action-btn"
+                        data-dashboard-detail="${item.id}"
+                        title="Lihat detail service"
+                      >
+                        Detail
+                      </button>`
+                    : ""
+                }
+                <button
+                  type="button"
+                  class="action-btn"
+                  data-dashboard-edit="${item.id}"
+                  title="Ubah data service"
+                >
+                  ${item.status === "Selesai" ? "🔒 Ubah" : "Ubah"}
+                </button>
+              </div>
             </td>
 
           </tr>
@@ -1243,6 +1436,52 @@ function renderKendaraan(search = "", page = 1) {
     button.addEventListener("click", () =>
       openDashboardEdit(button.dataset.dashboardEdit, button),
     );
+  });
+
+  /* Aksi cepat "Lunas" dari dashboard — konfirmasi dua klik. */
+  table.querySelectorAll("[data-dashboard-paid]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const id = button.dataset.dashboardPaid;
+      if (!armConfirmButton(button, "Klik lagi untuk lunas")) {
+        showPageNotice(
+          "Klik Lunas sekali lagi untuk menandai transaksi ini lunas.",
+          "error",
+        );
+        return;
+      }
+      const item = getKendaraan().find(
+        (row) => Number(row.id) === Number(id),
+      );
+      if (!item) return;
+      if (item.status !== "Selesai") {
+        showPageNotice(
+          "Transaksi hanya bisa dilunasi setelah status service Selesai.",
+          "error",
+        );
+        return;
+      }
+      if (!setServicePaid(id)) {
+        showPageNotice("Transaksi ini sudah berstatus lunas.", "error");
+        return;
+      }
+      addLog(
+        "Bayar",
+        "Service",
+        `Transaksi ${item.polisi} ditandai lunas`,
+        getKode("kendaraan", item),
+      );
+      if (typeof updateDashboard === "function") updateDashboard();
+      showPageNotice("Transaksi ditandai lunas.", "success");
+    });
+  });
+
+  /* Detail service hanya ditampilkan untuk data yang sudah Selesai. */
+  table.querySelectorAll("[data-dashboard-detail]").forEach((button) => {
+    button.addEventListener("click", () => {
+      if (typeof showDashboardDetail === "function") {
+        showDashboardDetail(button.dataset.dashboardDetail);
+      }
+    });
   });
 
   table.querySelectorAll("[data-kendaraan-detail]").forEach((button) => {
@@ -1636,6 +1875,9 @@ document.addEventListener("DOMContentLoaded", async function () {
       closeModal(terbuka[terbuka.length - 1].id);
     }
   });
+
+  /* Tab / Shift+Tab tetap berada di dalam modal aktif. */
+  document.addEventListener("keydown", trapModalFocus);
 
   /* 5. Halaman aktif */
   if (

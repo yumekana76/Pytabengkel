@@ -168,6 +168,118 @@ function renderTestimoniList(listEl, star = 0) {
   listEl.innerHTML = filtered.map(buildTestimoniCard).join("") || "<p>Belum ada ulasan.</p>";
 }
 
+/* =====================================================================
+   MODAL ULASAN (HP)
+   Aksesibilitas: fokus pindah ke tombol tutup saat dibuka, Tab
+   berputar di dalam modal, Escape menutup, dan fokus kembali ke
+   tombol pemicu. Halaman di belakang juga dikunci agar tidak ikut
+   tergulir.
+   ===================================================================== */
+
+var testimoniLastFocus = null;
+
+function openTestimoniModal() {
+  const modal = document.getElementById("testimoniModal");
+  const toggle = document.getElementById("reviewsToggle");
+
+  if (!modal || !modal.hidden) return;
+
+  testimoniLastFocus = document.activeElement;
+  modal.hidden = false;
+  modal.setAttribute("aria-hidden", "false");
+  document.documentElement.classList.add("testimoni-modal-open");
+  document.body.classList.add("testimoni-modal-open");
+
+  /* Cegah interaksi di area belakang saat modal ulasan terbuka */
+  const container = document.querySelector(".login-container");
+  if (container) container.setAttribute("inert", "");
+  document.querySelectorAll(".theme-toggle, .reviews-toggle").forEach((el) => {
+    el.setAttribute("inert", "");
+  });
+
+  if (toggle) toggle.setAttribute("aria-expanded", "true");
+
+  window.requestAnimationFrame(() => {
+    const dialog = modal.querySelector(".testimoni-modal");
+    if (dialog) {
+      dialog.setAttribute("tabindex", "-1");
+      dialog.focus({ preventScroll: true });
+    } else {
+      const closeBtn = document.getElementById("testimoniModalClose");
+      if (closeBtn) closeBtn.focus();
+    }
+  });
+}
+
+function closeTestimoniModal() {
+  const modal = document.getElementById("testimoniModal");
+  const toggle = document.getElementById("reviewsToggle");
+
+  if (!modal || modal.hidden) return;
+
+  modal.hidden = true;
+  modal.setAttribute("aria-hidden", "true");
+  document.documentElement.classList.remove("testimoni-modal-open");
+  document.body.classList.remove("testimoni-modal-open");
+
+  const container = document.querySelector(".login-container");
+  if (container) container.removeAttribute("inert");
+  document.querySelectorAll(".theme-toggle, .reviews-toggle").forEach((el) => {
+    el.removeAttribute("inert");
+  });
+
+  if (toggle) toggle.setAttribute("aria-expanded", "false");
+
+  if (testimoniLastFocus && typeof testimoniLastFocus.focus === "function") {
+    testimoniLastFocus.focus();
+  }
+
+  testimoniLastFocus = null;
+}
+
+/* Escape + jebakan fokus Tab, dipasang sekali saja. */
+function bindTestimoniModalKeys() {
+  if (document.body.dataset.testimoniKeys === "true") return;
+  document.body.dataset.testimoniKeys = "true";
+
+  document.addEventListener("keydown", (event) => {
+    const modal = document.getElementById("testimoniModal");
+
+    if (!modal || modal.hidden) return;
+
+    if (event.key === "Escape") {
+      event.preventDefault();
+      closeTestimoniModal();
+      return;
+    }
+
+    if (event.key !== "Tab") return;
+
+    const focusable = modal.querySelectorAll(
+      'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+    );
+
+    if (!focusable.length) {
+      event.preventDefault();
+      return;
+    }
+
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    const active = document.activeElement;
+
+    if (event.shiftKey) {
+      if (active === first || !modal.contains(active)) {
+        event.preventDefault();
+        last.focus();
+      }
+    } else if (active === last || !modal.contains(active)) {
+      event.preventDefault();
+      first.focus();
+    }
+  });
+}
+
 async function initPublicTestimoni() {
   const section = document.getElementById("testimoniSection");
   const list = document.getElementById("publicTestimoni");
@@ -191,7 +303,6 @@ async function initPublicTestimoni() {
     if (toggle && toggle.dataset.bound !== "true") {
       toggle.dataset.bound = "true";
       toggle.addEventListener("click", () => {
-        const modal = document.getElementById("testimoniModal");
         const listEl = document.getElementById("testimoniModalList");
         const filter = document.getElementById("testimoniModalFilter");
         buildTestimoniFilter(filter, listEl);
@@ -202,25 +313,32 @@ async function initPublicTestimoni() {
             .forEach((b) => b.classList.toggle("active", b.dataset.star === "0"));
         }
         renderTestimoniList(listEl, 0);
-        if (modal) modal.hidden = false;
+        openTestimoniModal();
       });
     }
+    bindTestimoniModalKeys();
     const closeBtn = document.getElementById("testimoniModalClose");
     if (closeBtn && closeBtn.dataset.bound !== "true") {
       closeBtn.dataset.bound = "true";
-      closeBtn.addEventListener("click", () => {
-        const modal = document.getElementById("testimoniModal");
-        if (modal) modal.hidden = true;
-      });
+      closeBtn.addEventListener("click", closeTestimoniModal);
     }
     const modalOverlay = document.getElementById("testimoniModal");
     if (modalOverlay && modalOverlay.dataset.bound !== "true") {
       modalOverlay.dataset.bound = "true";
       modalOverlay.addEventListener("click", (e) => {
         if (e.target === modalOverlay) {
-          modalOverlay.hidden = true;
+          closeTestimoniModal();
         }
       });
+      modalOverlay.addEventListener(
+        "touchmove",
+        (e) => {
+          if (e.target === modalOverlay) {
+            e.preventDefault();
+          }
+        },
+        { passive: false },
+      );
     }
 
     const rata =

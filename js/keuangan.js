@@ -414,7 +414,13 @@ function showKeuanganDetail(id) {
   const lunasButton = document.getElementById("btnLunaskanKeuangan");
 
   if (lunasButton) {
-    lunasButton.hidden = (item.pembayaran || "Belum Lunas") === "Lunas";
+    lunasButton.hidden =
+      item.status !== "Selesai" ||
+      (item.pembayaran || "Belum Lunas") === "Lunas";
+    lunasButton.title =
+      item.status === "Selesai"
+        ? "Tandai transaksi ini lunas"
+        : "Service harus berstatus Selesai sebelum bisa dilunasi";
   }
 
   /* Invoice hanya boleh dicetak setelah service selesai. */
@@ -438,6 +444,14 @@ function tandaiKeuanganLunas() {
   );
 
   if (!item) return;
+
+  if (item.status !== "Selesai") {
+    showPageNotice(
+      "Transaksi hanya bisa dilunasi setelah status service Selesai.",
+      "error",
+    );
+    return;
+  }
 
   if (!setServicePaid(item.id)) {
     showPageNotice("Transaksi ini sudah berstatus lunas.", "error");

@@ -1,7 +1,44 @@
 /* DASHBOARD */
 
+function getStatusTanggal() {
+  const input = document.getElementById("filterStatusTanggal");
+  const value = input?.value || "";
+  if (value) return value;
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
 function updateDashboard() {
-  const kendaraan = getKendaraan();
+  const semuaKendaraan = getKendaraan();
+
+  /* Ringkasan status service di dashboard ditampilkan berdasarkan
+     data per hari sesuai tanggal yang dipilih (default: hari ini). */
+  const tanggalDipilih = getStatusTanggal();
+  const inputTanggal = document.getElementById("filterStatusTanggal");
+  if (inputTanggal && !inputTanggal.value) {
+    inputTanggal.value = tanggalDipilih;
+  }
+
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  const actualToday = `${year}-${month}-${day}`;
+
+  const isToday = tanggalDipilih === actualToday;
+  setText(
+    "statusServiceSub",
+    isToday
+      ? "Ringkasan kendaraan hari ini"
+      : `Ringkasan tanggal ${formatTanggalRekap(tanggalDipilih)}`,
+  );
+
+  const kendaraan = semuaKendaraan.filter(
+    (item) => String(item.tanggalService || "").slice(0, 10) === tanggalDipilih,
+  );
 
   const menunggu = kendaraan.filter(
     (item) => item.status === "Menunggu",
@@ -17,7 +54,7 @@ function updateDashboard() {
 
   /* Pendapatan hanya dihitung dari service selesai yang SUDAH LUNAS —
      tagihan belum lunas tidak masuk angka pendapatan. */
-  const pendapatan = kendaraan
+  const pendapatan = semuaKendaraan
     .filter(
       (item) =>
         item.status === "Selesai" &&
@@ -74,7 +111,7 @@ function updateDashboard() {
 function getMekanikTanggal() {
   const input = document.getElementById("filterMekanikTanggal");
   const value = input?.value || "";
-  return value || new Date().toISOString().slice(0, 10);
+  return value || getTodayLocalDate();
 }
 
 /* "2026-10-14..." -> "14 Okt 2026" */
@@ -250,14 +287,71 @@ function setCustomerManualLock(locked) {
   });
 }
 
+/* Ambil satu kendaraan unik per nomor polisi milik customer.
+   Data service bisa punya banyak baris untuk plat yang sama, tetapi
+   dropdown "Kendaraan Milik Customer" cukup menampilkan satu entri. */
+function getUniqueCustomerVehicles(customerId) {
+  const map = new Map();
+
+  getKendaraan()
+    .filter((item) => Number(item.pelangganId) === Number(customerId))
+    .forEach((item) => {
+      const key = String(item.polisi || "").trim().toUpperCase();
+      if (!key) return;
+
+      const existing = map.get(key);
+      if (!existing) {
+        map.set(key, item);
+        return;
+      }
+
+      const lebihBaru =
+        String(item.tanggalService || "").localeCompare(
+          String(existing.tanggalService || ""),
+        ) > 0 ||
+        (String(item.tanggalService || "") ===
+          String(existing.tanggalService || "") &&
+          Number(item.id) > Number(existing.id));
+
+      if (lebihBaru) map.set(key, item);
+    });
+
+  return [...map.values()].sort((a, b) =>
+    String(a.polisi || "").localeCompare(String(b.polisi || ""), "id", {
+      sensitivity: "base",
+    }),
+  );
+}
+
+/* Saat kendaraan dipilih, hanya identitas kendaraan yang diambil.
+   Status, tanggal, keluhan, biaya, dan sparepart adalah data per
+   service sehingga harus mulai bersih untuk service baru. */
+function resetUnifiedServiceFields() {
+  const status = document.getElementById("unifiedStatus");
+  if (status) status.value = "Menunggu";
+
+  const tanggal = document.getElementById("unifiedTanggal");
+  if (tanggal) tanggal.value = getTodayLocalDate();
+
+  const keluhan = document.getElementById("unifiedKeluhan");
+  if (keluhan) keluhan.value = "";
+
+  const biayaJasa = document.getElementById("unifiedBiayaJasa");
+  if (biayaJasa) biayaJasa.value = "";
+
+  const list = document.getElementById("unifiedSparepartList");
+  if (list) {
+    list.innerHTML = "";
+    addUnifiedSparepartRow();
+  }
+
+  updateUnifiedTotalPreview();
+}
+
 function refreshUnifiedVehicles(customerId) {
   const vehicleSelect = document.getElementById("unifiedVehicleId");
   if (!vehicleSelect) return;
-  const milik = customerId
-    ? getKendaraan().filter(
-        (item) => Number(item.pelangganId) === Number(customerId),
-      )
-    : [];
+  const milik = customerId ? getUniqueCustomerVehicles(customerId) : [];
   vehicleSelect.innerHTML =
     '<option value="">-- Kendaraan baru (isi manual) --</option>' +
     milik
@@ -306,6 +400,7 @@ function populateUnifiedRelations() {
       (item) => Number(item.id) === Number(customerSelect.value),
     );
     refreshUnifiedVehicles(customer ? customer.id : "");
+    resetUnifiedServiceFields();
     if (!customer) {
       /* Kembali ke mode "customer baru": isian manual dibuka lagi. */
       setCustomerManualLock(false);
@@ -335,10 +430,23 @@ function populateUnifiedRelations() {
       const vehicle = getKendaraan().find(
         (item) => Number(item.id) === Number(vehicleSelect.value),
       );
-      if (!vehicle) return;
+
+      if (!vehicle) {
+        /* Mode kendaraan baru: identitas lama jangan tertinggal. */
+        document.getElementById("unifiedPolisi").value = "";
+        document.getElementById("unifiedJenis").value = "Mobil";
+        document.getElementById("unifiedMerk").value = "";
+        resetUnifiedServiceFields();
+        return;
+      }
+
+      /* Hanya no. polisi, jenis, dan merk yang diambil dari kendaraan.
+         Field service selalu baru: status Menunggu, tanggal hari ini,
+         keluhan/biaya/sparepart kosong. */
       document.getElementById("unifiedPolisi").value = vehicle.polisi || "";
       document.getElementById("unifiedJenis").value = vehicle.jenis || "Mobil";
       document.getElementById("unifiedMerk").value = vehicle.merk || "";
+      resetUnifiedServiceFields();
     };
   }
 }
@@ -418,6 +526,16 @@ function addUnifiedSparepartRow(selectedId = "", jumlah = "", preset = {}) {
       </div>
     </div>`;
   const select = row.querySelector("[data-part-select]");
+  /* Baris kosong di atas, baris yang sudah dipilih pindah ke bawah. */
+  const moveRow = (hasSelection) => {
+    const parent = row.parentElement;
+    if (!parent) return;
+    if (hasSelection) {
+      parent.appendChild(row);
+    } else {
+      parent.prepend(row);
+    }
+  };
   /* Cache opsi awal supaya kotak cari bisa menyaring daftar sparepart. */
   select.__allOptions = [...select.options].map((opt) => opt.cloneNode(true));
   row.querySelector("[data-part-search]").addEventListener("input", (event) => {
@@ -430,6 +548,7 @@ function addUnifiedSparepartRow(selectedId = "", jumlah = "", preset = {}) {
       row.querySelector("[data-part-nama]").value = "";
       row.querySelector("[data-part-stok]").value = "";
       row.querySelector("[data-part-harga]").value = "";
+      moveRow(false);
       updateUnifiedTotalPreview();
     }
     /* Auto-pilih hasil pertama supaya pengguna langsung melihat
@@ -444,10 +563,14 @@ function addUnifiedSparepartRow(selectedId = "", jumlah = "", preset = {}) {
     if (event.key === "Enter") event.preventDefault();
   });
   select.addEventListener("change", () => {
+    moveRow(Boolean(select.value));
     const part = getSparepart().find(
       (item) => Number(item.id) === Number(select.value),
     );
-    if (!part) return;
+    if (!part) {
+      updateUnifiedTotalPreview();
+      return;
+    }
     row.querySelector("[data-part-nama]").value = part.nama || "";
     row.querySelector("[data-part-stok]").value = part.stok ?? "";
     row.querySelector("[data-part-harga]").value = part.harga ?? "";
@@ -464,7 +587,11 @@ function addUnifiedSparepartRow(selectedId = "", jumlah = "", preset = {}) {
     row.remove();
     updateUnifiedTotalPreview();
   });
-  list.appendChild(row);
+  if (selectedId) {
+    list.appendChild(row);
+  } else {
+    list.prepend(row);
+  }
   updateUnifiedTotalPreview();
 }
 
@@ -499,7 +626,7 @@ function resetUnifiedForm() {
   }
   const tanggal = document.getElementById("unifiedTanggal");
   if (tanggal && !tanggal.value)
-    tanggal.value = new Date().toISOString().slice(0, 10);
+    tanggal.value = getTodayLocalDate();
   updateUnifiedTotalPreview();
 }
 
@@ -513,6 +640,8 @@ function saveUnifiedForm(event) {
   const merk = value("unifiedMerk");
   const keluhan = value("unifiedKeluhan");
   const namaCustomer = value("unifiedCustomerNama");
+  const status = document.getElementById("unifiedStatus").value;
+  const biayaJasa = Number(value("unifiedBiayaJasa")) || 0;
   if (!polisi || !merk || !keluhan || !namaCustomer) {
     showFormError(
       "unifiedForm",
@@ -542,6 +671,30 @@ function saveUnifiedForm(event) {
       registeredAt: new Date().toISOString(),
     };
     customers.push(customer);
+  }
+
+  /* Kendaraan baru manual tidak boleh membuat plat yang sudah terdaftar
+     untuk customer yang sama. Untuk service berikutnya, pilih kendaraan
+     dari dropdown supaya identitas kendaraan tidak terduplikasi. */
+  if (!value("unifiedVehicleId")) {
+    const duplikat = getKendaraan().find(
+      (item) =>
+        Number(item.pelangganId) === Number(customer.id) &&
+        String(item.polisi || "")
+          .trim()
+          .toUpperCase() ===
+          String(polisi || "")
+            .trim()
+            .toUpperCase(),
+    );
+
+    if (duplikat) {
+      showFormError(
+        "unifiedForm",
+        `No. polisi ${polisi} sudah terdaftar untuk customer ini. Pilih kendaraan tersebut di dropdown "Kendaraan Milik Customer" agar service baru tidak membuat data kendaraan ganda.`,
+      );
+      return;
+    }
   }
 
   const mekanikData = getMekanik();
@@ -641,16 +794,38 @@ function saveUnifiedForm(event) {
         return;
       }
     }
-    for (const id of Object.keys(totalPerPart)) {
-      const part = sparepartData.find((item) => Number(item.id) === Number(id));
-      if (part) part.stok = Number(part.stok) - totalPerPart[id];
-    }
-    spareparts = resolved.map(({ sparepart, jumlah }) => ({
+    const draftSpareparts = resolved.map(({ sparepart, jumlah }) => ({
       sparepartId: sparepart.id,
       nama: sparepart.nama,
       harga: Number(sparepart.harga),
       jumlah: Number(jumlah),
     }));
+    const statusError = validateServiceStatus(status, {
+      mekanikId: mekanik.id,
+      mekanik: mekanik.nama,
+      biayaJasa,
+      spareparts: draftSpareparts,
+    });
+    if (statusError) {
+      showFormError("unifiedForm", statusError);
+      return;
+    }
+    for (const id of Object.keys(totalPerPart)) {
+      const part = sparepartData.find((item) => Number(item.id) === Number(id));
+      if (part) part.stok = Number(part.stok) - totalPerPart[id];
+    }
+    spareparts = draftSpareparts;
+  } else {
+    const statusError = validateServiceStatus(status, {
+      mekanikId: mekanik.id,
+      mekanik: mekanik.nama,
+      biayaJasa,
+      spareparts,
+    });
+    if (statusError) {
+      showFormError("unifiedForm", statusError);
+      return;
+    }
   }
 
   const kendaraan = getKendaraan();
@@ -663,13 +838,13 @@ function saveUnifiedForm(event) {
     jenis: document.getElementById("unifiedJenis").value,
     merk,
     keluhan,
-    status: document.getElementById("unifiedStatus").value,
+    status,
     mekanikId: mekanik.id,
     mekanik: mekanik.nama,
-    biayaJasa: Number(value("unifiedBiayaJasa")) || 0,
+    biayaJasa,
     spareparts,
     tanggalService:
-      value("unifiedTanggal") || new Date().toISOString().slice(0, 10),
+      value("unifiedTanggal") || getTodayLocalDate(),
   });
 
   saveCustomers(customers);
@@ -684,6 +859,119 @@ function saveUnifiedForm(event) {
   showPageNotice("Data tersimpan ke tabel.", "success");
 }
 
+function dashboardSparepartOptions(selectedId = "") {
+  return getSparepart()
+    .filter(
+      (item) =>
+        Number(item.stok) > 0 ||
+        Number(item.id) === Number(selectedId),
+    )
+    .map(
+      (item) =>
+        `<option value="${item.id}"${Number(item.id) === Number(selectedId) ? " selected" : ""}>${escapeHTML(item.nama)} — ${formatRupiah(item.harga)} (stok: ${item.stok})</option>`,
+    )
+    .join("");
+}
+
+function addDashboardSparepartRow(selectedId = "", jumlah = 1) {
+  const list = document.getElementById("dashboardEditSparepartList");
+  if (!list) return;
+
+  const row = document.createElement("div");
+  row.className = "service-part-row";
+  row.innerHTML = `
+    <select class="form-control" data-dash-part required>
+      <option value="">Pilih sparepart</option>
+      ${dashboardSparepartOptions(selectedId)}
+    </select>
+    <input class="form-control" data-dash-part-quantity type="number" min="1" value="${Math.max(1, Number(jumlah) || 1)}" required aria-label="Jumlah sparepart" />
+    <button type="button" class="action-btn danger" data-remove-dash-part aria-label="Hapus sparepart">Hapus</button>`;
+  row
+    .querySelectorAll("select, input")
+    .forEach((input) =>
+      input.addEventListener("input", updateDashboardEditTotalPreview),
+    );
+  row
+    .querySelector("[data-remove-dash-part]")
+    .addEventListener("click", () => {
+      row.remove();
+      updateDashboardEditTotalPreview();
+    });
+  /* Baris kosong di atas, baris yang sudah dipilih pindah ke bawah. */
+  row.querySelector("[data-dash-part]").addEventListener("change", (event) => {
+    if (!list) return;
+    if (event.target.value) {
+      list.appendChild(row);
+    } else {
+      list.prepend(row);
+    }
+  });
+  if (selectedId) {
+    list.appendChild(row);
+  } else {
+    list.prepend(row);
+  }
+  updateDashboardEditTotalPreview();
+}
+
+function updateDashboardEditTotalPreview() {
+  const biayaJasa =
+    Number(document.getElementById("dashEditBiayaJasa")?.value) || 0;
+  const sparepart = getSparepart();
+  const totalSparepart = [
+    ...document.querySelectorAll(
+      "#dashboardEditSparepartList .service-part-row",
+    ),
+  ].reduce((total, row) => {
+    const part = sparepart.find(
+      (item) =>
+        Number(item.id) ===
+        Number(row.querySelector("[data-dash-part]")?.value),
+    );
+    const jumlah =
+      Number(row.querySelector("[data-dash-part-quantity]")?.value) || 0;
+    return total + (Number(part?.harga) || 0) * jumlah;
+  }, 0);
+  setText(
+    "dashEditTotalPreview",
+    formatRupiah(biayaJasa + totalSparepart),
+  );
+}
+
+function getDashboardSparepartsFromForm() {
+  const sparepart = getSparepart();
+  const selected = [];
+
+  for (const row of document.querySelectorAll(
+    "#dashboardEditSparepartList .service-part-row",
+  )) {
+    const partId = row.querySelector("[data-dash-part]").value;
+    const jumlah = Number(
+      row.querySelector("[data-dash-part-quantity]").value,
+    );
+    if (!partId || !Number.isInteger(jumlah) || jumlah < 1) {
+      throw new Error("Pilih sparepart dan isi jumlah minimal 1.");
+    }
+    const part = sparepart.find((item) => Number(item.id) === Number(partId));
+    if (!part) throw new Error("Sparepart yang dipilih tidak tersedia.");
+    const existing = selected.find(
+      (item) => Number(item.sparepartId) === Number(part.id),
+    );
+    if (existing) {
+      existing.jumlah += jumlah;
+    } else {
+      selected.push({
+        sparepartId: part.id,
+        nama: part.nama,
+        harga: Number(part.harga) || 0,
+        jumlah,
+      });
+    }
+  }
+
+  return selected;
+}
+
 function openDashboardEdit(id, button = null) {
   const item = getKendaraan().find(
     (vehicle) => Number(vehicle.id) === Number(id),
@@ -695,6 +983,13 @@ function openDashboardEdit(id, button = null) {
 
   document.getElementById("dashEditId").value = item.id;
   document.getElementById("dashEditStatus").value = item.status;
+  document.getElementById("dashEditTanggal").value = String(
+    item.tanggalService || "",
+  ).slice(0, 10);
+  document.getElementById("dashEditPembayaran").value =
+    item.pembayaran || "Belum Lunas";
+  document.getElementById("dashEditBiayaJasa").value =
+    Number(item.biayaJasa) || "";
 
   const mekanikSelect = document.getElementById("dashEditMekanik");
   /* Mekanik berstatus Izin tidak bisa dipilih, kecuali mekanik
@@ -714,6 +1009,17 @@ function openDashboardEdit(id, button = null) {
         `<option value="${mekanik.id}" ${Number(mekanik.id) === Number(item.mekanikId) ? "selected" : ""}>${escapeHTML(mekanik.nama)} — ${escapeHTML(mekanik.status)}</option>`,
     )
     .join("");
+
+  const sparepartList = document.getElementById(
+    "dashboardEditSparepartList",
+  );
+  if (sparepartList) {
+    sparepartList.innerHTML = "";
+    (item.spareparts || []).forEach((part) =>
+      addDashboardSparepartRow(part.sparepartId, part.jumlah),
+    );
+  }
+  updateDashboardEditTotalPreview();
 
   setText("dashboardEditTitle", `Ubah ${item.polisi}`);
   document.getElementById("dashEditLockNote").hidden = !isLocked(item);
@@ -740,17 +1046,213 @@ function saveDashboardEdit(event) {
     return;
   }
 
-  kendaraan[index] = {
+  const status = document.getElementById("dashEditStatus").value;
+  const pembayaran =
+    document.getElementById("dashEditPembayaran").value || "Belum Lunas";
+  const tanggalService =
+    document.getElementById("dashEditTanggal").value ||
+    String(kendaraan[index].tanggalService || "").slice(0, 10) ||
+    getTodayLocalDate();
+  const biayaJasa =
+    Number(document.getElementById("dashEditBiayaJasa").value) || 0;
+
+  if (pembayaran === "Lunas" && status !== "Selesai") {
+    showFormError(
+      "dashboardEditForm",
+      "Status pembayaran Lunas hanya bisa dipilih setelah status service Selesai.",
+    );
+    return;
+  }
+
+  let spareparts;
+  try {
+    spareparts = getDashboardSparepartsFromForm();
+  } catch (error) {
+    showFormError("dashboardEditForm", error.message);
+    return;
+  }
+
+  const draft = {
     ...kendaraan[index],
-    status: document.getElementById("dashEditStatus").value,
+    status,
     mekanikId: mekanik.id,
     mekanik: mekanik.nama,
+    biayaJasa,
+    spareparts,
+  };
+
+  const statusError = validateServiceStatus(status, draft);
+  if (statusError) {
+    showFormError("dashboardEditForm", statusError);
+    return;
+  }
+
+  const previousParts = kendaraan[index].spareparts || [];
+  const stokTersedia = getSparepart();
+  const previousQuantities = previousParts.reduce((map, item) => {
+    map[item.sparepartId] =
+      (map[item.sparepartId] || 0) + (Number(item.jumlah) || 0);
+    return map;
+  }, {});
+
+  for (const part of spareparts) {
+    const available = stokTersedia.find(
+      (entry) => Number(entry.id) === Number(part.sparepartId),
+    );
+    if (
+      !available ||
+      Number(part.jumlah) >
+        Number(available.stok) +
+          (previousQuantities[part.sparepartId] || 0)
+    ) {
+      showFormError(
+        "dashboardEditForm",
+        `Stok ${part.nama} tidak mencukupi.`,
+      );
+      return;
+    }
+  }
+
+  const nextQuantities = spareparts.reduce((map, item) => {
+    map[item.sparepartId] =
+      (map[item.sparepartId] || 0) + Number(item.jumlah);
+    return map;
+  }, {});
+  stokTersedia.forEach((part) => {
+    const restored = previousQuantities[part.id] || 0;
+    const used = nextQuantities[part.id] || 0;
+    part.stok = Number(part.stok) + restored - used;
+  });
+
+  kendaraan[index] = {
+    ...kendaraan[index],
+    status,
+    mekanikId: mekanik.id,
+    mekanik: mekanik.nama,
+    pembayaran,
+    tanggalService,
+    biayaJasa,
+    spareparts,
   };
   saveKendaraan(kendaraan);
+  saveSparepart(stokTersedia);
+
+  addLog(
+    "Update",
+    "Service",
+    `${kendaraan[index].polisi} — status ${status}, pembayaran ${pembayaran}`,
+    getKode("kendaraan", kendaraan[index]),
+  );
+
   closeModal("dashboardEditModal");
   if (typeof updateDashboard === "function") updateDashboard();
   if (typeof renderMekanik === "function") renderMekanik();
-  showPageNotice("Perubahan tersimpan di tabel.", "success");
+  showPageNotice("Perubahan service tersimpan di tabel.", "success");
+}
+
+/* =========================================
+   DETAIL SERVICE DARI DASHBOARD
+   ========================================= */
+
+var activeDashboardDetailId = null;
+
+function showDashboardDetail(id) {
+  const item = getKendaraan().find(
+    (vehicle) => Number(vehicle.id) === Number(id),
+  );
+  if (!item) return;
+
+  activeDashboardDetailId = item.id;
+
+  const content = document.getElementById("dashboardDetailContent");
+  const steps = document.getElementById("dashboardDetailSteps");
+  const invoice = document.getElementById("dashboardDetailInvoice");
+
+  if (content) {
+    const ringkasan = getServiceRingkasan(item);
+    content.innerHTML = buildServiceDetailGrid(item, {
+      extraItems: [
+        { label: "Biaya Jasa", value: formatRupiah(ringkasan.biayaJasa) },
+        {
+          label: "Subtotal Sparepart",
+          value: formatRupiah(ringkasan.subtotalSparepart),
+        },
+        {
+          label: "Jumlah Sparepart",
+          value: `${ringkasan.jumlahSparepart} item`,
+        },
+        { label: "Total Tagihan", value: formatRupiah(ringkasan.total) },
+        {
+          label: "Sisa Tagihan",
+          value: ringkasan.lunas
+            ? '<span class="badge done">Lunas</span>'
+            : formatRupiah(ringkasan.sisa),
+        },
+      ],
+    });
+  }
+
+  if (steps) {
+    steps.innerHTML = `<div class="status-steps">${buildServiceSteps(
+      item.status,
+    )}</div>`;
+  }
+
+  if (invoice) {
+    invoice.innerHTML = buildServiceInvoice(item);
+  }
+
+  const lunasButton = document.getElementById("btnDashboardDetailLunas");
+  if (lunasButton) {
+    lunasButton.hidden =
+      item.status !== "Selesai" ||
+      (item.pembayaran || "Belum Lunas") === "Lunas";
+    lunasButton.title =
+      item.status === "Selesai"
+        ? "Tandai transaksi ini lunas"
+        : "Service harus berstatus Selesai sebelum bisa dilunasi";
+  }
+
+  openModal("dashboardDetailModal");
+}
+
+function tandaiDashboardDetailLunas() {
+  const item = getKendaraan().find(
+    (row) => Number(row.id) === Number(activeDashboardDetailId),
+  );
+  if (!item) return;
+
+  if (item.status !== "Selesai") {
+    showPageNotice(
+      "Tagihan hanya bisa dilunasi setelah status service Selesai.",
+      "error",
+    );
+    return;
+  }
+
+  if (!setServicePaid(item.id)) {
+    showPageNotice("Tagihan ini sudah berstatus lunas.", "error");
+    return;
+  }
+
+  addLog(
+    "Bayar",
+    "Service",
+    `Transaksi ${item.polisi} ditandai lunas`,
+    getKode("kendaraan", item),
+  );
+
+  showDashboardDetail(item.id);
+  if (typeof updateDashboard === "function") updateDashboard();
+  showPageNotice("Transaksi ditandai lunas.", "success");
+}
+
+function cetakDashboardDetail() {
+  const item = getKendaraan().find(
+    (row) => Number(row.id) === Number(activeDashboardDetailId),
+  );
+  if (!item) return;
+  printServiceInvoice(item);
 }
 
 function initDashboardEdit() {
@@ -762,6 +1264,19 @@ function initDashboardEdit() {
     ?.addEventListener("change", () => {
       if (typeof updateDashboard === "function") updateDashboard();
     });
+
+  document
+    .getElementById("btnTambahDashboardSparepart")
+    ?.addEventListener("click", () => addDashboardSparepartRow());
+  document
+    .getElementById("dashEditBiayaJasa")
+    ?.addEventListener("input", updateDashboardEditTotalPreview);
+  document
+    .getElementById("btnDashboardDetailLunas")
+    ?.addEventListener("click", tandaiDashboardDetailLunas);
+  document
+    .getElementById("btnDashboardDetailCetak")
+    ?.addEventListener("click", cetakDashboardDetail);
 }
 
 function initDashboardInput() {
@@ -781,6 +1296,14 @@ function initDashboardInput() {
       }
     });
 
+  const tanggalStatus = document.getElementById("filterStatusTanggal");
+  if (tanggalStatus && !tanggalStatus.value) {
+    tanggalStatus.value = getStatusTanggal();
+  }
+  tanggalStatus?.addEventListener("change", () => {
+    if (typeof updateDashboard === "function") updateDashboard();
+  });
+
   document
     .getElementById("filterMekanikDashboard")
     ?.addEventListener("change", () => {
@@ -788,7 +1311,7 @@ function initDashboardInput() {
     });
   const tanggalMekanik = document.getElementById("filterMekanikTanggal");
   if (tanggalMekanik && !tanggalMekanik.value) {
-    tanggalMekanik.value = new Date().toISOString().slice(0, 10);
+    tanggalMekanik.value = getTodayLocalDate();
   }
   tanggalMekanik?.addEventListener("change", () => {
     if (typeof renderMekanik === "function") renderMekanik();

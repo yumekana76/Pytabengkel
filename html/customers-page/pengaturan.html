@@ -190,9 +190,66 @@
                 >Akhiri sesi login dan kembali ke halaman login customer.</span
               >
             </div>
+            <div class="setting-btn" style="margin-top: 14px">
+              <button type="button" class="btn btn-danger" id="btnDeleteAccount">
+                <i class="fa-solid fa-user-slash" aria-hidden="true"></i>
+                Hapus Akun
+              </button>
+              <span class="setting-description"
+                >Hapus akun login customer secara permanen. Data kendaraan dan
+                riwayat service tetap tersimpan di bengkel.</span
+              >
+            </div>
           </div>
         </section>
       </main>
+    </div>
+    <div class="modal-overlay" id="deleteAccountModal">
+      <div
+        class="modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="deleteAccountModal-title"
+      >
+        <div class="modal-header">
+          <div>
+            <h3 id="deleteAccountModal-title">Hapus Akun?</h3>
+            <p>Tindakan ini tidak dapat dibatalkan.</p>
+          </div>
+          <button
+            type="button"
+            class="modal-close"
+            data-close-modal="deleteAccountModal"
+            aria-label="Tutup"
+          >
+            ×
+          </button>
+        </div>
+        <div class="modal-body">
+          <p class="lock-note">
+            ⚠️ Akun login Anda akan dihapus permanen dan tidak bisa dipakai
+            untuk masuk lagi. Data kendaraan dan riwayat service tetap
+            tersimpan di bengkel.
+          </p>
+          <p class="setting-description">
+            Jika hanya ingin mengakhiri sesi di perangkat ini, gunakan tombol
+            <strong>Keluar dari Akun</strong>.
+          </p>
+        </div>
+        <div class="modal-footer">
+          <button
+            type="button"
+            class="btn btn-secondary"
+            data-close-modal="deleteAccountModal"
+          >
+            Batal
+          </button>
+          <button type="button" class="btn btn-danger" id="btnConfirmDeleteAccount">
+            <i class="fa-solid fa-user-slash" aria-hidden="true"></i>
+            Ya, Hapus Akun
+          </button>
+        </div>
+      </div>
     </div>
     <script src="../../js/db.js"></script>
     <script src="../../js/customer-auth.js"></script>
