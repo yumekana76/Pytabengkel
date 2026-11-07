@@ -161,7 +161,7 @@
                 class="form-control filter-select"
                 aria-label="Urutkan kendaraan"
               >
-                <option value="id:desc">Urutkan: ID</option>
+                <option value="">Urutkan: Status (default)</option>
                 <option value="tanggalService:desc">Terbaru</option>
                 <option value="tanggalService:asc">Terlama</option>
                 <option value="polisi:asc">No. Polisi</option>
@@ -206,15 +206,11 @@
             <p class="form-error" id="requestError" hidden></p>
             <div class="form-grid">
               <div class="form-group form-full">
-                <label for="requestMode">Pilih Kendaraan</label>
-                <select id="requestMode" class="form-control">
-                  <option value="existing">Kendaraan yang sudah ada</option>
-                  <option value="new">Tambah kendaraan baru</option>
-                </select>
-              </div>
-              <div class="form-group form-full" id="existingVehicleGroup">
-                <label for="requestVehicle">Kendaraan Saya</label>
+                <label for="requestVehicle">Pilih Kendaraan</label>
                 <select id="requestVehicle" class="form-control"></select>
+                <span class="form-hint">
+                  Pilih kendaraan terdaftar, atau tambahkan kendaraan baru pada daftar.
+                </span>
               </div>
               <div class="form-group form-full" id="newVehicleGroup" hidden>
                 <label for="requestPolisi">No.Police</label>

@@ -13,8 +13,6 @@ const loginButton = document.getElementById("loginButton");
 const forgotPassword = document.getElementById("forgotPassword");
 const resetBox = document.getElementById("resetBox");
 
-let noticeTimer = null;
-
 const REDIRECTS = {
   admin: "admin-page/dashboard.html",
   customer: "customers-page/dashboard.html",
@@ -27,11 +25,8 @@ const REDIRECT_DELAY = 500;
 
 let currentRole = "admin";
 
-/* TEMA */
-
-if (typeof initTheme === "function") {
-  initTheme();
-}
+/* TEMA — dipanggil boot global.js (DOMContentLoaded), bukan di sini,
+   supaya tidak dobel dengan halaman lain yang memuat global.js. */
 
 /* Form atur password hanya untuk mode lokal. Di mode Supabase,
    reset password dilakukan lewat tautan email. */
@@ -134,6 +129,11 @@ document.querySelectorAll(".role-tab").forEach((tab) => {
 /* Role dari URL (?role=customer) */
 const urlRole = new URLSearchParams(window.location.search).get("role");
 setRole(urlRole === "customer" ? "customer" : "admin");
+
+/* Pesan setelah customer menghapus akunnya sendiri. */
+if (urlRole === "customer" && new URLSearchParams(window.location.search).get("accountDeleted") === "1") {
+  showSuccess("Akun Anda berhasil dihapus.");
+}
 
 /* =========================================
    TAMPILKAN / SEMBUNYIKAN PASSWORD
@@ -334,71 +334,7 @@ document
     }
   });
 
-/* =========================================
-   HELPER
-   ========================================= */
+/* HELPER (isValidEmail, setText, showNotice, showError, showSuccess,
+   hideMessages) sudah disentralisasi di global.js — halaman ini
+   selalu memuat global.js sebelum skrip ini. */
 
-function isValidEmail(email) {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-}
-
-function setText(id, value) {
-  const element = document.getElementById(id);
-  if (element) {
-    element.textContent = value;
-  }
-}
-
-/* Notifikasi mengambang (gaya sama dengan halaman dashboard),
-   jadi tidak mendorong layout / menutupi form. */
-function showNotice(message, type = "error") {
-  let notice = document.getElementById("loginNotice");
-
-  if (!notice) {
-    notice = document.createElement("div");
-    notice.id = "loginNotice";
-    notice.setAttribute("role", "status");
-    notice.className = "page-notice";
-    document.body.appendChild(notice);
-  }
-
-  if (noticeTimer) {
-    window.clearTimeout(noticeTimer);
-    noticeTimer = null;
-  }
-
-  notice.hidden = false;
-  notice.className =
-    "page-notice " + (type === "success" ? "success" : "error");
-  notice.textContent = message;
-
-  noticeTimer = window.setTimeout(() => {
-    notice.hidden = true;
-    notice.textContent = "";
-    notice.className = "page-notice";
-    noticeTimer = null;
-  }, type === "success" ? 3000 : 4000);
-}
-
-function showError(message) {
-  showNotice(message, "error");
-}
-
-function showSuccess(message) {
-  showNotice(message, "success");
-}
-
-function hideMessages() {
-  const notice = document.getElementById("loginNotice");
-
-  if (!notice) return;
-
-  notice.hidden = true;
-  notice.textContent = "";
-  notice.className = "page-notice";
-
-  if (noticeTimer) {
-    window.clearTimeout(noticeTimer);
-    noticeTimer = null;
-  }
-}

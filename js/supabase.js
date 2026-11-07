@@ -449,10 +449,100 @@ var Auth = {
     authState.profile = null;
   },
 
+  /* Hapus akun yang sedang login.
+     - Mode lokal   : hapus dari daftar akun customer di localStorage.
+     - Mode Supabase: panggil RPC delete_my_account() (security definer),
+                      lalu bersihkan sesi. Data customer/service TIDAK
+                      dihapus — hanya akun login-nya. */
+  async deleteAccount() {
+    const profile = getCurrentProfile();
+
+    if (profile?.role === "admin") {
+      return {
+        ok: false,
+        error: "Akun administrator tidak dapat dihapus dari halaman customer.",
+      };
+    }
+
+    if (!isSupabaseMode()) {
+      const email = String(profile?.email || "")
+        .trim()
+        .toLowerCase();
+      const accounts = getCustomerAccounts();
+      const target = accounts.find(
+        (account) =>
+          (account.role || "customer") !== "admin" &&
+          (String(account.email || "").trim().toLowerCase() === email ||
+            (profile?.id && String(account.id) === String(profile.id))),
+      );
+
+      if (!target) {
+        return { ok: false, error: "Akun login tidak ditemukan." };
+      }
+
+      saveCustomerAccounts(
+        accounts.filter((account) => account !== target),
+      );
+
+      await this.signOut();
+      return { ok: true };
+    }
+
+    const { error } = await supabaseClient.rpc("delete_my_account");
+
+    if (error) {
+      const pesan = String(error.message || "");
+      const belumAktif =
+        pesan.toLowerCase().includes("could not find the function") ||
+        pesan.toLowerCase().includes("does not exist");
+
+      return {
+        ok: false,
+        error: belumAktif
+          ? "Fitur hapus akun belum aktif di server. Jalankan ulang supabase/schema.sql."
+          : pesan || "Gagal menghapus akun.",
+      };
+    }
+
+    try {
+      await this.signOut();
+    } catch (signOutError) {
+      /* Akun sudah terhapus; sesi lokal tetap harus dibersihkan. */
+      sessionStorage.removeItem("workshopLoggedIn");
+      sessionStorage.removeItem("workshopUserName");
+      sessionStorage.removeItem("workshopCustomerSession");
+      sessionStorage.removeItem("workshopCustomerName");
+      sessionStorage.removeItem(LOCAL_SESSION_KEY);
+      authState.user = null;
+      authState.profile = null;
+    }
+
+    return { ok: true };
+  },
+
   /* Ambil baris profile user dari tabel profiles. */
   async loadProfile(user) {
     if (!user) {
       return null;
+    }
+
+    /* Jalur utama: RPC security definer yang membuat profil +
+       menghubungkan ke customer secara idempoten (aman dari policy
+       INSERT self yang hanya untuk admin). */
+    try {
+      const { data: rpcData, error: rpcError } = await supabaseClient.rpc(
+        "ensure_my_profile",
+      );
+
+      if (!rpcError && Array.isArray(rpcData) && rpcData.length) {
+        return rpcData[0];
+      }
+
+      if (rpcError) {
+        console.warn("ensure_my_profile gagal, fallback SELECT:", rpcError.message);
+      }
+    } catch (error) {
+      console.warn("ensure_my_profile error, fallback SELECT:", error?.message || error);
     }
 
     const { data, error } = await supabaseClient
@@ -531,11 +621,60 @@ var Auth = {
       return { ok: false, error: "Email atau password salah." };
     }
 
-    const customer = account.customerId
+    const role = account.role === "admin" ? "admin" : "customer";
+
+    /* Akun customer harus terhubung ke baris di tabel customers.
+       Urutan resolusi: id tersimpan -> email -> buat baru (lazy-create),
+       supaya akun demo/lama yang customerId-nya null tidak buntu
+       di portal customer. */
+    let customer = account.customerId
       ? getCustomerById(account.customerId)
       : null;
 
-    const role = account.role === "admin" ? "admin" : "customer";
+    if (!customer && role === "customer") {
+      customer =
+        getCustomers().find(
+          (item) =>
+            String(item.email || "").toLowerCase() === target,
+        ) || null;
+    }
+
+    if (!customer && role === "customer") {
+      const customers = getCustomers();
+      /* nextNumericId ada di global.js (tidak dimuat halaman index) —
+         pakai fallback sederhana kalau helper itu belum tersedia. */
+      const newId =
+        typeof nextNumericId === "function"
+          ? nextNumericId(customers)
+          : Math.max(0, ...customers.map((item) => Number(item.id) || 0)) + 1;
+      customer = {
+        id: newId,
+        kode: nextKode("customers", customers),
+        nama: account.nama || "Customer",
+        telepon: "",
+        email: account.email,
+        alamat: "",
+        catatan: "",
+        registeredAt: new Date().toISOString(),
+        registeredVia: "local",
+      };
+      customers.push(customer);
+      saveCustomers(customers);
+    }
+
+    /* Tautkan akun -> customer supaya login berikutnya langsung cocok. */
+    if (role === "customer" && customer && Number(account.customerId) !== Number(customer.id)) {
+      account.customerId = Number(customer.id);
+      saveCustomerAccounts(getLocalAccounts());
+    }
+
+    if (role === "customer" && !customer) {
+      return {
+        ok: false,
+        error:
+          "Data customer untuk akun ini belum ada dan gagal dibuat otomatis. Hubungi admin bengkel.",
+      };
+    }
 
     authState.user = { email: account.email };
     authState.profile = {

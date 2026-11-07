@@ -223,9 +223,14 @@ function renderKeuanganChart() {
       // Klik ulang bulan aktif = lepas filter (kembali Semua Bulan).
       select.value =
         select.value === bar.dataset.bulan ? "" : bar.dataset.bulan;
+      /* Filter hari ikut disegarkan — pilihan hari lama bisa tidak
+         berlaku lagi untuk bulan baru (pola sama dengan listener
+         change pada dropdown bulan). */
+      populateFilterHari();
       renderKeuanganChart();
       if (typeof renderKeuanganTable === "function")
         renderKeuanganTable(document.getElementById("searchKeuangan").value);
+      if (typeof updateKeuanganStats === "function") updateKeuanganStats();
     });
   });
 }
@@ -414,7 +419,13 @@ function showKeuanganDetail(id) {
   const lunasButton = document.getElementById("btnLunaskanKeuangan");
 
   if (lunasButton) {
-    lunasButton.hidden = (item.pembayaran || "Belum Lunas") === "Lunas";
+    lunasButton.hidden =
+      item.status !== "Selesai" ||
+      (item.pembayaran || "Belum Lunas") === "Lunas";
+    lunasButton.title =
+      item.status === "Selesai"
+        ? "Tandai transaksi ini lunas"
+        : "Service harus berstatus Selesai sebelum bisa dilunasi";
   }
 
   /* Invoice hanya boleh dicetak setelah service selesai. */
@@ -438,6 +449,14 @@ function tandaiKeuanganLunas() {
   );
 
   if (!item) return;
+
+  if (item.status !== "Selesai") {
+    showPageNotice(
+      "Transaksi hanya bisa dilunasi setelah status service Selesai.",
+      "error",
+    );
+    return;
+  }
 
   if (!setServicePaid(item.id)) {
     showPageNotice("Transaksi ini sudah berstatus lunas.", "error");
@@ -521,8 +540,11 @@ function buildRekapKeuangan() {
     document.getElementById("searchKeuangan")?.value || "",
   );
 
+  /* Wajib berupa ARRAY: `Number(bulan)` tanpa kurung siku membuat
+     .map() di bawah melempar TypeError sehingga cetak rekap selalu
+     gagal saat filter bulan aktif. */
   const bulanDipilih = bulan
-    ? Number(bulan)
+    ? [Number(bulan)]
     : Array.from({ length: 12 }, (_, index) => index + 1);
 
   const baris = bulanDipilih
@@ -664,10 +686,19 @@ function exportKeuanganCsv() {
     item.pembayaran || "Belum Lunas",
   ]);
 
+  /* Cegah formula injection (CSV/Excel): sel teks yang diawali
+     karakter formula (=, +, -, @, tab, CR) diberi awalan apostrof
+     supaya aplikasi spreadsheet membacanya sebagai teks biasa.
+     Angka (typeof bukan string) tidak disentuh. */
+  const amanFormula = (cell) => {
+    if (typeof cell !== "string") return cell;
+    return /^[=+\-@\t\r]/.test(cell) ? `'${cell}` : cell;
+  };
+
   const csv = [header, ...rows]
     .map((row) =>
       row
-        .map((cell) => `"${String(cell).replace(/"/g, '""')}"`)
+        .map((cell) => `"${String(amanFormula(cell)).replace(/"/g, '""')}"`)
         .join(";"),
     )
     .join("\n");

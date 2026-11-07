@@ -8,44 +8,23 @@
       />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Login | Pytabengkel</title>
-    <link 
-    rel="stylesheet" 
-    href="../css/login.css" 
-    />
+    <link rel="stylesheet" href="../css/login.css" />
     <link
       rel="stylesheet"
       href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
     />
-
+    <!-- WAJIB urut di <head>: error-logger -> theme -> config ->
+         library supabase -> applyThemeBeforePaint, supaya tema
+         terpasang sebelum paint pertama (tanpa kedip) dan skrip di
+         <body> menemukan definisinya. -->
+    <script src="../js/error-logger.js"></script>
+    <script src="../js/theme.js"></script>
+    <script src="../js/config.js"></script>
+    <script src="../js/vendor/supabase.min.js"></script>
+    <script src="../js/supabase.js"></script>
+    <script>applyThemeBeforePaint();</script>
   </head>
   <body>
-    <button
-      type="button"
-      class="theme-toggle"
-      data-theme-toggle
-      aria-label="Aktifkan mode gelap"
-      aria-pressed="false"
-      title="Ganti tema terang / gelap"
-    >
-      <i class="fa-solid fa-sun icon-sun" aria-hidden="true"></i>
-      <i class="fa-solid fa-moon icon-moon" aria-hidden="true"></i>
-    </button>
-
-    <!-- Akses ulasan di HP: panel kiri (termasuk testimoni) tersembunyi
-         pada layar kecil, jadi disediakan tombol khusus untuk membuka
-         daftar ulasan sebagai layar penuh. -->
-    <button
-      type="button"
-      class="theme-toggle reviews-toggle"
-      id="reviewsToggle"
-      aria-expanded="false"
-      aria-controls="loginInfo"
-      aria-label="Lihat ulasan pelanggan"
-      title="Lihat ulasan pelanggan"
-    >
-      <i class="fa-solid fa-star" aria-hidden="true"></i>
-    </button>
-
     <main class="login-container">
       <section class="login-info">
         <div class="brand">
@@ -99,6 +78,30 @@
       </section>
 
       <section class="login-form-container">
+        <div class="login-top-actions">
+          <button
+            type="button"
+            class="theme-toggle reviews-toggle"
+            id="reviewsToggle"
+            aria-expanded="false"
+            aria-controls="loginInfo"
+            aria-label="Lihat ulasan pelanggan"
+            title="Lihat ulasan pelanggan"
+          >
+            <i class="fa-solid fa-star" aria-hidden="true"></i>
+          </button>
+          <button
+            type="button"
+            class="theme-toggle"
+            data-theme-toggle
+            aria-label="Aktifkan mode gelap"
+            aria-pressed="false"
+            title="Ganti tema terang / gelap"
+          >
+            <i class="fa-solid fa-sun icon-sun" aria-hidden="true"></i>
+            <i class="fa-solid fa-moon icon-moon" aria-hidden="true"></i>
+          </button>
+        </div>
         <div class="login-form-wrap">
           <div class="role-switch" role="tablist" aria-label="Pilih portal">
             <button
@@ -254,7 +257,12 @@
     </main>
 
     <!-- Modal semua ulasan (dibuka tombol "Lihat semua ulasan") -->
-    <div class="testimoni-modal-overlay" id="testimoniModal" hidden>
+    <div
+      class="testimoni-modal-overlay"
+      id="testimoniModal"
+      hidden
+      aria-hidden="true"
+    >
       <div
         class="testimoni-modal"
         role="dialog"
@@ -285,17 +293,13 @@
       </div>
     </div>
 
-    <!-- WAJIB urut: theme -> config -> library -> lapisan auth supaya
-         db.js (panggil isSupabaseMode()) dan login.js (panggil Auth)
-         sudah menemukan definisinya saat dieksekusi. -->
-    <script src="../js/error-logger.js"></script>
-    <script src="../js/theme.js"></script>
-    <script src="../js/config.js"></script>
-    <script src="../js/vendor/supabase.min.js"></script>
-    <script src="../js/supabase.js"></script>
-    <script>applyThemeBeforePaint();</script>
+    <!-- WAJIB urut: db -> auth -> global -> halaman, supaya db.js
+         (panggil isSupabaseMode()), login.js (panggil Auth), dan
+         global.js (menyediakan helper) sudah menemukan definisinya
+         saat dieksekusi. Skrip theme/config/library ada di <head>. -->
     <script src="../js/db.js"></script>
     <script src="../js/auth.js"></script>
+    <script src="../js/global.js"></script>
     <script src="../js/login.js"></script>
     <script src="../js/testimoni.js"></script>
   </body>

@@ -178,7 +178,14 @@
 
   window.addEventListener("error", function (event) {
     /* Error pada elemen <img>/<script> (resource) juga tercatat —
-       pesannya informatif untuk debugging CSP / path yang salah. */
+       pesannya informatif untuk debugging CSP / path yang salah.
+       Kecuali config.prod.js: file itu OPSIONAL dan memang sering
+       tidak ada (auto-load di js/config.js), 404-nya bukan bug. */
+    var target = event && event.target;
+    if (target && target !== window && target.tagName === "SCRIPT") {
+      if (/config\.prod\.js(\?|#|$)/i.test(String(target.src || ""))) return;
+    }
+
     handleError(
       event && event.message ? event.message : "Unknown error",
       event && event.error && event.error.stack

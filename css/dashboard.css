@@ -133,16 +133,50 @@
 /* --- Tabel Mekanik (dashboard): select status & rekap harian --- */
 /* (.row-select, .table-fit/min-width filter kini di css/global.css) */
 
-/* Input tanggal + filter status sebelahan di toolbar panel Mekanik.
+/* Input tanggal + filter status sebelahan di toolbar panel Mekanik & Status Service.
    Selector id dipakai supaya mengalahkan .form-control { width:100% }
    yang membuat select melebar 100% dan toolbar membungkus. */
-#filterMekanikTanggal {
+#filterMekanikTanggal,
+#filterStatusTanggal {
   width: 132px;
   min-width: 132px;
 }
 #filterMekanikDashboard {
   width: auto;
   min-width: 96px;
+}
+
+/* Header dua panel dashboard: judul & toolbar tidak berebut ruang.
+   Di desktop lebar judul diringkas agar tanggal + filter muat sebaris;
+   di layar menengah toolbar turun selebar panel dan rata kanan. */
+@media (min-width: 1201px) {
+  .dashboard-grid .panel-header {
+    gap: 12px;
+  }
+  .dashboard-grid .panel-header > div:first-child {
+    flex: 1 1 140px;
+  }
+  #filterMekanikTanggal,
+  #filterStatusTanggal {
+    width: 124px;
+    min-width: 124px;
+  }
+  #filterMekanikDashboard {
+    min-width: 90px;
+  }
+}
+
+@media (max-width: 1200px) and (min-width: 701px) {
+  .dashboard-grid .panel-header {
+    gap: 12px;
+  }
+  .dashboard-grid .panel-header > div:first-child {
+    flex: 1 1 100%;
+  }
+  .dashboard-grid .panel-header > .vehicle-toolbar {
+    width: 100%;
+    justify-content: flex-end;
+  }
 }
 
 /* Rekap service per hari: jumlah + rincian status per mekanik */
@@ -163,6 +197,56 @@
 @media (max-width: 900px) {
   .dashboard-grid {
     grid-template-columns: 1fr;
+  }
+}
+@media (max-width: 768px) {
+  /* Di mobile, buat tabel mekanik dashboard responsif seperti kartu tanpa scroll horizontal */
+  .dashboard-grid .table-fit {
+    overflow-x: visible;
+  }
+  .dashboard-grid .table-fit table {
+    min-width: 0 !important;
+    display: block;
+    width: 100%;
+  }
+  .dashboard-grid .table-fit thead {
+    display: none;
+  }
+  .dashboard-grid .table-fit tbody {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 10px 12px;
+  }
+  .dashboard-grid .table-fit tr {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 12px 14px;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+  }
+  .dashboard-grid .table-fit td:nth-child(1) {
+    display: none;
+  }
+  .dashboard-grid .table-fit td:nth-child(2) {
+    padding: 0;
+    font-size: 14px;
+  }
+  .dashboard-grid .table-fit td:nth-child(3) {
+    padding: 0;
+    color: var(--secondary);
+    font-size: 12px;
+  }
+  .dashboard-grid .table-fit td:nth-child(4) {
+    padding: 4px 0;
+  }
+  .dashboard-grid .table-fit td:nth-child(4) select {
+    width: 100%;
+  }
+  .dashboard-grid .table-fit td:nth-child(5) {
+    padding: 0;
   }
 }
 @media (max-width: 700px) {
@@ -191,5 +275,14 @@
   .status-item {
     padding: 7px 8px;
     gap: 8px;
+  }
+  /* Filter mekanik & status service ikut aturan toolbar mobile: berbagi baris, tidak
+     memaksa lebar tetap yang membuat header sesak. */
+  #filterMekanikTanggal,
+  #filterMekanikDashboard,
+  #filterStatusTanggal {
+    flex: 1 1 120px;
+    width: auto;
+    min-width: 0;
   }
 }

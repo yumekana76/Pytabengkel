@@ -30,6 +30,34 @@ function formatRupiah(value) {
   }).format(Number(value) || 0);
 }
 
+/* Tanggal lokal (YYYY-MM-DD) — jangan pakai toISOString() karena itu
+   UTC dan bisa menghasilkan tanggal kemarin pada dini hari WIB. */
+function getTodayLocalDate() {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+/* Format tanggal LOKAL (YYYY-MM-DD) dari nilai tanggal apa pun
+   (timestamp ISO, string tanggal, Date). Jangan pakai
+   `String(iso).slice(0, 10)` — potongan itu UTC, jadi ulasan yang
+   dibuat dini hari WIB bisa tertulis tanggal kemarin.
+   Mengembalikan "" untuk nilai kosong dan potongan asli kalau
+   valuenya tidak bisa diparse menjadi tanggal. */
+function formatTanggalLokal(value) {
+  if (!value) return "";
+
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return String(value).slice(0, 10);
+
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
 /* STATUS */
 
 function getStatusClass(status) {
@@ -51,6 +79,45 @@ function getStatusClass(status) {
   }
 }
 
+/* Status Quality Check / Selesai baru boleh dipakai setelah data service
+   lengkap: mekanik ditugaskan, biaya jasa diisi, dan minimal satu
+   sparepart dipakai. Dipakai semua form yang bisa mengubah status. */
+function getServiceMissingRequirements(service) {
+  const missing = [];
+
+  if (
+    !service?.mekanikId &&
+    !String(service?.mekanik || "").trim()
+  ) {
+    missing.push("mekanik");
+  }
+
+  if (!(Number(service?.biayaJasa) > 0)) {
+    missing.push("biaya jasa");
+  }
+
+  if (
+    !Array.isArray(service?.spareparts) ||
+    !service.spareparts.some((part) => Number(part?.jumlah) > 0)
+  ) {
+    missing.push("sparepart");
+  }
+
+  return missing;
+}
+
+function validateServiceStatus(status, service) {
+  if (status !== "Quality Check" && status !== "Selesai") return "";
+
+  const missing = getServiceMissingRequirements(service);
+  if (!missing.length) return "";
+
+  return (
+    `Status ${status} belum bisa dipilih. Lengkapi ${missing.join(", ")} ` +
+    "terlebih dahulu."
+  );
+}
+
 /* HELPER */
 
 function setText(id, value) {
@@ -59,6 +126,10 @@ function setText(id, value) {
   if (element) {
     element.textContent = value;
   }
+}
+
+function isValidEmail(email) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
 
 function escapeHTML(value) {
@@ -70,15 +141,91 @@ function escapeHTML(value) {
     .replace(/'/g, "&#039;");
 }
 
+/* Saring opsi <select> sesuai kata kunci pencarian. Opsi pertama
+   (default, value kosong) selalu ditampilkan. Mengembalikan true
+   bila pilihan yang sedang aktif tersaring keluar dari daftar.
+   Dipakai kotak cari di halaman dashboard (Input Data) & kendaraan —
+   pemanggil wajib meng-cache `selectEl.__allOptions` dulu saat opsi
+   dibangun (lihat populateVehicleFormRelations / populateUnifiedRelations). */
+function filterDropdown(selectEl, keyword) {
+  if (!selectEl || !Array.isArray(selectEl.__allOptions)) return false;
+  const key = String(keyword || "").toLowerCase().trim();
+  const current = selectEl.value;
+  selectEl.innerHTML = "";
+  selectEl.__allOptions.forEach((opt) => {
+    if (
+      opt.value === "" ||
+      !key ||
+      opt.textContent.toLowerCase().includes(key)
+    ) {
+      selectEl.appendChild(opt.cloneNode(true));
+    }
+  });
+  const masihDipilih = [...selectEl.options].some(
+    (opt) => opt.value === current,
+  );
+  if (masihDipilih) selectEl.value = current;
+  return !masihDipilih && current !== "";
+}
+
 /* MODAL */
+
+/* Kumpulkan elemen yang bisa difokus di dalam modal (urutan tab). */
+function getModalFocusable(modal) {
+  if (!modal) return [];
+
+  const selector =
+    'a[href], button:not([disabled]):not([hidden]), input:not([disabled]):not([type="hidden"]):not([hidden]), select:not([disabled]):not([hidden]), textarea:not([disabled]):not([hidden]), [tabindex]:not([tabindex="-1"]):not([hidden])';
+
+  return [...modal.querySelectorAll(selector)].filter((element) => {
+    return (
+      element.getClientRects().length > 0 &&
+      element.getAttribute("aria-hidden") !== "true"
+    );
+  });
+}
+
+/* Fokuskan kontrol pertama (atau modal itu sendiri bila kosong). */
+function focusModal(modal) {
+  if (!modal) return;
+
+  const field = [
+    ...modal.querySelectorAll(
+      'input:not([type="hidden"]):not([disabled]), select:not([disabled]), textarea:not([disabled])',
+    ),
+  ].find((element) => element.getClientRects().length > 0);
+
+  const target =
+    modal.querySelector("[autofocus]") || field || getModalFocusable(modal)[0];
+
+  if (target) {
+    target.focus({ preventScroll: true });
+  } else {
+    modal.setAttribute("tabindex", "-1");
+    modal.focus({ preventScroll: true });
+  }
+}
 
 function openModal(id) {
   const modal = document.getElementById(id);
 
-  if (modal) {
-    modal.classList.add("show");
-    document.body.classList.add("modal-open");
+  if (!modal || modal.classList.contains("show")) {
+    return;
   }
+
+  /* Simpan pemicu supaya fokus bisa kembali saat modal ditutup. */
+  if (
+    document.activeElement instanceof HTMLElement &&
+    document.activeElement !== document.body
+  ) {
+    modal.__focusReturn = document.activeElement;
+  }
+
+  modal.classList.add("show");
+  document.body.classList.add("modal-open");
+
+  /* Tunggu satu frame agar modal sudah terlihat sebelum difokuskan. */
+  window.requestAnimationFrame(() => focusModal(modal));
 }
 
 function closeModal(id) {
@@ -99,6 +246,44 @@ function closeModal(id) {
       trigger.focus();
       modal.__focusReturn = null;
     }
+  }
+}
+
+/* Jebakan fokus (focus trap) untuk modal yang sedang terbuka:
+   Tab / Shift+Tab tidak bisa keluar ke halaman di belakang. */
+function trapModalFocus(event) {
+  if (event.key !== "Tab") return;
+
+  const terbuka = [...document.querySelectorAll(".modal-overlay.show")];
+  if (!terbuka.length) return;
+
+  const overlay = terbuka[terbuka.length - 1];
+  const modal = overlay.querySelector(".modal") || overlay;
+  const focusable = getModalFocusable(modal);
+
+  if (!focusable.length) {
+    event.preventDefault();
+    modal.setAttribute("tabindex", "-1");
+    modal.focus({ preventScroll: true });
+    return;
+  }
+
+  const first = focusable[0];
+  const last = focusable[focusable.length - 1];
+  const active = document.activeElement;
+
+  if (!modal.contains(active)) {
+    event.preventDefault();
+    first.focus({ preventScroll: true });
+    return;
+  }
+
+  if (event.shiftKey && active === first) {
+    event.preventDefault();
+    last.focus({ preventScroll: true });
+  } else if (!event.shiftKey && active === last) {
+    event.preventDefault();
+    first.focus({ preventScroll: true });
   }
 }
 
@@ -169,6 +354,7 @@ function setServicePaid(id) {
   const index = kendaraan.findIndex((item) => Number(item.id) === Number(id));
 
   if (index === -1) return false;
+  if (kendaraan[index].status !== "Selesai") return false;
   if ((kendaraan[index].pembayaran || "Belum Lunas") === "Lunas") return false;
 
   kendaraan[index] = { ...kendaraan[index], pembayaran: "Lunas" };
@@ -176,6 +362,396 @@ function setServicePaid(id) {
   saveKendaraan(kendaraan);
 
   return true;
+}
+
+/* =========================================
+   ANTREAN SERVICE
+   Nomor urut service yang BELUM selesai, diurut
+   dari yang masuk paling dulu (id naik).
+   Admin & mode lokal menghitung dari data lengkap;
+   sesi customer memakai RPC queue_positions() karena
+   RLS hanya memberikan service miliknya sendiri.
+   ========================================= */
+
+function getAntrianList() {
+  return getKendaraan()
+    .filter(
+      (item) =>
+        item.status !== "Selesai" &&
+        /* Hanya ajuan yang sudah disetujui yang masuk antrean —
+           ajuan menunggu persetujuan & yang ditolak tidak dihitung. */
+        getApprovalValue(item) === "Disetujui",
+    )
+    .sort((a, b) => Number(a.id) - Number(b.id));
+}
+
+function getNomorAntrian(id) {
+  const nomorId = Number(id);
+  const hitungLokal = () => {
+    const index = getAntrianList().findIndex(
+      (item) => Number(item.id) === nomorId,
+    );
+    return index === -1 ? null : index + 1;
+  };
+
+  /* Admin & mode lokal punya data lengkap, jadi hitung langsung —
+     selalu sinkron walau status baru saja berubah. */
+  if (DB.mode !== "supabase" || dbIsAdmin()) {
+    return hitungLokal();
+  }
+
+  /* Customer: posisi global hanya bisa datang dari RPC. */
+  return DB.antrian ? DB.antrian.get(nomorId) || null : null;
+}
+
+function formatNomorAntrian(nomor) {
+  if (!nomor) return "-";
+  return `A-${String(nomor).padStart(2, "0")}`;
+}
+
+/* Badge nomor antrean untuk tabel (admin & customer). */
+function buildAntrianBadge(id) {
+  const nomor = getNomorAntrian(id);
+  return `<span class="badge antrian${nomor ? "" : " off"}">${formatNomorAntrian(nomor)}</span>`;
+}
+
+/* Panel urutan antrean di dashboard admin. */
+function renderAntrian() {
+  const list = document.getElementById("antrianList");
+  if (!list) return;
+
+  const antre = getAntrianList();
+  setText("antrianCount", `${antre.length} service`);
+
+  const button = document.getElementById("btnPanggilBerikutnya");
+  if (button) {
+    button.disabled = !antre.some((item) => item.status === "Menunggu");
+  }
+
+  if (!antre.length) {
+    list.innerHTML =
+      '<li class="antrian-empty">Tidak ada service dalam antrean.</li>';
+    return;
+  }
+
+  list.innerHTML = antre
+    .map((item, index) => {
+      const nomor = index + 1;
+      const nomorMap = getNomorAntrian(item.id);
+      return `
+        <li class="antrian-item">
+          <span class="antrian-nomor">${formatNomorAntrian(nomorMap || nomor)}</span>
+          <span class="antrian-info">
+            <strong>${escapeHTML(item.polisi || "-")}</strong>
+            <span>${escapeHTML(item.pelanggan || "-")}</span>
+          </span>
+          <span class="badge ${getStatusClass(item.status)}">
+            ${escapeHTML(item.status || "-")}
+          </span>
+        </li>
+      `;
+    })
+    .join("");
+}
+
+/* Aksi admin: service "Menunggu" pertama menjadi "Dikerjakan". */
+function panggilBerikutnya(button) {
+  const berikut = getAntrianList().find(
+    (item) => item.status === "Menunggu",
+  );
+
+  if (!berikut) {
+    showPageNotice("Tidak ada service yang menunggu untuk dipanggil.");
+    return;
+  }
+
+  if (!armConfirmButton(button)) return;
+
+  const nomor = getNomorAntrian(berikut.id);
+  const kendaraan = getKendaraan();
+  const index = kendaraan.findIndex(
+    (item) => Number(item.id) === Number(berikut.id),
+  );
+  if (index === -1) return;
+
+  kendaraan[index] = { ...kendaraan[index], status: "Dikerjakan" };
+  saveKendaraan(kendaraan);
+
+  addLog(
+    "Update",
+    "Service",
+    `Antrean ${formatNomorAntrian(nomor)} dipanggil — ${kendaraan[index].polisi} mulai dikerjakan`,
+    getKode("kendaraan", kendaraan[index]),
+  );
+
+  showPageNotice(
+    `Service ${kendaraan[index].polisi} dipanggil (antrean ${formatNomorAntrian(nomor)}).`,
+    "success",
+  );
+
+  if (typeof updateDashboard === "function") updateDashboard();
+}
+/* =========================================
+   PERSETUJUAN AJUAN SERVICE
+   Ajuan customer (requestedBy "customer") selalu
+   dimulai dengan approval "Menunggu". Admin memilih
+   "Disetujui" (masuk antrean) atau "Ditolak" —
+   ditolak tetap tampil di daftar dengan alasan.
+   ========================================= */
+
+function getApprovalValue(item) {
+  if (item?.approval) return item.approval;
+
+  /* Data lama (sebelum kolom approval ada). */
+  return item?.requestedBy === "customer" && item?.status === "Menunggu"
+    ? "Menunggu"
+    : "Disetujui";
+}
+
+function isAjuanMenunggu(item) {
+  return (
+    item?.requestedBy === "customer" &&
+    getApprovalValue(item) === "Menunggu"
+  );
+}
+
+function isAjuanDitolak(item) {
+  return getApprovalValue(item) === "Ditolak";
+}
+
+/* Penyaring status bersama (tabel admin & customer): ajuan yang
+   ditolak tidak dihitung sebagai "Menunggu" supaya angka & filter
+   tetap konsisten dengan badge Ditolak. */
+function cocokFilterStatus(item, statusFilter) {
+  if (!statusFilter) return true;
+  if (item.status !== statusFilter) return false;
+  if (statusFilter === "Menunggu" && isAjuanDitolak(item)) return false;
+  return true;
+}
+
+/* Keterangan ajuan untuk detail service (customer & admin). */
+function describeAjuan(item) {
+  const approval = getApprovalValue(item);
+
+  if (approval === "Ditolak") {
+    const alasan = String(item.approvalNote || "").trim();
+    return alasan ? `Ditolak — ${alasan}` : "Ditolak bengkel";
+  }
+
+  if (approval === "Menunggu") return "Menunggu persetujuan bengkel";
+
+  return "Disetujui";
+}
+
+/* Badge persetujuan pada kolom Status (kosong untuk service admin). */
+function buildAjuanBadge(item) {
+  if (item?.requestedBy !== "customer") return "";
+
+  const approval = getApprovalValue(item);
+
+  if (approval === "Menunggu") {
+    return '<span class="badge waiting ajuan">Ajuan menunggu</span>';
+  }
+
+  if (approval === "Ditolak") {
+    const alasan = String(item.approvalNote || "").trim();
+    return `<span class="badge danger ajuan" title="${escapeHTML(alasan ? `Ditolak: ${alasan}` : "Ajuan ditolak bengkel")}">Ditolak</span>`;
+  }
+
+  return "";
+}
+
+function getAjuanMenungguList() {
+  return getKendaraan()
+    .filter((item) => isAjuanMenunggu(item))
+    .sort((a, b) => Number(a.id) - Number(b.id));
+}
+
+/* Terima / tolak ajuan (hanya admin yang memanggil fungsi ini). */
+function setServiceApproval(id, approval, alasan = "") {
+  const kendaraan = getKendaraan();
+  const index = kendaraan.findIndex(
+    (item) => Number(item.id) === Number(id),
+  );
+
+  if (index === -1) return false;
+
+  const service = kendaraan[index];
+  if (service.requestedBy !== "customer") return false;
+  if (getApprovalValue(service) === approval) return false;
+
+  kendaraan[index] = {
+    ...service,
+    approval,
+    approvalNote: approval === "Ditolak" ? alasan : "",
+  };
+  saveKendaraan(kendaraan);
+
+  const kata = approval === "Disetujui" ? "diterima" : "ditolak";
+
+  addLog(
+    "Update",
+    "Service",
+    `Ajuan ${service.polisi} ${kata}${alasan ? ` — ${alasan}` : ""}`,
+    getKode("kendaraan", service),
+  );
+
+  showPageNotice(`Ajuan service ${service.polisi} ${kata}.`, "success");
+
+  if (typeof updateDashboard === "function") updateDashboard();
+  if (typeof updateServiceStats === "function") updateServiceStats();
+  if (typeof renderServicePage === "function") {
+    renderServicePage(document.getElementById("searchService")?.value || "");
+  }
+
+  return true;
+}
+
+function terimaAjuan(id, button = null) {
+  const service = getKendaraan().find(
+    (item) => Number(item.id) === Number(id),
+  );
+
+  if (!service || !isAjuanMenunggu(service)) return;
+  if (button && !armConfirmButton(button, "Klik lagi untuk menerima")) return;
+
+  setServiceApproval(id, "Disetujui");
+}
+
+/* Modal alasan penolakan — dibuat sekali lewat JS supaya bisa dipakai
+   di dashboard & halaman service tanpa menduplikasi markup. */
+var ajuanDitolakId = null;
+
+function bukaTolakAjuan(id) {
+  const service = getKendaraan().find(
+    (item) => Number(item.id) === Number(id),
+  );
+
+  if (!service || !isAjuanMenunggu(service)) return;
+
+  let overlay = document.getElementById("tolakAjuanModal");
+
+  if (!overlay) {
+    overlay = document.createElement("div");
+    overlay.className = "modal-overlay";
+    overlay.id = "tolakAjuanModal";
+    overlay.innerHTML = `
+      <div class="modal" role="dialog" aria-modal="true" aria-labelledby="tolakAjuan-title">
+        <div class="modal-header">
+          <div>
+            <h3 id="tolakAjuan-title">Tolak Ajuan Service</h3>
+            <p>Alasan penolakan akan dilihat oleh customer.</p>
+          </div>
+          <button type="button" class="modal-close" data-close-modal="tolakAjuanModal" aria-label="Tutup">×</button>
+        </div>
+        <form id="tolakAjuanForm">
+          <div class="modal-body">
+            <p class="ajuan-ringkasan" id="tolakAjuanRingkasan"></p>
+            <div class="form-group">
+              <label class="form-label" for="tolakAjuanAlasan">Alasan penolakan</label>
+              <textarea
+                id="tolakAjuanAlasan"
+                class="form-control"
+                rows="3"
+                placeholder="Contoh: keluhan di luar kapasitas bengkel"
+              ></textarea>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-close-modal="tolakAjuanModal">Batal</button>
+            <button type="submit" class="btn btn-danger" id="btnTolakAjuan">Tolak Ajuan</button>
+          </div>
+        </form>
+      </div>`;
+
+    document.body.appendChild(overlay);
+
+    /* Boot sudah lewat, jadi listener close dipasang manual di sini. */
+    overlay.querySelectorAll("[data-close-modal]").forEach((button) => {
+      button.dataset.globalBound = "true";
+      button.addEventListener("click", () =>
+        closeModal(button.dataset.closeModal),
+      );
+    });
+    overlay.dataset.globalBound = "true";
+    overlay.addEventListener("click", (event) => {
+      if (event.target === overlay) closeModal(overlay.id);
+    });
+
+    overlay
+      .querySelector("form")
+      .addEventListener("submit", konfirmasiTolakAjuan);
+  }
+
+  ajuanDitolakId = service.id;
+
+  const form = overlay.querySelector("form");
+  clearFormError("tolakAjuanForm");
+  form.reset();
+
+  document.getElementById("tolakAjuanRingkasan").textContent =
+    `${service.polisi} — ${service.pelanggan || "-"}: ${service.keluhan || "-"}`;
+
+  openModal("tolakAjuanModal");
+}
+
+function konfirmasiTolakAjuan(event) {
+  event.preventDefault();
+  clearFormError("tolakAjuanForm");
+
+  const alasan = document
+    .getElementById("tolakAjuanAlasan")
+    .value.trim();
+
+  if (!alasan) {
+    showFormError("tolakAjuanForm", "Alasan penolakan wajib diisi.");
+    return;
+  }
+
+  const button = document.getElementById("btnTolakAjuan");
+  if (!armConfirmButton(button, "Klik lagi untuk menolak")) return;
+
+  const id = ajuanDitolakId;
+  ajuanDitolakId = null;
+
+  closeModal("tolakAjuanModal");
+  setServiceApproval(id, "Ditolak", alasan);
+}
+
+/* Panel daftar ajuan menunggu (dashboard admin). */
+function renderAjuan() {
+  const list = document.getElementById("ajuanList");
+  if (!list) return;
+
+  const ajuan = getAjuanMenungguList();
+
+  setText(
+    "ajuanCount",
+    ajuan.length ? `${ajuan.length} ajuan menunggu` : "Tidak ada ajuan",
+  );
+
+  if (!ajuan.length) {
+    list.innerHTML =
+      '<li class="ajuan-empty">Tidak ada ajuan service yang menunggu persetujuan.</li>';
+    return;
+  }
+
+  list.innerHTML = ajuan
+    .map(
+      (item) => `
+        <li class="ajuan-item">
+          <div class="ajuan-info">
+            <strong>${escapeHTML(item.polisi || "-")}</strong>
+            <span>${escapeHTML(item.pelanggan || "-")} — ${escapeHTML(item.keluhan || "-")}</span>
+          </div>
+          <div class="ajuan-aksi">
+            <button type="button" class="action-btn" data-terima-ajuan="${item.id}">✔ Terima</button>
+            <button type="button" class="action-btn" data-tolak-ajuan="${item.id}">✖ Tolak</button>
+          </div>
+        </li>
+      `,
+    )
+    .join("");
 }
 
 /* Ringkasan biaya service (dipakai di detail transaksi). */
@@ -812,6 +1388,62 @@ function clearFormError(formId) {
   showFormError(formId, "");
 }
 
+/* Notifikasi mengambang untuk halaman auth (index & register),
+   gaya sama dengan halaman dashboard — tidak mendorong layout /
+   menutupi form. ID loginNotice dipakai bersama login & register
+   (keduanya tidak pernah aktif bersamaan). */
+function showNotice(message, type = "error") {
+  let notice = document.getElementById("loginNotice");
+
+  if (!notice) {
+    notice = document.createElement("div");
+    notice.id = "loginNotice";
+    notice.setAttribute("role", "status");
+    notice.className = "page-notice";
+    document.body.appendChild(notice);
+  }
+
+  if (showNotice._timer) {
+    window.clearTimeout(showNotice._timer);
+    showNotice._timer = undefined;
+  }
+
+  notice.hidden = false;
+  notice.className =
+    "page-notice " + (type === "success" ? "success" : "error");
+  notice.textContent = message;
+
+  showNotice._timer = window.setTimeout(() => {
+    notice.hidden = true;
+    notice.textContent = "";
+    notice.className = "page-notice";
+    showNotice._timer = undefined;
+  }, type === "success" ? 3000 : 4000);
+}
+
+function showError(message) {
+  showNotice(message, "error");
+}
+
+function showSuccess(message) {
+  showNotice(message, "success");
+}
+
+function hideMessages() {
+  const notice = document.getElementById("loginNotice");
+
+  if (!notice) return;
+
+  notice.hidden = true;
+  notice.textContent = "";
+  notice.className = "page-notice";
+
+  if (showNotice._timer) {
+    window.clearTimeout(showNotice._timer);
+    showNotice._timer = undefined;
+  }
+}
+
 function showPageNotice(message, type = "error") {
   let notice = document.getElementById("pageNotice");
   if (!notice) {
@@ -968,9 +1600,28 @@ function renderKendaraan(search = "", page = 1) {
 
   const sort = getSortValue("sortKendaraan");
 
+  const isDashboard = !document.getElementById("btnTambahKendaraan");
+  const hariIni = getTodayLocalDate();
+
   const hasil = kendaraan
     .filter((item) => {
-      if (statusFilter && item.status !== statusFilter) return false;
+      if (isDashboard) {
+        const tanggal = String(item.tanggalService || "").slice(0, 10);
+        const belumSelesai = item.status !== "Selesai";
+        const dariHariSebelumnya = !tanggal || tanggal < hariIni;
+
+        /* Dashboard menampilkan kendaraan hari ini + service yang belum
+           selesai dari hari sebelumnya supaya pekerjaan tidak hilang
+           saat berganti hari. */
+        if (
+          tanggal !== hariIni &&
+          (!belumSelesai || !dariHariSebelumnya)
+        ) {
+          return false;
+        }
+      }
+
+      if (!cocokFilterStatus(item, statusFilter)) return false;
       return [
         item.kode,
         item.polisi,
@@ -996,8 +1647,6 @@ function renderKendaraan(search = "", page = 1) {
 
   const hasilSorted = sortRows(hasilWithTotal, sort.key, sort.direction);
 
-  const isDashboard = !document.getElementById("btnTambahKendaraan");
-
   const perPage = isDashboard ? 5 : 10;
 
   const totalPages = Math.max(1, Math.ceil(hasilSorted.length / perPage));
@@ -1019,7 +1668,7 @@ function renderKendaraan(search = "", page = 1) {
   table.innerHTML = "";
 
   if (hasilSorted.length === 0) {
-    const colspan = 12;
+    const colspan = isDashboard ? 13 : 12;
 
     /* Kosong gara-gara cari/filter? Jangan menawarkan tombol tambah. */
     const tersaring = Boolean(keyword || statusFilter);
@@ -1063,6 +1712,8 @@ function renderKendaraan(search = "", page = 1) {
 
   dataHalaman.forEach((item, index) => {
     const statusClass = getStatusClass(item.status);
+
+    const pembayaran = item.pembayaran || "Belum Lunas";
 
     const nomor = startIndex + index + 1;
 
@@ -1115,22 +1766,60 @@ function renderKendaraan(search = "", page = 1) {
             </td>
 
             <td>
-              <span
-                class="badge ${statusClass}"
-              >
-                ${escapeHTML(item.status)}${item.status === "Selesai" ? " 🔒" : ""}
+              <div class="status-cell">
+                <span class="badge ${statusClass}">
+                  ${escapeHTML(item.status)}${item.status === "Selesai" ? " 🔒" : ""}
+                </span>
+                ${buildAjuanBadge(item)}
+              </div>
+            </td>
+
+            <td>
+              <span class="badge ${pembayaran === "Lunas" ? "done" : "waiting"}">
+                ${escapeHTML(pembayaran)}
               </span>
             </td>
 
             <td>
-              <button
-                type="button"
-                class="action-btn"
-                data-dashboard-edit="${item.id}"
-                title="Ubah status & mekanik"
-              >
-                Ubah
-              </button>
+              <div class="action-buttons">
+                ${
+                  pembayaran !== "Lunas"
+                    ? `<button
+                        type="button"
+                        class="action-btn"
+                        data-dashboard-paid="${item.id}"
+                        ${item.status === "Selesai" ? "" : "disabled"}
+                        title="${
+                          item.status === "Selesai"
+                            ? `Tandai transaksi ${escapeHTML(item.polisi)} lunas`
+                            : "Service harus berstatus Selesai sebelum bisa dilunasi"
+                        }"
+                      >
+                        💰 Lunas
+                      </button>`
+                    : ""
+                }
+                ${
+                  item.status === "Selesai"
+                    ? `<button
+                        type="button"
+                        class="action-btn"
+                        data-dashboard-detail="${item.id}"
+                        title="Lihat detail service"
+                      >
+                        Detail
+                      </button>`
+                    : ""
+                }
+                <button
+                  type="button"
+                  class="action-btn"
+                  data-dashboard-edit="${item.id}"
+                  title="Ubah data service"
+                >
+                  ${item.status === "Selesai" ? "🔒 Ubah" : "Ubah"}
+                </button>
+              </div>
             </td>
 
           </tr>
@@ -1184,11 +1873,12 @@ function renderKendaraan(search = "", page = 1) {
             </td>
 
             <td>
-              <span
-                class="badge ${statusClass}"
-              >
-                ${escapeHTML(item.status)}${item.status === "Selesai" ? " 🔒" : ""}
-              </span>
+              <div class="status-cell">
+                <span class="badge ${statusClass}">
+                  ${escapeHTML(item.status)}${item.status === "Selesai" ? " 🔒" : ""}
+                </span>
+                ${buildAjuanBadge(item)}
+              </div>
             </td>
 
             <td>
@@ -1243,6 +1933,52 @@ function renderKendaraan(search = "", page = 1) {
     button.addEventListener("click", () =>
       openDashboardEdit(button.dataset.dashboardEdit, button),
     );
+  });
+
+  /* Aksi cepat "Lunas" dari dashboard — konfirmasi dua klik. */
+  table.querySelectorAll("[data-dashboard-paid]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const id = button.dataset.dashboardPaid;
+      if (!armConfirmButton(button, "Klik lagi untuk lunas")) {
+        showPageNotice(
+          "Klik Lunas sekali lagi untuk menandai transaksi ini lunas.",
+          "error",
+        );
+        return;
+      }
+      const item = getKendaraan().find(
+        (row) => Number(row.id) === Number(id),
+      );
+      if (!item) return;
+      if (item.status !== "Selesai") {
+        showPageNotice(
+          "Transaksi hanya bisa dilunasi setelah status service Selesai.",
+          "error",
+        );
+        return;
+      }
+      if (!setServicePaid(id)) {
+        showPageNotice("Transaksi ini sudah berstatus lunas.", "error");
+        return;
+      }
+      addLog(
+        "Bayar",
+        "Service",
+        `Transaksi ${item.polisi} ditandai lunas`,
+        getKode("kendaraan", item),
+      );
+      if (typeof updateDashboard === "function") updateDashboard();
+      showPageNotice("Transaksi ditandai lunas.", "success");
+    });
+  });
+
+  /* Detail service hanya ditampilkan untuk data yang sudah Selesai. */
+  table.querySelectorAll("[data-dashboard-detail]").forEach((button) => {
+    button.addEventListener("click", () => {
+      if (typeof showDashboardDetail === "function") {
+        showDashboardDetail(button.dataset.dashboardDetail);
+      }
+    });
   });
 
   table.querySelectorAll("[data-kendaraan-detail]").forEach((button) => {
@@ -1559,11 +2295,15 @@ function hideSkeleton() {
   }
 }
 
-/* Fallback kalau sebuah halaman lupa memanggil showSkeleton()
-   via inline script setelah <body>. Pada halaman yang benar,
-   skeleton sudah ada sejak paint pertama dan baris ini hanya
-   no-op (showSkeleton() langsung return). */
-showSkeleton();
+/* Fallback kalau sebuah halaman ber-role lupa memanggil
+   showSkeleton() via inline script setelah <body>. Pada halaman
+   yang benar, skeleton sudah ada sejak paint pertama dan baris ini
+   hanya no-op (showSkeleton() langsung return). Halaman tanpa
+   __APP_ROLE (login index) tidak memakai skeleton — jangan
+   dibuatkan, nanti tertimpa halaman login sebentar. */
+if (window.__APP_ROLE) {
+  showSkeleton();
+}
 
 /* =========================================
    BOOT SEQUENCE
@@ -1572,7 +2312,9 @@ showSkeleton();
 document.addEventListener("DOMContentLoaded", async function () {
   if (typeof initTheme === "function") initTheme();
 
-  showSkeleton();
+  if (window.__APP_ROLE) {
+    showSkeleton();
+  }
 
   const role = window.__APP_ROLE;
 
@@ -1636,6 +2378,9 @@ document.addEventListener("DOMContentLoaded", async function () {
       closeModal(terbuka[terbuka.length - 1].id);
     }
   });
+
+  /* Tab / Shift+Tab tetap berada di dalam modal aktif. */
+  document.addEventListener("keydown", trapModalFocus);
 
   /* 5. Halaman aktif */
   if (

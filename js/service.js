@@ -65,7 +65,7 @@ function renderServicePage(search = "") {
   const sort = getSortValue("sortService");
 
   const services = getKendaraan()
-    .filter((item) => !statusFilter || item.status === statusFilter)
+    .filter((item) => cocokFilterStatus(item, statusFilter))
     .filter((item) =>
       [
         item.kode,
@@ -73,6 +73,7 @@ function renderServicePage(search = "") {
         item.pelanggan,
         item.keluhan,
         item.status,
+        getApprovalValue(item),
         getMekanikNama(item.mekanikId),
       ].some((value) =>
         String(value || "")
@@ -96,8 +97,8 @@ function renderServicePage(search = "") {
   if (!servicesSorted.length) {
     const tersaring = Boolean(keyword);
     table.innerHTML = tersaring
-      ? '<tr class="empty-row"><td colspan="11" style="text-align: center; padding: 30px;">Tidak ada data yang cocok dengan pencarian / filter.</td></tr>'
-      : `<tr class="empty-row"><td colspan="11" style="text-align: center; padding: 30px;">Belum ada data service. <button type="button" class="action-btn" data-empty-cta>+ Proses Service</button></td></tr>`;
+      ? '<tr class="empty-row"><td colspan="12" style="text-align: center; padding: 30px;">Tidak ada data yang cocok dengan pencarian / filter.</td></tr>'
+      : `<tr class="empty-row"><td colspan="12" style="text-align: center; padding: 30px;">Belum ada data service. <button type="button" class="action-btn" data-empty-cta>+ Proses Service</button></td></tr>`;
     const cta = table.querySelector("[data-empty-cta]");
     if (cta) {
       cta.addEventListener("click", () =>
@@ -119,7 +120,13 @@ function renderServicePage(search = "") {
         <td>${escapeHTML(item.pelanggan)}</td>
         <td>${escapeHTML(item.keluhan)}</td>
         <td>${escapeHTML(getMekanikNama(item.mekanikId))}</td>
-        <td><span class="badge ${statusClass}">${escapeHTML(item.status)}${item.status === "Selesai" ? " 🔒" : ""}</span></td>
+        <td>
+          <div class="status-cell">
+            <span class="badge ${statusClass}">${escapeHTML(item.status)}${item.status === "Selesai" ? " 🔒" : ""}</span>
+            ${buildAjuanBadge(item)}
+          </div>
+        </td>
+        <td>${buildAntrianBadge(item.id)}</td>
         <td><span class="badge ${pembayaran === "Lunas" ? "done" : "waiting"}">${escapeHTML(pembayaran)}</span></td>
         <td>${formatRupiah(getServiceTotal(item))}</td>
         <td>${escapeHTML(item.tanggalService || "-")}</td>
@@ -127,10 +134,26 @@ function renderServicePage(search = "") {
           <div class="action-buttons">
             ${
               pembayaran !== "Lunas"
-                ? `<button type="button" class="action-btn" data-bayar-service="${item.id}" title="Tandai transaksi ${escapeHTML(item.polisi)} lunas">💰 Lunas</button>`
+                ? `<button
+                    type="button"
+                    class="action-btn"
+                    data-bayar-service="${item.id}"
+                    ${item.status === "Selesai" ? "" : "disabled"}
+                    title="${
+                      item.status === "Selesai"
+                        ? `Tandai transaksi ${escapeHTML(item.polisi)} lunas`
+                        : "Service harus berstatus Selesai sebelum bisa dilunasi"
+                    }"
+                  >💰 Lunas</button>`
                 : ""
             }
             <button type="button" class="action-btn" data-edit-service="${item.id}" title="Ubah status & mekanik">${item.status === "Selesai" ? "🔒 Ubah" : "✏️ Ubah"}</button>
+            ${
+              isAjuanMenunggu(item)
+                ? `<button type="button" class="action-btn" data-terima-ajuan="${item.id}" title="Terima ajuan service">✔ Terima</button>
+            <button type="button" class="action-btn" data-tolak-ajuan="${item.id}" title="Tolak ajuan service">✖ Tolak</button>`
+                : ""
+            }
           </div>
         </td>
       </tr>`;
@@ -159,6 +182,13 @@ function renderServicePage(search = "") {
         (row) => Number(row.id) === Number(id),
       );
       if (!item) return;
+      if (item.status !== "Selesai") {
+        showPageNotice(
+          "Transaksi hanya bisa dilunasi setelah status service Selesai.",
+          "error",
+        );
+        return;
+      }
       if (!setServicePaid(id)) {
         showPageNotice("Transaksi ini sudah berstatus lunas.", "error");
         return;
@@ -174,6 +204,19 @@ function renderServicePage(search = "") {
       showPageNotice("Transaksi ditandai lunas.", "success");
     });
   });
+  /* Aksi persetujuan ajuan service (Terima / Tolak). */
+  table.querySelectorAll("[data-terima-ajuan]").forEach((button) => {
+    button.addEventListener("click", () =>
+      terimaAjuan(button.dataset.terimaAjuan, button),
+    );
+  });
+
+  table.querySelectorAll("[data-tolak-ajuan]").forEach((button) => {
+    button.addEventListener("click", () =>
+      bukaTolakAjuan(button.dataset.tolakAjuan),
+    );
+  });
+
   setText("serviceInfo", `Menampilkan ${services.length} service`);
 }
 
@@ -182,7 +225,9 @@ function updateServiceStats() {
   setText("totalService", services.length);
   setText(
     "serviceMenunggu",
-    services.filter((item) => item.status === "Menunggu").length,
+    services.filter(
+      (item) => item.status === "Menunggu" && !isAjuanDitolak(item),
+    ).length,
   );
   setText(
     "serviceDikerjakan",
@@ -258,13 +303,29 @@ function addServiceSparepartRow(selectedId = "", jumlah = 1) {
     .forEach((input) =>
       input.addEventListener("input", updateServiceTotalPreview),
     );
+  /* Baris kosong di atas, baris yang sudah dipilih pindah ke bawah. */
+  row
+    .querySelector("[data-service-part]")
+    .addEventListener("change", (event) => {
+      const list = row.parentElement;
+      if (!list) return;
+      if (event.target.value) {
+        list.appendChild(row);
+      } else {
+        list.prepend(row);
+      }
+    });
   row
     .querySelector("[data-remove-service-part]")
     .addEventListener("click", () => {
       row.remove();
       updateServiceTotalPreview();
     });
-  list.appendChild(row);
+  if (selectedId) {
+    list.appendChild(row);
+  } else {
+    list.prepend(row);
+  }
   updateServiceTotalPreview();
 }
 
@@ -310,13 +371,23 @@ function resetServiceForm() {
   document.getElementById("serviceSparepartList").innerHTML = "";
   const tanggal = document.getElementById("serviceTanggal");
   if (tanggal && !tanggal.value)
-    tanggal.value = new Date().toISOString().slice(0, 10);
+    tanggal.value = getTodayLocalDate();
   updateServiceTotalPreview();
   document.getElementById("serviceVehicle").disabled = false;
   document.getElementById("serviceModalTitle").textContent = "Proses Service";
 
   /* Zona foto hanya muncul saat mengedit service yang sudah ada. */
   activeServiceId = null;
+
+  /* Struk hanya bisa dicetak untuk service yang sudah ada & selesai —
+     reset = service baru, jadi tombol cetak ikut disembunyikan
+     (editService menyembunyikannya, tetapi reset tidak pernah). */
+  const cetakButton = document.getElementById("btnCetakStrukService");
+  if (cetakButton) {
+    cetakButton.hidden = true;
+    cetakButton.title = "Struk bisa dicetak setelah service selesai";
+  }
+
   const photoZone = document.getElementById("servicePhotoZone");
   if (photoZone) {
     photoZone.hidden = true;
@@ -325,12 +396,212 @@ function resetServiceForm() {
     if (photoList) photoList.innerHTML = "";
     const photoInput = document.getElementById("servicePhotoInput");
     if (photoInput) photoInput.value = "";
+    clearServicePhotoPreview();
   }
 }
 
 var activeServiceId = null;
 
+/* =========================================
+   FOTO SERVICE (Supabase Storage)
+   ========================================= */
 
+/* Isi ulang daftar foto untuk service yang sedang diedit. */
+async function refreshServicePhotoList(serviceId) {
+  const list = document.getElementById("servicePhotoList");
+
+  if (!list) return;
+
+  list.innerHTML = '<span class="photo-upload-hint">Memuat foto…</span>';
+
+  let photos = [];
+
+  try {
+    photos = await getServicePhotos(serviceId);
+  } catch (error) {
+    list.innerHTML =
+      '<span class="photo-upload-hint">Foto gagal dimuat. Coba lagi.</span>';
+    return;
+  }
+
+  if (!list.isConnected) return;
+
+  list.__photos = photos;
+
+  if (!photos.length) {
+    list.innerHTML =
+      '<span class="photo-upload-hint">Belum ada foto untuk service ini.</span>';
+    return;
+  }
+
+  list.innerHTML = `
+    <div class="photo-gallery">
+      ${photos
+        .map(
+          (photo, index) => `
+        <figure>
+          <a href="${escapeHTML(photo.url)}" target="_blank" rel="noopener">
+            <img src="${escapeHTML(photo.url)}" alt="Foto service" loading="lazy" />
+          </a>
+          <figcaption class="photo-caption">${escapeHTML(photo.keterangan || "Foto")}</figcaption>
+          <button
+            type="button"
+            class="photo-delete"
+            data-photo-index="${index}"
+            aria-label="Hapus foto"
+            title="Hapus foto"
+          >
+            ×
+          </button>
+        </figure>`,
+        )
+        .join("")}
+    </div>`;
+}
+
+/* Pratinjau cepat foto yang baru dipilih, sebelum upload selesai. */
+function clearServicePhotoPreview() {
+  const preview = document.getElementById("servicePhotoPreview");
+  if (!preview) return;
+
+  (preview.__urls || []).forEach((url) => URL.revokeObjectURL(url));
+  preview.__urls = [];
+  preview.innerHTML = "";
+  preview.hidden = true;
+}
+
+function showServicePhotoPreview(files) {
+  const preview = document.getElementById("servicePhotoPreview");
+  if (!preview) return;
+
+  clearServicePhotoPreview();
+
+  const images = files.filter((file) =>
+    String(file.type || "").startsWith("image/"),
+  );
+
+  if (!images.length) return;
+
+  const urls = [];
+  preview.innerHTML = images
+    .map((file) => {
+      const url = URL.createObjectURL(file);
+      urls.push(url);
+      return `<figure class="photo-preview-item">
+        <img src="${url}" alt="Pratinjau ${escapeHTML(file.name || "foto")}" />
+        <figcaption>${escapeHTML(file.name || "Foto")}</figcaption>
+      </figure>`;
+    })
+    .join("");
+
+  preview.__urls = urls;
+  preview.hidden = false;
+}
+
+/* Tampilkan zona foto hanya untuk service yang sudah tersimpan di
+   Supabase. Di mode lokal (tanpa storage) zona disembunyikan. */
+async function showServicePhotoSection(serviceId) {
+  const zone = document.getElementById("servicePhotoZone");
+  const list = document.getElementById("servicePhotoList");
+  const input = document.getElementById("servicePhotoInput");
+
+  if (!zone) return;
+
+  const online =
+    typeof isSupabaseMode === "function" &&
+    isSupabaseMode() &&
+    typeof supabaseClient !== "undefined" &&
+    supabaseClient;
+
+  if (!serviceId || !online) {
+    zone.hidden = true;
+    zone.dataset.serviceId = "";
+    if (list) list.innerHTML = "";
+    if (input) input.value = "";
+    return;
+  }
+
+  zone.hidden = false;
+  zone.dataset.serviceId = String(serviceId);
+
+  if (list && list.dataset.bound !== "true") {
+    list.dataset.bound = "true";
+    list.addEventListener("click", async (event) => {
+      const button = event.target.closest("[data-photo-index]");
+      if (!button) return;
+
+      const photos = Array.isArray(list.__photos) ? list.__photos : [];
+      const photo = photos[Number(button.dataset.photoIndex)];
+      if (!photo) return;
+
+      if (!window.confirm("Hapus foto service ini?")) return;
+
+      button.disabled = true;
+
+      try {
+        await deleteServicePhoto(photo);
+        showPageNotice("Foto service dihapus.", "success");
+        await refreshServicePhotoList(zone.dataset.serviceId);
+      } catch (error) {
+        button.disabled = false;
+        showPageNotice(error.message || "Gagal menghapus foto.", "error");
+      }
+    });
+  }
+
+  if (input && input.dataset.bound !== "true") {
+    input.dataset.bound = "true";
+    input.addEventListener("change", async () => {
+      const service = zone.dataset.serviceId;
+      const files = [...(input.files || [])];
+
+      if (!service || !files.length) return;
+
+      input.disabled = true;
+      showServicePhotoPreview(files);
+
+      try {
+        const existing = await getServicePhotos(service);
+
+        if (existing.length + files.length > 8) {
+          showPageNotice(
+            "Maksimal 8 foto per service. Hapus foto lama terlebih dahulu.",
+            "error",
+          );
+          return;
+        }
+
+        let berhasil = 0;
+        let gagal = 0;
+
+        for (const file of files) {
+          try {
+            await uploadServicePhoto(service, file);
+            berhasil++;
+          } catch (error) {
+            gagal++;
+            showPageNotice(error.message || "Gagal mengunggah foto.", "error");
+          }
+        }
+
+        if (berhasil) {
+          showPageNotice(
+            `${berhasil} foto service berhasil diunggah${gagal ? `, ${gagal} gagal` : ""}.`,
+            gagal ? "error" : "success",
+          );
+        }
+
+        await refreshServicePhotoList(service);
+      } finally {
+        input.disabled = false;
+        input.value = "";
+        clearServicePhotoPreview();
+      }
+    });
+  }
+
+  await refreshServicePhotoList(serviceId);
+}
 
 /* Cetak struk invoice service yang sedang diproses. */
 function printServiceStruk() {
@@ -366,11 +637,36 @@ function saveServiceForm(event) {
     return;
   }
 
+  if (pembayaran === "Lunas" && status !== "Selesai") {
+    showFormError(
+      "serviceForm",
+      "Status pembayaran Lunas hanya bisa dipilih setelah status service Selesai.",
+    );
+    return;
+  }
+
   let spareparts;
   try {
     spareparts = getServiceSparepartsFromForm();
   } catch (error) {
     showFormError("serviceForm", error.message);
+    return;
+  }
+
+  const biayaJasa =
+    Number(document.getElementById("serviceBiayaJasa").value) || 0;
+
+  /* Status Quality Check / Selesai hanya boleh dipakai kalau mekanik,
+     biaya jasa, dan minimal satu sparepart sudah lengkap. */
+  const statusError = validateServiceStatus(status, {
+    ...kendaraan[index],
+    mekanikId: mekanik.id,
+    mekanik: mekanik.nama,
+    biayaJasa,
+    spareparts,
+  });
+  if (statusError) {
+    showFormError("serviceForm", statusError);
     return;
   }
 
@@ -413,7 +709,7 @@ function saveServiceForm(event) {
     status,
     pembayaran,
     tanggalService,
-    biayaJasa: Number(document.getElementById("serviceBiayaJasa").value) || 0,
+    biayaJasa,
     spareparts,
   };
   saveKendaraan(kendaraan);

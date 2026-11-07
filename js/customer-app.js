@@ -102,9 +102,11 @@ function initCustomerDashboard() {
   }
 
   const vehicles = getCustomerVehicles();
-  const berjalan = vehicles.filter((item) => item.status !== "Selesai");
+  /* Ajuan yang ditolak tidak dihitung sebagai service berjalan. */
+  const berjalan = vehicles.filter(
+    (item) => item.status !== "Selesai" && !isAjuanDitolak(item),
+  );
   const selesai = vehicles.filter((item) => item.status === "Selesai");
-  const total = vehicles.reduce((sum, item) => sum + getServiceTotal(item), 0);
 
   setText("customerGreeting", `Halo, ${customer.nama}!`);
   setText(
@@ -115,10 +117,62 @@ function initCustomerDashboard() {
   setText("statKendaraan", vehicles.length);
   setText("statBerjalan", berjalan.length);
   setText("statSelesai", selesai.length);
-  setText("statTagihan", formatRupiah(total));
+
+  /* Status ajuan & posisi antrean customer. Nomor global datang dari
+     RPC queue_positions() — RLS tidak memperbolehkan sesi customer
+     menghitung antrean milik orang lain. */
+  const menungguPersetujuan = [...vehicles]
+    .filter((item) => isAjuanMenunggu(item))
+    .sort((a, b) => Number(a.id) - Number(b.id))[0];
+
+  const ditolakTerakhir = [...vehicles]
+    .filter((item) => isAjuanDitolak(item))
+    .sort((a, b) => Number(b.id) - Number(a.id))[0];
+
+  const antreSaya = [...berjalan]
+    .filter((item) => !isAjuanMenunggu(item))
+    .sort((a, b) => Number(a.id) - Number(b.id))[0];
+  const posisiAntrean = antreSaya ? getNomorAntrian(antreSaya.id) : null;
+
+  let infoAntrean;
+
+  if (menungguPersetujuan) {
+    infoAntrean = `Ajuan service ${menungguPersetujuan.polisi} menunggu persetujuan bengkel.`;
+  } else if (antreSaya && posisiAntrean) {
+    infoAntrean = `Anda antrian ke-${posisiAntrean} dengan nomor ${formatNomorAntrian(posisiAntrean)}.`;
+  } else if (antreSaya) {
+    infoAntrean =
+      "Nomor antrean belum tersedia. Muat ulang halaman bila belum muncul.";
+  } else if (ditolakTerakhir) {
+    const alasan = String(ditolakTerakhir.approvalNote || "").trim();
+    infoAntrean = alasan
+      ? `Ajuan service ${ditolakTerakhir.polisi} ditolak: ${alasan}`
+      : `Ajuan service ${ditolakTerakhir.polisi} ditolak bengkel.`;
+  } else {
+    infoAntrean = "Belum ada service Anda dalam antrean.";
+  }
+
+  setText("customerQueueInfo", infoAntrean);
+
+  /* Dua kartu tagihan: id yang dipakai di dashboard.html adalah
+     statTagihanLunas & statBelumLunas (bukan "statTagihan", yang
+     tidak pernah ada di HTML sehingga selalu tampil Rp0). */
+  const totalLunas = vehicles
+    .filter((item) => (item.pembayaran || "Belum Lunas") === "Lunas")
+    .reduce((sum, item) => sum + getServiceTotal(item), 0);
+
+  const totalBelumLunas = getCustomerBelumLunas().reduce(
+    (sum, item) => sum + getServiceTotal(item),
+    0,
+  );
+
+  setText("statTagihanLunas", formatRupiah(totalLunas));
+  setText("statBelumLunas", formatRupiah(totalBelumLunas));
 
   const counts = {
-    Menunggu: vehicles.filter((item) => item.status === "Menunggu").length,
+    Menunggu: vehicles.filter(
+      (item) => item.status === "Menunggu" && !isAjuanDitolak(item),
+    ).length,
     Dikerjakan: vehicles.filter((item) => item.status === "Dikerjakan").length,
     "Quality Check": vehicles.filter((item) => item.status === "Quality Check")
       .length,
@@ -281,13 +335,18 @@ function initCustomerVehicles() {
   document
     .getElementById("sortKendaraan")
     ?.addEventListener("change", renderVehicleCards);
+}
 
+/* Form ajukan service dipakai di dua halaman: kendaraan dan
+   dashboard. Binding dipisah dari initCustomerVehicles supaya ikut
+   aktif di dashboard yang tidak punya #vehicleCards. */
+function initRequestForm() {
   document
     .getElementById("btnAjukanService")
     ?.addEventListener("click", openRequestModal);
 
   document
-    .getElementById("requestMode")
+    .getElementById("requestVehicle")
     ?.addEventListener("change", toggleRequestVehicleFields);
 
   document
@@ -354,7 +413,7 @@ function renderVehicleCards() {
   }
 
   groups.sort((a, b) => {
-    if (!sort.key) return 0;
+    if (!sort.key) return compareStatusOrder(a.latest, b.latest);
     return compareBy(sort.key, sort.direction)(a.latest, b.latest);
   });
 
@@ -489,27 +548,23 @@ function openRequestModal() {
 
   const groups = customerVehiclesByPlate(getCustomerVehicles());
 
-  select.innerHTML = groups.length
-    ? groups
-        .map(
-          (group) =>
-            `<option value="${escapeHTML(group.polisi)}">${escapeHTML(
-              group.polisi,
-            )} — ${escapeHTML(group.merk || "")}</option>`,
-        )
-        .join("")
-    : '<option value="">-- Tambah kendaraan baru --</option>';
+  select.innerHTML =
+    groups
+      .map(
+        (group) =>
+          `<option value="${escapeHTML(group.polisi)}">${escapeHTML(
+            group.polisi,
+          )} — ${escapeHTML(group.merk || group.jenis || "Kendaraan")}</option>`,
+      )
+      .join("") + `<option value="__new__">+ Tambah kendaraan baru</option>`;
 
-  const mode = document.getElementById("requestMode");
-
-  if (!groups.length && mode) {
-    mode.value = "new";
-  }
+  /* Tanpa kendaraan terdaftar, langsung arahkan ke formulir kendaraan baru. */
+  select.value = groups.length ? String(groups[0].polisi) : "__new__";
 
   const tanggal = document.getElementById("requestTanggal");
 
   if (tanggal && !tanggal.value) {
-    tanggal.value = new Date().toISOString().slice(0, 10);
+    tanggal.value = getTodayLocalDate();
   }
 
   const error = document.getElementById("requestError");
@@ -523,8 +578,8 @@ function openRequestModal() {
 }
 
 function toggleRequestVehicleFields() {
-  const mode = document.getElementById("requestMode")?.value || "existing";
-  const isNew = mode === "new";
+  const selected = document.getElementById("requestVehicle")?.value || "__new__";
+  const isNew = selected === "__new__";
 
   const toggle = (id, visible) => {
     const element = document.getElementById(id);
@@ -534,7 +589,6 @@ function toggleRequestVehicleFields() {
     }
   };
 
-  toggle("existingVehicleGroup", !isNew);
   toggle("newVehicleGroup", isNew);
   toggle("newJenisGroup", isNew);
   toggle("newMerkGroup", isNew);
@@ -557,11 +611,13 @@ function submitServiceRequest(event) {
     return;
   }
 
-  const mode = document.getElementById("requestMode")?.value || "existing";
+  const selectedVehicle =
+    document.getElementById("requestVehicle")?.value || "__new__";
+  const isNewVehicle = selectedVehicle === "__new__";
   const keluhan = document.getElementById("requestKeluhan").value.trim();
   const tanggal =
     document.getElementById("requestTanggal").value ||
-    new Date().toISOString().slice(0, 10);
+    getTodayLocalDate();
 
   if (!keluhan) {
     showError("Tuliskan keluhan kendaraan Anda.");
@@ -574,7 +630,7 @@ function submitServiceRequest(event) {
   let jenis = "";
   let merk = "";
 
-  if (mode === "new") {
+  if (isNewVehicle) {
     polisi = document
       .getElementById("requestPolisi")
       .value.trim()
@@ -598,7 +654,7 @@ function submitServiceRequest(event) {
       return;
     }
   } else {
-    polisi = document.getElementById("requestVehicle").value;
+    polisi = selectedVehicle;
 
     if (!polisi) {
       showError("Pilih kendaraan terlebih dahulu.");
@@ -633,6 +689,8 @@ function submitServiceRequest(event) {
     spareparts: [],
     pembayaran: "Belum Lunas",
     requestedBy: "customer",
+    approval: "Menunggu",
+    approvalNote: "",
   };
 
   kendaraan.push(record);
@@ -640,6 +698,7 @@ function submitServiceRequest(event) {
 
   closeModal("requestModal");
   document.getElementById("requestForm").reset();
+  toggleRequestVehicleFields();
 
   showPageNotice(
     "Permintaan service terkirim. Bengkel akan segera menghubungi Anda.",
@@ -649,6 +708,12 @@ function submitServiceRequest(event) {
   renderVehicleCards();
   renderCustomerServiceTable();
   renderCustomerHistoryTable();
+
+  /* Kalau diajukan dari dashboard, segarkan ringkasan status &
+     daftar riwayat terbaru di halaman itu juga. */
+  if (document.getElementById("customerProgressCircle")) {
+    initCustomerDashboard();
+  }
 }
 
 /* =========================================
@@ -697,7 +762,7 @@ function renderCustomerServiceTable() {
 
   const data = vehicles
     .filter((item) => {
-      if (statusFilter && item.status !== statusFilter) {
+      if (!cocokFilterStatus(item, statusFilter)) {
         return false;
       }
 
@@ -705,6 +770,7 @@ function renderCustomerServiceTable() {
         item.polisi,
         item.keluhan,
         item.status,
+        getApprovalValue(item),
         getMekanikNama(item.mekanikId),
       ].some((value) =>
         String(value || "")
@@ -712,14 +778,17 @@ function renderCustomerServiceTable() {
           .includes(keyword),
       );
     })
-    .map((item) => ({ ...item, total: getServiceTotal(item) }));
+    .map((item) => ({ ...item, total: getServiceTotal(item) }))
+    .sort(compareStatusOrder);
 
   const sorted = sortRows(data, sort.key, sort.direction);
 
   setText("statTotalService", vehicles.length);
   setText(
     "statMenunggu",
-    vehicles.filter((item) => item.status === "Menunggu").length,
+    vehicles.filter(
+      (item) => item.status === "Menunggu" && !isAjuanDitolak(item),
+    ).length,
   );
   setText(
     "statDikerjakan",
@@ -733,7 +802,7 @@ function renderCustomerServiceTable() {
   if (!sorted.length) {
     table.innerHTML = `
       <tr class="empty-row">
-        <td colspan="9">Belum ada data service.</td>
+        <td colspan="10">Belum ada data service.</td>
       </tr>
     `;
     setText("customerServiceInfo", "Tidak ada data");
@@ -751,10 +820,14 @@ function renderCustomerServiceTable() {
           <td>${escapeHTML(getMekanikNama(item.mekanikId))}</td>
           <td>${escapeHTML(item.tanggalService || "-")}</td>
           <td>
-            <span class="badge ${getStatusClass(item.status)}">
-              ${escapeHTML(item.status || "-")}
-            </span>
+            <div class="status-cell">
+              <span class="badge ${getStatusClass(item.status)}">
+                ${escapeHTML(item.status || "-")}
+              </span>
+              ${buildAjuanBadge(item)}
+            </div>
           </td>
+          <td>${buildAntrianBadge(item.id)}</td>
           <td>${formatRupiah(getServiceTotal(item))}</td>
           <td>
             <button
@@ -826,11 +899,25 @@ function showServiceDetail(id) {
         <span class="detail-label">Status</span>
         <span class="detail-value">${escapeHTML(item.status || "-")}</span>
       </div>
+      ${
+        item.requestedBy === "customer"
+          ? `<div class="detail-item">
+        <span class="detail-label">Ajuan</span>
+        <span class="detail-value">${escapeHTML(describeAjuan(item))}</span>
+      </div>`
+          : ""
+      }
       <div class="detail-item full">
         <span class="detail-label">Perkiraan Biaya</span>
         <span class="detail-value">${formatRupiah(getServiceTotal(item))}</span>
       </div>
     `;
+  }
+
+  const photos = document.getElementById("serviceDetailPhotos");
+  if (photos) {
+    photos.innerHTML = "";
+    renderServicePhotos(photos, item.id);
   }
 
   openModal("serviceDetailModal");
@@ -855,6 +942,10 @@ function initCustomerHistory() {
 
   document
     .getElementById("filterRiwayatStatus")
+    ?.addEventListener("change", () => renderCustomerHistoryTable(1));
+
+  document
+    .getElementById("filterBulanRiwayatCustomer")
     ?.addEventListener("change", () => renderCustomerHistoryTable(1));
 
   document
@@ -883,9 +974,20 @@ function renderCustomerHistoryTable(page = 1) {
   const paymentFilter =
     document.getElementById("filterRiwayatStatus")?.value || "";
 
+  const bulanFilter =
+    document.getElementById("filterBulanRiwayatCustomer")?.value || "";
+
   const sort = getSortValue("sortRiwayat");
 
-  const data = selesai
+  /* Ringkasan kartu mengikuti periode bulan yang dipilih, bukan seluruh
+     riwayat. Pencarian & filter pembayaran hanya menyaring tabel. */
+  const periode = selesai.filter(
+    (item) =>
+      !bulanFilter ||
+      String(item.tanggalService || "").slice(0, 7) === bulanFilter,
+  );
+
+  const data = periode
     .filter((item) => {
       const pembayaran = item.pembayaran || "Belum Lunas";
 
@@ -909,22 +1011,25 @@ function renderCustomerHistoryTable(page = 1) {
 
   const sorted = sortRows(data, sort.key, sort.direction);
 
-  const totalBelanja = selesai.reduce(
+  const totalBelanja = periode.reduce(
     (sum, item) => sum + getServiceTotal(item),
     0,
   );
 
-  const belumLunas = selesai
+  const belumLunas = periode
     .filter((item) => (item.pembayaran || "Belum Lunas") !== "Lunas")
     .reduce((sum, item) => sum + getServiceTotal(item), 0);
 
-  setText("statRiwayat", selesai.length);
+  const terbaru = [...periode].sort((a, b) =>
+    String(b.tanggalService || "").localeCompare(
+      String(a.tanggalService || ""),
+    ),
+  )[0];
+
+  setText("statRiwayat", periode.length);
   setText("statTotalBelanja", formatRupiah(totalBelanja));
   setText("statBelumLunas", formatRupiah(belumLunas));
-  setText(
-    "statServiceTerakhir",
-    selesai.length ? selesai[0].tanggalService || "-" : "-",
-  );
+  setText("statServiceTerakhir", terbaru?.tanggalService || "-");
 
   if (!sorted.length) {
     table.innerHTML = `
@@ -1016,7 +1121,7 @@ function renderCustomerHistoryTable(page = 1) {
     `Menampilkan ${start + 1}-${Math.min(
       start + perPage,
       sorted.length,
-    )} dari ${selesai.length} service selesai`,
+    )} dari ${periode.length} service selesai`,
   );
 
   renderTablePagination("customerRiwayatPagination", page, totalPages, (next) =>
@@ -1054,6 +1159,12 @@ function showCustomerServiceDetail(id) {
 
   if (invoice) {
     invoice.innerHTML = buildServiceInvoice(item);
+  }
+
+  const photos = document.getElementById("riwayatDetailPhotos");
+  if (photos) {
+    photos.innerHTML = "";
+    renderServicePhotos(photos, item.id);
   }
 
   const overhaul = document.getElementById("riwayatOverhaul");
@@ -1094,9 +1205,7 @@ function renderCustomerReviewSection(item) {
   activeReviewServiceId = item.id;
   activeReviewRating = review ? Number(review.rating) : 0;
 
-  const tanggalUlasan = review?.createdAt
-    ? String(review.createdAt).slice(0, 10)
-    : "";
+  const tanggalUlasan = formatTanggalLokal(review?.createdAt) || "";
 
   section.innerHTML = `
     <div class="review-box">
@@ -1310,6 +1419,10 @@ function initCustomerFinance() {
   }
 
   document
+    .getElementById("filterBulanKeuangan")
+    ?.addEventListener("change", () => renderCustomerFinanceTable(1));
+
+  document
     .getElementById("filterStatusKeuangan")
     ?.addEventListener("change", () => renderCustomerFinanceTable(1));
 
@@ -1336,6 +1449,7 @@ function renderCustomerFinanceTable(page = 1) {
   );
 
   const tahun = document.getElementById("filterTahunKeuangan")?.value || "";
+  const bulan = document.getElementById("filterBulanKeuangan")?.value || "";
   const statusFilter =
     document.getElementById("filterStatusKeuangan")?.value || "";
   const keyword = String(
@@ -1345,12 +1459,18 @@ function renderCustomerFinanceTable(page = 1) {
     .trim();
   const sort = getSortValue("sortKeuangan");
 
-  const data = selesai
-    .filter((item) => {
-      if (tahun && String(item.tanggalService || "").slice(0, 4) !== tahun) {
-        return false;
-      }
+  const periode = selesai.filter((item) => {
+    const tanggal = String(item.tanggalService || "");
 
+    if (tahun && tanggal.slice(0, 4) !== tahun) {
+      return false;
+    }
+
+    return !bulan || tanggal.slice(5, 7) === bulan;
+  });
+
+  const data = periode
+    .filter((item) => {
       const pembayaran = item.pembayaran || "Belum Lunas";
 
       if (statusFilter && pembayaran !== statusFilter) {
@@ -1368,23 +1488,23 @@ function renderCustomerFinanceTable(page = 1) {
 
   const sorted = sortRows(data, sort.key, sort.direction);
 
-  const totalTagihan = selesai.reduce(
+  const totalTagihan = periode.reduce(
     (sum, item) => sum + getServiceTotal(item),
     0,
   );
 
-  const totalLunas = selesai
+  const totalLunas = periode
     .filter((item) => (item.pembayaran || "Belum Lunas") === "Lunas")
     .reduce((sum, item) => sum + getServiceTotal(item), 0);
 
-  const totalBelumLunas = selesai
+  const totalBelumLunas = periode
     .filter((item) => (item.pembayaran || "Belum Lunas") !== "Lunas")
     .reduce((sum, item) => sum + getServiceTotal(item), 0);
 
   setText("statTotalTagihan", formatRupiah(totalTagihan));
   setText("statTagihanLunas", formatRupiah(totalLunas));
   setText("statTagihanBelumLunas", formatRupiah(totalBelumLunas));
-  setText("statJumlahTagihan", selesai.length);
+  setText("statJumlahTagihan", periode.length);
 
   if (!sorted.length) {
     table.innerHTML = `
@@ -1453,7 +1573,7 @@ function renderCustomerFinanceTable(page = 1) {
     `Menampilkan ${start + 1}-${Math.min(
       start + perPage,
       sorted.length,
-    )} dari ${selesai.length} tagihan • Total ${formatRupiah(total)}`,
+    )} dari ${periode.length} tagihan • Total ${formatRupiah(total)}`,
   );
 
   renderTablePagination("customerKeuanganPagination", page, totalPages, (next) =>
@@ -1635,7 +1755,11 @@ async function saveProfile(event) {
   updateCustomerSession({ nama, email });
 
   if (typeof dbUpdateProfile === "function") {
-    const hasil = await dbUpdateProfile({ nama, telepon, email, alamat });
+    /* profiles.email TIDAK dikirim: kolom itu terkunci guard_profile_write
+       (schema.sql) — email login yang otoritatif ada di Supabase Auth dan
+       disinkronkan ke profiles lewat trigger sync_profile_email. Mengirim
+       email membuat seluruh UPDATE nama/telepon/alamat ikut ditolak. */
+    const hasil = await dbUpdateProfile({ nama, telepon, alamat });
 
     if (!hasil.ok) {
       showError(
@@ -1869,6 +1993,37 @@ function initCustomerSettings() {
         customerLogout();
       }
     });
+
+  /* Hapus akun customer sendiri (bukan hanya keluar sesi). */
+  document.getElementById("btnDeleteAccount")?.addEventListener("click", () => {
+    openModal("deleteAccountModal");
+  });
+
+  document
+    .getElementById("btnConfirmDeleteAccount")
+    ?.addEventListener("click", async () => {
+      const button = document.getElementById("btnConfirmDeleteAccount");
+
+      if (!button || button.disabled) {
+        return;
+      }
+
+      button.disabled = true;
+      const result = await Auth.deleteAccount();
+
+      if (!result.ok) {
+        button.disabled = false;
+        showPageNotice(
+          result.error || "Gagal menghapus akun. Coba lagi.",
+          "error",
+        );
+        return;
+      }
+
+      closeModal("deleteAccountModal");
+      clearCustomerSession();
+      window.location.replace("/html/index.html?role=customer&accountDeleted=1");
+    });
 }
 
 /* =========================================
@@ -1886,6 +2041,9 @@ function initCustomerApp() {
   }
 
   initCustomerHeader();
+
+  /* Form ajukan service aktif di halaman kendaraan DAN dashboard. */
+  initRequestForm();
 
   if (document.getElementById("customerProgressCircle")) {
     initCustomerDashboard();

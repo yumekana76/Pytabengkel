@@ -26,17 +26,6 @@
   <body>
     <!-- Skeleton dipasang SEBELUM paint pertama (lihat js/theme.js) -->
     <script>showSkeleton();</script>
-    <button
-      type="button"
-      class="theme-toggle"
-      data-theme-toggle
-      aria-label="Aktifkan mode gelap"
-      aria-pressed="false"
-      title="Ganti tema terang / gelap"
-    >
-      <i class="fa-solid fa-sun icon-sun" aria-hidden="true"></i>
-      <i class="fa-solid fa-moon icon-moon" aria-hidden="true"></i>
-    </button>
     <main class="login-container">
       <section class="login-info">
         <div class="brand">
@@ -68,6 +57,19 @@
         <div class="copyright">© 2026 Pytabengkel</div>
       </section>
       <section class="login-form-container">
+        <div class="login-top-actions">
+          <button
+            type="button"
+            class="theme-toggle"
+            data-theme-toggle
+            aria-label="Aktifkan mode gelap"
+            aria-pressed="false"
+            title="Ganti tema terang / gelap"
+          >
+            <i class="fa-solid fa-sun icon-sun" aria-hidden="true"></i>
+            <i class="fa-solid fa-moon icon-moon" aria-hidden="true"></i>
+          </button>
+        </div>
         <form class="login-form" id="registerForm">
           <div class="login-header">
             <span class="auth-role">
@@ -180,9 +182,9 @@
               <a href="/html/index.html?role=customer">Masuk di sini</a>
             </div>
             <div>
-              <a href="/html/index.html?role=admin">
-                <i class="fa-solid fa-user-shield" aria-hidden="true"></i>
-                Masuk sebagai Admin
+              <a href="/html/index.html?role=customer">
+                <i class="fa-solid fa-arrow-left" aria-hidden="true"></i>
+                Kembali ke halaman masuk
               </a>
             </div>
           </div>

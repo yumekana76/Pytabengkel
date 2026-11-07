@@ -192,6 +192,7 @@
                   <th scope="col">Keluhan</th>
                   <th scope="col">Mekanik</th>
                   <th scope="col">Status</th>
+                  <th scope="col">Antrean</th>
                   <th scope="col">Pembayaran</th>
                   <th scope="col">Total</th>
                   <th scope="col">Tanggal</th>
@@ -246,6 +247,10 @@
                   <option value="Quality Check">Quality Check</option>
                   <option value="Selesai">Selesai</option>
                 </select>
+                <p class="form-hint">
+                  Quality Check / Selesai memerlukan mekanik, biaya jasa, dan
+                  minimal satu sparepart.
+                </p>
               </div>
               <div class="form-group form-full">
                 <label for="serviceTanggal">Tanggal Service</label
@@ -287,6 +292,7 @@
                 <div class="photo-upload-zone">
                   <div id="servicePhotoList"></div>
                   <input type="file" id="servicePhotoInput" accept="image/*" multiple />
+                  <div id="servicePhotoPreview" class="photo-preview" hidden></div>
                   <span class="photo-upload-hint"
                     >Unggah foto kerusakan / hasil kerja (maks 5 MB per file, maks
                     8 foto). Klik foto untuk memperbesar.</span

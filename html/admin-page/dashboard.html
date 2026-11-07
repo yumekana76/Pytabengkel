@@ -146,7 +146,7 @@
           <div class="stat-card">
             <i class="fa-solid fa-sack-dollar stat-icon" aria-hidden="true"></i
             ><span class="stat-number money" id="totalPendapatan"> Rp 0 </span>
-            <span class="stat-label">Pendapatan Service Selesai</span>
+            <span class="stat-label">Total Pendapatan Lunas</span>
           </div>
         </section>
         <section class="dashboard-grid">
@@ -154,9 +154,15 @@
             <div class="panel-header">
               <div>
                 <h3>Status Service</h3>
-                <p>Ringkasan kendaraan hari ini</p>
+                <p id="statusServiceSub">Ringkasan kendaraan hari ini</p>
               </div>
               <div class="vehicle-toolbar">
+                <input
+                  type="date"
+                  id="filterStatusTanggal"
+                  class="form-control filter-date"
+                  aria-label="Tanggal status service"
+                />
                 <a class="toolbar-link" href="service.html">
                   Lihat semua <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
                 </a>
@@ -239,11 +245,46 @@
             </div>
           </div>
         </section>
+        <section class="panel ajuan-panel">
+          <div class="panel-header">
+            <div>
+              <h3>Ajuan Service</h3>
+              <p id="ajuanCount">Tidak ada ajuan</p>
+            </div>
+            <div class="vehicle-toolbar">
+              <a class="toolbar-link" href="service.html">
+                Lihat semua <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
+              </a>
+            </div>
+          </div>
+          <ul class="ajuan-list" id="ajuanList"></ul>
+        </section>
+        <section class="panel antrian-panel">
+          <div class="panel-header">
+            <div>
+              <h3>Antrean Service</h3>
+              <p id="antrianCount">0 service</p>
+            </div>
+            <div class="vehicle-toolbar">
+              <button
+                type="button"
+                class="btn btn-primary"
+                id="btnPanggilBerikutnya"
+              >
+                Panggil Berikutnya
+              </button>
+            </div>
+          </div>
+          <ol class="antrian-list" id="antrianList"></ol>
+        </section>
         <section class="panel vehicle-panel">
           <div class="panel-header">
             <div>
               <h3>Daftar Kendaraan Masuk</h3>
-              <p>Data kendaraan yang masuk hari ini</p>
+              <p>
+                Kendaraan hari ini + service yang belum selesai dari hari
+                sebelumnya.
+              </p>
             </div>
             <div class="vehicle-toolbar">
               <select
@@ -278,6 +319,7 @@
                   <th scope="col">Tagihan</th>
                   <th scope="col">Tanggal</th>
                   <th scope="col">Status</th>
+                  <th scope="col">Pembayaran</th>
                   <th scope="col">Aksi</th>
                 </tr>
               </thead>
@@ -389,6 +431,11 @@
                 <select id="unifiedVehicleId" class="form-control">
                   <option value="">-- Kendaraan baru --</option>
                 </select>
+                <p class="form-hint">
+                  Daftar unik per nomor polisi. Untuk service berikutnya, pilih
+                  kendaraan yang sama — status, tanggal, dan keluhan akan mulai
+                  baru sebagai data service.
+                </p>
               </div>
               <div class="form-group">
                 <label for="unifiedPolisi">No. Polisi</label>
@@ -416,6 +463,10 @@
                   placeholder="Contoh: Toyota"
                   required
                 />
+              </div>
+
+              <div class="form-group form-full">
+                <div class="form-section-title">Service</div>
               </div>
               <div class="form-group">
                 <label for="unifiedStatus">Status Service</label>
@@ -506,19 +557,22 @@
         </form>
       </div>
     </div>
-    <!-- MODAL UBAH STATUS & MEKANIK -->
+    <!-- MODAL UBAH DATA SERVICE -->
     <div class="modal-overlay" id="dashboardEditModal">
 
       <div
-        class="modal"
+        class="modal modal-wide"
         role="dialog"
         aria-modal="true"
         aria-labelledby="dashboardEditTitle"
       >
         <div class="modal-header">
           <div>
-            <h3 id="dashboardEditTitle">Ubah Status & Mekanik</h3>
-            <p>Perbarui status service dan mekanik penanggung jawab.</p>
+            <h3 id="dashboardEditTitle">Ubah Data Service</h3>
+            <p>
+              Ubah status, mekanik, pembayaran, biaya jasa, dan sparepart tanpa
+              pindah ke halaman Service.
+            </p>
           </div>
           <button
             type="button"
@@ -536,6 +590,11 @@
               🔒 Data berstatus <strong>Selesai</strong> dan terkunci agar tidak berubah
               sembarangan. Perubahan hanya dilanjutkan setelah konfirmasi.
             </p>
+            <p class="form-hint" id="dashEditRequirementNote">
+              Status <strong>Quality Check</strong> dan <strong>Selesai</strong>
+              hanya bisa dipilih setelah mekanik ditugaskan, biaya jasa diisi,
+              dan minimal satu sparepart ditambahkan.
+            </p>
             <div class="form-grid">
               <div class="form-group">
                 <label for="dashEditStatus">Status Service</label>
@@ -550,6 +609,44 @@
                 <label for="dashEditMekanik">Mekanik</label>
                 <select id="dashEditMekanik" class="form-control"></select>
               </div>
+              <div class="form-group">
+                <label for="dashEditTanggal">Tanggal Service</label>
+                <input type="date" id="dashEditTanggal" class="form-control" />
+              </div>
+              <div class="form-group">
+                <label for="dashEditPembayaran">Status Pembayaran</label>
+                <select id="dashEditPembayaran" class="form-control">
+                  <option value="Belum Lunas">Belum Lunas</option>
+                  <option value="Lunas">Lunas</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="dashEditBiayaJasa">Biaya Jasa</label>
+                <input
+                  type="number"
+                  id="dashEditBiayaJasa"
+                  class="form-control"
+                  min="0"
+                  placeholder="0"
+                />
+              </div>
+              <div class="form-group">
+                <label for="dashEditTotalPreview">Total Tagihan</label>
+                <output id="dashEditTotalPreview" class="total-preview">Rp0</output>
+              </div>
+              <div class="form-group form-full">
+                <div class="form-label-action">
+                  <label>Sparepart yang Dipakai</label>
+                  <button
+                    type="button"
+                    class="action-btn"
+                    id="btnTambahDashboardSparepart"
+                  >
+                    <i class="fa-solid fa-plus" aria-hidden="true"></i> Tambah Sparepart
+                  </button>
+                </div>
+                <div id="dashboardEditSparepartList" class="service-part-list"></div>
+              </div>
             </div>
           </div>
           <div class="modal-footer">
@@ -559,6 +656,50 @@
             <button type="submit" class="btn btn-primary">Simpan</button>
           </div>
         </form>
+      </div>
+    </div>
+
+    <!-- MODAL DETAIL SERVICE DARI DASHBOARD -->
+    <div class="modal-overlay" id="dashboardDetailModal">
+
+      <div
+        class="modal modal-wide"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="dashboardDetailTitle"
+      >
+        <div class="modal-header">
+          <div>
+            <h3 id="dashboardDetailTitle">Detail Service</h3>
+            <p>Rincian lengkap service yang telah selesai.</p>
+          </div>
+          <button
+            type="button"
+            class="modal-close"
+            data-close-modal="dashboardDetailModal"
+            aria-label="Tutup"
+          >
+            ×
+          </button>
+        </div>
+        <div class="modal-body">
+          <div class="detail-grid" id="dashboardDetailContent"></div>
+          <h4 class="detail-section">Riwayat Status Service</h4>
+          <div id="dashboardDetailSteps"></div>
+          <h4 class="detail-section">Rincian Tagihan</h4>
+          <div class="invoice" id="dashboardDetailInvoice"></div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-close-modal="dashboardDetailModal">
+            Tutup
+          </button>
+          <button type="button" class="btn btn-secondary" id="btnDashboardDetailLunas">
+            <i class="fa-solid fa-check" aria-hidden="true"></i> Tandai Lunas
+          </button>
+          <button type="button" class="btn btn-primary" id="btnDashboardDetailCetak">
+            <i class="fa-solid fa-print" aria-hidden="true"></i> Cetak Struk
+          </button>
+        </div>
       </div>
     </div>
     <script src="../../js/db.js"></script>

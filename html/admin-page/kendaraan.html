@@ -13,7 +13,6 @@
       rel="stylesheet"
       href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
     />
-    <link rel="stylesheet" href="../../css/kendaraan.css" />
     <script src="../../js/error-logger.js"></script>
     <script src="../../js/theme.js"></script>
     <script src="../../js/config.js"></script>
@@ -177,7 +176,8 @@
                 class="form-control filter-select"
                 aria-label="Urutkan kendaraan"
               >
-                <option value="id:asc">Urutkan: ID</option>
+                <option value="">Urutkan: Status (default)</option>
+                <option value="id:asc">ID</option>
                 <option value="tanggalService:desc">Tanggal terbaru</option>
                 <option value="tanggalService:asc">Tanggal terlama</option>
                 <option value="polisi:asc">No. Polisi</option>
@@ -240,6 +240,19 @@
           <input type="hidden" id="vehicleId" />
           <div class="modal-body">
             <div class="form-grid">
+              <div class="form-group form-full" id="vehicleCustomerSearchGroup">
+                <label for="vehicleCustomerSearch">Cari Pelanggan Terdaftar</label>
+                <input
+                  type="search"
+                  id="vehicleCustomerSearch"
+                  class="form-control"
+                  placeholder="Ketik nama pelanggan..."
+                  autocomplete="off"
+                />
+                <p class="form-hint" id="vehicleCustomerSearchHint">
+                  Hasil pencarian otomatis memilih pelanggan di dropdown bawah.
+                </p>
+              </div>
               <div class="form-group">
                 <label for="vehiclePolisi"> No. Polisi </label>
                 <input

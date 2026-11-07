@@ -168,7 +168,7 @@ function showUlasanDetail(id) {
           </span>
           <span class="review-card-meta">
             ${escapeHTML(row.pelanggan || "Customer")} •
-            ${escapeHTML(String(row.createdAt || "").slice(0, 10) || "-")}
+            ${escapeHTML(formatTanggalLokal(row.createdAt) || "-")}
           </span>
         </div>
         <p class="review-card-body">${
@@ -230,10 +230,12 @@ function updateUlasanStats() {
     ? reviews.reduce((sum, item) => sum + Number(item.rating || 0), 0) / total
     : 0;
 
-  const bulanIni = new Date().toISOString().slice(0, 7);
+  /* Bulan berjalan versi LOKAL (toISOString() = UTC, bisa beda bulan
+     pada dini hari WIB). */
+  const bulanIni = getTodayLocalDate().slice(0, 7);
 
   const bulanCount = reviews.filter(
-    (item) => String(item.createdAt || "").slice(0, 7) === bulanIni,
+    (item) => formatTanggalLokal(item.createdAt).slice(0, 7) === bulanIni,
   ).length;
 
   const sudahDinilai = new Set(reviews.map((item) => Number(item.serviceId)));
