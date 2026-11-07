@@ -41,6 +41,11 @@ function populateVehicleFormRelations() {
           )} — ${escapeHTML(item.nama)}</option>`,
       )
       .join("");
+  /* Simpan salinan opsi awal supaya kotak "Cari Pelanggan Terdaftar"
+     bisa menyaring daftar lalu mengembalikannya (dipakai filterDropdown). */
+  customerSelect.__allOptions = [...customerSelect.options].map((opt) =>
+    opt.cloneNode(true),
+  );
   mekanikSelect.innerHTML =
     '<option value="">Tambah mekanik baru</option>' +
     getMekanikAktif()
@@ -191,6 +196,10 @@ function saveKendaraanForm(event) {
   let customer = customers.find(
     (item) => Number(item.id) === Number(customerId),
   );
+  /* Customer/mekanik baru hanya DIANTRIKAN dulu — baru benar-benar
+     masuk array setelah seluruh validasi lolos, supaya form yang
+     gagal validasi tidak menyisakan data hantu di cache. */
+  let customerBaru = null;
   if (!customer) {
     const telepon = value("vehicleCustomerTelepon");
     if (!telepon) {
@@ -210,13 +219,14 @@ function saveKendaraanForm(event) {
       catatan: "",
       registeredAt: new Date().toISOString(),
     };
-    customers.push(customer);
+    customerBaru = customer;
   }
 
   const mekanikData = getMekanik();
   let mekanik = mekanikData.find(
     (item) => Number(item.id) === Number(mekanikId),
   );
+  let mekanikBaru = null;
   if (!mekanik) {
     const namaMekanik = value("vehicleMekanikNama");
     const spesialisasi = value("vehicleMekanikSpesialisasi");
@@ -235,7 +245,7 @@ function saveKendaraanForm(event) {
       telepon: value("vehicleMekanikTelepon"),
       status: "Aktif",
     };
-    mekanikData.push(mekanik);
+    mekanikBaru = mekanik;
   }
 
   const kendaraan = getKendaraan();
@@ -249,15 +259,31 @@ function saveKendaraanForm(event) {
   const biayaJasa = Number(value("vehicleBiayaJasa")) || 0;
   const spareparts = existingVehicle?.spareparts || [];
 
-  const statusError =
-    status === (existingVehicle?.status || "")
-      ? ""
-      : validateServiceStatus(status, {
-          mekanikId: mekanik.id,
-          mekanik: mekanik.nama,
-          biayaJasa,
-          spareparts,
-        });
+  /* Kunci data Selesai: service yang sudah Lunas harus tetap berstatus
+     Selesai. Form ini tidak punya field pembayaran, jadi aturannya
+     dijaga dari data lama — halaman Service & edit dashboard menjaga
+     lewat field pembayaran masing-masing. */
+  if (
+    (existingVehicle?.pembayaran || "Belum Lunas") === "Lunas" &&
+    status !== "Selesai"
+  ) {
+    showFormError(
+      "vehicleForm",
+      "Service yang sudah Lunas harus tetap berstatus Selesai.",
+    );
+    return;
+  }
+
+  /* Validasi kelengkapan dijalankan SETIAP simpan, bukan hanya saat
+     status berubah (pola sama dengan saveServiceForm & edit dashboard)
+     — supaya biaya jasa service Selesai/Quality Check tidak bisa
+     disetel 0 lewat form ini. */
+  const statusError = validateServiceStatus(status, {
+    mekanikId: mekanik.id,
+    mekanik: mekanik.nama,
+    biayaJasa,
+    spareparts,
+  });
   if (statusError) {
     showFormError("vehicleForm", statusError);
     return;
@@ -271,6 +297,9 @@ function saveKendaraanForm(event) {
     merk,
     keluhan: value("vehicleKeluhan"),
     status,
+    /* Form ini tidak punya field pembayaran: pertahankan nilai lama
+       (sudah dijaga guard di atas); service baru selalu "Belum Lunas". */
+    pembayaran: existingVehicle?.pembayaran || "Belum Lunas",
     mekanikId: mekanik.id,
     mekanik: mekanik.nama,
     biayaJasa,
@@ -293,6 +322,10 @@ function saveKendaraanForm(event) {
       ...data,
     });
   }
+
+  /* Semua validasi lolos — baru tulis customer & mekanik baru. */
+  if (customerBaru) customers.push(customerBaru);
+  if (mekanikBaru) mekanikData.push(mekanikBaru);
 
   saveKendaraan(kendaraan);
   saveCustomers(customers);
@@ -640,6 +673,67 @@ function initKendaraanPage() {
       renderKendaraan(this.value, 1);
     });
   }
+
+  /* Pencarian pelanggan terdaftar pada modal Kendaraan: menyaring
+     dropdown "Pelanggan Terdaftar" sambil mengetik, lalu LANGSUNG
+     memilih hasil pertamanya supaya isian nama/HP/email/alamat pelanggan
+     terisi otomatis (pola sama dengan unifiedCustomerSearch di dashboard). */
+  const cariPelanggan = document.getElementById("vehicleCustomerSearch");
+  const hintCariPelanggan = document.getElementById(
+    "vehicleCustomerSearchHint",
+  );
+  const setHintCariPelanggan = (teks) => {
+    if (hintCariPelanggan) hintCariPelanggan.textContent = teks;
+  };
+
+  cariPelanggan?.addEventListener("input", (event) => {
+    const customerSelect = document.getElementById("vehicleCustomerId");
+    const kata = event.target.value.trim();
+    const hilang = filterDropdown(customerSelect, kata);
+
+    if (hilang) {
+      /* Pilihan tersaring keluar: kembali ke mode "pelanggan baru"
+         supaya isian manual tidak menampilkan data pelanggan lama. */
+      customerSelect.value = "";
+      [
+        "vehiclePelanggan",
+        "vehicleCustomerTelepon",
+        "vehicleCustomerEmail",
+        "vehicleCustomerAlamat",
+      ].forEach((id) => {
+        const el = document.getElementById(id);
+        if (el) el.value = "";
+      });
+    }
+
+    if (!kata) {
+      setHintCariPelanggan(
+        "Hasil pencarian otomatis memilih pelanggan di dropdown bawah.",
+      );
+      return;
+    }
+
+    const jumlah = [...customerSelect.options].filter(
+      (opt) => opt.value !== "",
+    ).length;
+
+    if (jumlah > 0 && customerSelect.value === "") {
+      /* Auto-pilih hasil pertama; onchange mengisi isian pelanggan. */
+      customerSelect.value = customerSelect.options[1].value;
+      customerSelect.onchange?.();
+    }
+
+    setHintCariPelanggan(
+      jumlah === 0
+        ? `Tidak ada pelanggan cocok dengan "${kata}" — data baru akan dibuat.`
+        : `${jumlah} pelanggan cocok dengan "${kata}" — otomatis dipilih yang pertama.`,
+    );
+  });
+
+  /* Enter pada kotak cari tidak boleh menyubmit form kendaraan. */
+  cariPelanggan?.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") event.preventDefault();
+  });
 
   document
     .getElementById("filterStatus")

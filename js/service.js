@@ -65,7 +65,7 @@ function renderServicePage(search = "") {
   const sort = getSortValue("sortService");
 
   const services = getKendaraan()
-    .filter((item) => !statusFilter || item.status === statusFilter)
+    .filter((item) => cocokFilterStatus(item, statusFilter))
     .filter((item) =>
       [
         item.kode,
@@ -73,6 +73,7 @@ function renderServicePage(search = "") {
         item.pelanggan,
         item.keluhan,
         item.status,
+        getApprovalValue(item),
         getMekanikNama(item.mekanikId),
       ].some((value) =>
         String(value || "")
@@ -96,8 +97,8 @@ function renderServicePage(search = "") {
   if (!servicesSorted.length) {
     const tersaring = Boolean(keyword);
     table.innerHTML = tersaring
-      ? '<tr class="empty-row"><td colspan="11" style="text-align: center; padding: 30px;">Tidak ada data yang cocok dengan pencarian / filter.</td></tr>'
-      : `<tr class="empty-row"><td colspan="11" style="text-align: center; padding: 30px;">Belum ada data service. <button type="button" class="action-btn" data-empty-cta>+ Proses Service</button></td></tr>`;
+      ? '<tr class="empty-row"><td colspan="12" style="text-align: center; padding: 30px;">Tidak ada data yang cocok dengan pencarian / filter.</td></tr>'
+      : `<tr class="empty-row"><td colspan="12" style="text-align: center; padding: 30px;">Belum ada data service. <button type="button" class="action-btn" data-empty-cta>+ Proses Service</button></td></tr>`;
     const cta = table.querySelector("[data-empty-cta]");
     if (cta) {
       cta.addEventListener("click", () =>
@@ -119,7 +120,13 @@ function renderServicePage(search = "") {
         <td>${escapeHTML(item.pelanggan)}</td>
         <td>${escapeHTML(item.keluhan)}</td>
         <td>${escapeHTML(getMekanikNama(item.mekanikId))}</td>
-        <td><span class="badge ${statusClass}">${escapeHTML(item.status)}${item.status === "Selesai" ? " 🔒" : ""}</span></td>
+        <td>
+          <div class="status-cell">
+            <span class="badge ${statusClass}">${escapeHTML(item.status)}${item.status === "Selesai" ? " 🔒" : ""}</span>
+            ${buildAjuanBadge(item)}
+          </div>
+        </td>
+        <td>${buildAntrianBadge(item.id)}</td>
         <td><span class="badge ${pembayaran === "Lunas" ? "done" : "waiting"}">${escapeHTML(pembayaran)}</span></td>
         <td>${formatRupiah(getServiceTotal(item))}</td>
         <td>${escapeHTML(item.tanggalService || "-")}</td>
@@ -141,6 +148,12 @@ function renderServicePage(search = "") {
                 : ""
             }
             <button type="button" class="action-btn" data-edit-service="${item.id}" title="Ubah status & mekanik">${item.status === "Selesai" ? "🔒 Ubah" : "✏️ Ubah"}</button>
+            ${
+              isAjuanMenunggu(item)
+                ? `<button type="button" class="action-btn" data-terima-ajuan="${item.id}" title="Terima ajuan service">✔ Terima</button>
+            <button type="button" class="action-btn" data-tolak-ajuan="${item.id}" title="Tolak ajuan service">✖ Tolak</button>`
+                : ""
+            }
           </div>
         </td>
       </tr>`;
@@ -191,6 +204,19 @@ function renderServicePage(search = "") {
       showPageNotice("Transaksi ditandai lunas.", "success");
     });
   });
+  /* Aksi persetujuan ajuan service (Terima / Tolak). */
+  table.querySelectorAll("[data-terima-ajuan]").forEach((button) => {
+    button.addEventListener("click", () =>
+      terimaAjuan(button.dataset.terimaAjuan, button),
+    );
+  });
+
+  table.querySelectorAll("[data-tolak-ajuan]").forEach((button) => {
+    button.addEventListener("click", () =>
+      bukaTolakAjuan(button.dataset.tolakAjuan),
+    );
+  });
+
   setText("serviceInfo", `Menampilkan ${services.length} service`);
 }
 
@@ -199,7 +225,9 @@ function updateServiceStats() {
   setText("totalService", services.length);
   setText(
     "serviceMenunggu",
-    services.filter((item) => item.status === "Menunggu").length,
+    services.filter(
+      (item) => item.status === "Menunggu" && !isAjuanDitolak(item),
+    ).length,
   );
   setText(
     "serviceDikerjakan",
@@ -350,6 +378,16 @@ function resetServiceForm() {
 
   /* Zona foto hanya muncul saat mengedit service yang sudah ada. */
   activeServiceId = null;
+
+  /* Struk hanya bisa dicetak untuk service yang sudah ada & selesai —
+     reset = service baru, jadi tombol cetak ikut disembunyikan
+     (editService menyembunyikannya, tetapi reset tidak pernah). */
+  const cetakButton = document.getElementById("btnCetakStrukService");
+  if (cetakButton) {
+    cetakButton.hidden = true;
+    cetakButton.title = "Struk bisa dicetak setelah service selesai";
+  }
+
   const photoZone = document.getElementById("servicePhotoZone");
   if (photoZone) {
     photoZone.hidden = true;

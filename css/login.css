@@ -927,11 +927,14 @@ body {
 
 .testimoni-list {
   display: grid;
+  /* Baris tetap berukuran alami kalau kotak punya sisa ruang,
+     supaya kartu tidak ikut meregang saat cuma ada 1 ulasan. */
+  align-content: start;
   gap: 10px;
-  /* Tinggi TETAP setara ~2 ulasan berapa pun jumlah datanya (0, 1, 2,
-     atau pulan). Bila lebih, gulir di dalam kotak; bila kurang, kotak
-     tetap terisi tinggi yang sama. */
-  height: 200px;
+  /* Maksimum setara ~2 ulasan: kalau lebih, gulir di dalam kotak;
+     kalau lebih sedikit (mis. 1 ulasan), kotak mengecil mengikuti
+     isi sehingga tidak ada ruang kosong yang memanjang. */
+  max-height: 200px;
   overflow-y: auto;
   padding-right: 4px;
   scrollbar-width: thin;
@@ -945,6 +948,12 @@ body {
 .testimoni-list::-webkit-scrollbar-thumb {
   background: #4b5563;
   border-radius: 999px;
+}
+
+/* Pesan kosong (mis. filter bintang tanpa hasil) ditampilkan rata
+   tengah, bukan menempel di kiri. */
+.testimoni-list > p {
+  text-align: center;
 }
 
 .testimoni-card {

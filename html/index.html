@@ -8,15 +8,21 @@
       />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Login | Pytabengkel</title>
-    <link 
-    rel="stylesheet" 
-    href="../css/login.css" 
-    />
+    <link rel="stylesheet" href="../css/login.css" />
     <link
       rel="stylesheet"
       href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
     />
-
+    <!-- WAJIB urut di <head>: error-logger -> theme -> config ->
+         library supabase -> applyThemeBeforePaint, supaya tema
+         terpasang sebelum paint pertama (tanpa kedip) dan skrip di
+         <body> menemukan definisinya. -->
+    <script src="../js/error-logger.js"></script>
+    <script src="../js/theme.js"></script>
+    <script src="../js/config.js"></script>
+    <script src="../js/vendor/supabase.min.js"></script>
+    <script src="../js/supabase.js"></script>
+    <script>applyThemeBeforePaint();</script>
   </head>
   <body>
     <main class="login-container">
@@ -287,17 +293,13 @@
       </div>
     </div>
 
-    <!-- WAJIB urut: theme -> config -> library -> lapisan auth supaya
-         db.js (panggil isSupabaseMode()) dan login.js (panggil Auth)
-         sudah menemukan definisinya saat dieksekusi. -->
-    <script src="../js/error-logger.js"></script>
-    <script src="../js/theme.js"></script>
-    <script src="../js/config.js"></script>
-    <script src="../js/vendor/supabase.min.js"></script>
-    <script src="../js/supabase.js"></script>
-    <script>applyThemeBeforePaint();</script>
+    <!-- WAJIB urut: db -> auth -> global -> halaman, supaya db.js
+         (panggil isSupabaseMode()), login.js (panggil Auth), dan
+         global.js (menyediakan helper) sudah menemukan definisinya
+         saat dieksekusi. Skrip theme/config/library ada di <head>. -->
     <script src="../js/db.js"></script>
     <script src="../js/auth.js"></script>
+    <script src="../js/global.js"></script>
     <script src="../js/login.js"></script>
     <script src="../js/testimoni.js"></script>
   </body>

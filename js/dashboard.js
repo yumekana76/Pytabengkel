@@ -40,17 +40,30 @@ function updateDashboard() {
     (item) => String(item.tanggalService || "").slice(0, 10) === tanggalDipilih,
   );
 
-  const menunggu = kendaraan.filter(
-    (item) => item.status === "Menunggu",
-  ).length;
+  /* Panel "Status Service" juga ikut menampilkan service yang BELUM
+     SELESAI dari tanggal sebelumnya (carry-over) — sama seperti logika
+     tabel di bawah (renderKendaraan) — supaya pekerjaan yang masih
+     berjalan tidak hilang dari ringkasan saat berganti hari.
+     Kartu statistik di atas tetap murni data tanggal terpilih. */
+  const kendaraanStatus = semuaKendaraan.filter((item) => {
+    const tanggal = String(item.tanggalService || "").slice(0, 10);
+    if (tanggal === tanggalDipilih) return true;
+    const belumSelesai = item.status !== "Selesai";
+    return belumSelesai && (!tanggal || tanggal < tanggalDipilih);
+  });
 
-  const dikerjakan = kendaraan.filter(
-    (item) => item.status === "Dikerjakan",
-  ).length;
+  const hitungStatus = (list) => ({
+    /* Ajuan yang ditolak tidak dihitung sebagai service menunggu. */
+    menunggu: list.filter(
+      (item) => item.status === "Menunggu" && !isAjuanDitolak(item),
+    ).length,
+    dikerjakan: list.filter((item) => item.status === "Dikerjakan").length,
+    qc: list.filter((item) => item.status === "Quality Check").length,
+    selesai: list.filter((item) => item.status === "Selesai").length,
+  });
 
-  const qc = kendaraan.filter((item) => item.status === "Quality Check").length;
-
-  const selesai = kendaraan.filter((item) => item.status === "Selesai").length;
+  const statistik = hitungStatus(kendaraan);
+  const ringkasan = hitungStatus(kendaraanStatus);
 
   /* Pendapatan hanya dihitung dari service selesai yang SUDAH LUNAS —
      tagihan belum lunas tidak masuk angka pendapatan. */
@@ -64,35 +77,35 @@ function updateDashboard() {
 
   setText("totalKendaraan", kendaraan.length);
 
-  setText("totalMenunggu", menunggu);
+  setText("totalMenunggu", statistik.menunggu);
 
-  setText("totalDikerjakan", dikerjakan);
+  setText("totalDikerjakan", statistik.dikerjakan);
 
-  setText("totalQC", qc);
+  setText("totalQC", statistik.qc);
 
-  setText("totalSelesai", selesai);
+  setText("totalSelesai", statistik.selesai);
 
   setText("totalPendapatan", formatRupiah(pendapatan));
 
-  setText("totalServiceCircle", kendaraan.length);
+  setText("totalServiceCircle", kendaraanStatus.length);
 
-  setText("circleMenunggu", menunggu);
+  setText("circleMenunggu", ringkasan.menunggu);
 
-  setText("circleDikerjakan", dikerjakan);
+  setText("circleDikerjakan", ringkasan.dikerjakan);
 
-  setText("circleQC", qc);
+  setText("circleQC", ringkasan.qc);
 
-  setText("circleSelesai", selesai);
+  setText("circleSelesai", ringkasan.selesai);
 
   const circle = document.querySelector(".progress-circle");
   if (circle) {
-    const total = kendaraan.length;
+    const total = kendaraanStatus.length;
     if (!total) {
       circle.style.background = "conic-gradient(#e2e8f0 0 100%)";
     } else {
-      const waitingEnd = (menunggu / total) * 100;
-      const workingEnd = waitingEnd + (dikerjakan / total) * 100;
-      const qcEnd = workingEnd + (qc / total) * 100;
+      const waitingEnd = (ringkasan.menunggu / total) * 100;
+      const workingEnd = waitingEnd + (ringkasan.dikerjakan / total) * 100;
+      const qcEnd = workingEnd + (ringkasan.qc / total) * 100;
       circle.style.background = `conic-gradient(
         var(--waiting) 0% ${waitingEnd}%,
         var(--working) ${waitingEnd}% ${workingEnd}%,
@@ -102,6 +115,8 @@ function updateDashboard() {
     }
   }
 
+  renderAjuan();
+  renderAntrian();
   renderKendaraan(document.getElementById("searchKendaraan")?.value || "", 1);
 }
 
@@ -142,12 +157,7 @@ function renderMekanik() {
     (item) => !statusFilter || item.status === statusFilter,
   );
 
-  let kendaraan = [];
-  try {
-    kendaraan = getKendaraan();
-  } catch (error) {
-    kendaraan = [];
-  }
+  const kendaraan = getKendaraan();
 
   table.innerHTML = "";
 
@@ -215,7 +225,6 @@ function renderMekanik() {
           <td>
             <select
               class="form-control row-select"
-              data-mekanik-status="${item.id}"
               aria-label="Ubah status ${escapeHTML(item.nama)}"
               onchange="updateMekanikStatus(${item.id}, this.value)"
             >
@@ -247,20 +256,17 @@ function updateMekanikStatus(id, status) {
   const index = mekanik.findIndex((item) => Number(item.id) === Number(id));
   if (index === -1) return;
   if (mekanik[index].status === status) return;
+  const sebelumnya = mekanik[index].status;
   mekanik[index] = { ...mekanik[index], status };
   saveMekanik(mekanik);
   if (typeof renderMekanik === "function") renderMekanik();
   if (typeof updateDashboard === "function") updateDashboard();
-  if (typeof renderMekanikPage === "function") {
-    try {
-      renderMekanikPage(document.getElementById("searchMekanik")?.value || "");
-    } catch (error) {}
-  }
-  if (typeof updateMekanikStats === "function") {
-    try {
-      updateMekanikStats();
-    } catch (error) {}
-  }
+  addLog(
+    "Update",
+    "Mekanik",
+    `Status ${mekanik[index].nama}: ${sebelumnya} → ${status}`,
+    getKode("mekanik", mekanik[index]),
+  );
   showPageNotice(
     `Status ${mekanik[index].nama} diubah ke ${status}.`,
     "success",
@@ -451,29 +457,8 @@ function populateUnifiedRelations() {
   }
 }
 
-/* Saring opsi <select> sesuai kata kunci pencarian. Opsi pertama
-   (default, value kosong) selalu ditampilkan. Mengembalikan true
-   bila pilihan yang sedang aktif tersaring keluar dari daftar. */
-function filterDropdown(selectEl, keyword) {
-  if (!selectEl || !Array.isArray(selectEl.__allOptions)) return false;
-  const key = String(keyword || "").toLowerCase().trim();
-  const current = selectEl.value;
-  selectEl.innerHTML = "";
-  selectEl.__allOptions.forEach((opt) => {
-    if (
-      opt.value === "" ||
-      !key ||
-      opt.textContent.toLowerCase().includes(key)
-    ) {
-      selectEl.appendChild(opt.cloneNode(true));
-    }
-  });
-  const masihDipilih = [...selectEl.options].some(
-    (opt) => opt.value === current,
-  );
-  if (masihDipilih) selectEl.value = current;
-  return !masihDipilih && current !== "";
-}
+/* filterDropdown() dipindah ke js/global.js supaya halaman kendaraan
+   (yang tidak memuat dashboard.js) bisa memakainya juga. */
 
 function unifiedSparepartOptions(selectedId = "") {
   /* Sparepart baru ditampilkan paling atas, yang lama turun ke bawah
@@ -494,7 +479,7 @@ function unifiedSparepartOptions(selectedId = "") {
   );
 }
 
-function addUnifiedSparepartRow(selectedId = "", jumlah = "", preset = {}) {
+function addUnifiedSparepartRow() {
   const list = document.getElementById("unifiedSparepartList");
   if (!list) return;
   const row = document.createElement("div");
@@ -503,26 +488,26 @@ function addUnifiedSparepartRow(selectedId = "", jumlah = "", preset = {}) {
     <div class="part-row-head">
       <input type="search" class="form-control" data-part-search placeholder="Cari sparepart..." aria-label="Cari sparepart" autocomplete="off" />
       <select class="form-control" data-part-select aria-label="Sparepart terdaftar">
-        ${unifiedSparepartOptions(selectedId)}
+        ${unifiedSparepartOptions("")}
       </select>
       <button type="button" class="action-btn danger" data-part-remove aria-label="Hapus baris sparepart">Hapus</button>
     </div>
     <div class="part-row-grid">
       <div class="form-group">
         <label>Nama Sparepart</label>
-        <input type="text" class="form-control" data-part-nama placeholder="Contoh: Oli Mesin" value="${escapeHTML(preset.nama || "")}" />
+        <input type="text" class="form-control" data-part-nama placeholder="Contoh: Oli Mesin" value="" />
       </div>
       <div class="form-group">
         <label>Stok Awal (khusus baru)</label>
-        <input type="number" class="form-control" data-part-stok min="0" placeholder="0" value="${preset.stok ?? ""}" />
+        <input type="number" class="form-control" data-part-stok min="0" placeholder="0" value="" />
       </div>
       <div class="form-group">
         <label>Harga Satuan</label>
-        <input type="number" class="form-control" data-part-harga min="0" placeholder="0" value="${preset.harga ?? ""}" />
+        <input type="number" class="form-control" data-part-harga min="0" placeholder="0" value="" />
       </div>
       <div class="form-group">
         <label>Jumlah Dipakai</label>
-        <input type="number" class="form-control" data-part-jumlah min="1" placeholder="0" value="${jumlah}" />
+        <input type="number" class="form-control" data-part-jumlah min="1" placeholder="0" value="" />
       </div>
     </div>`;
   const select = row.querySelector("[data-part-select]");
@@ -587,11 +572,8 @@ function addUnifiedSparepartRow(selectedId = "", jumlah = "", preset = {}) {
     row.remove();
     updateUnifiedTotalPreview();
   });
-  if (selectedId) {
-    list.appendChild(row);
-  } else {
-    list.prepend(row);
-  }
+  /* Baris baru selalu di atas (belum ada pilihan). */
+  list.prepend(row);
   updateUnifiedTotalPreview();
 }
 
@@ -654,6 +636,10 @@ function saveUnifiedForm(event) {
   let customer = customers.find(
     (item) => Number(item.id) === Number(value("unifiedCustomerId")),
   );
+  /* Customer/mekanik/sparepart baru hanya DIANTRIKAN dulu — baru
+     benar-benar masuk array setelah seluruh validasi lolos, supaya
+     form yang gagal tidak menyisakan data hantu di cache. */
+  let customerBaru = null;
   if (!customer) {
     const telepon = value("unifiedCustomerTelepon");
     if (!telepon) {
@@ -670,7 +656,7 @@ function saveUnifiedForm(event) {
       catatan: "",
       registeredAt: new Date().toISOString(),
     };
-    customers.push(customer);
+    customerBaru = customer;
   }
 
   /* Kendaraan baru manual tidak boleh membuat plat yang sudah terdaftar
@@ -701,6 +687,7 @@ function saveUnifiedForm(event) {
   let mekanik = mekanikData.find(
     (item) => Number(item.id) === Number(value("unifiedMekanikId")),
   );
+  let mekanikBaru = null;
   if (!mekanik) {
     const namaMekanik = value("unifiedMekanikNama");
     const spesialisasi = value("unifiedMekanikSpesialisasi");
@@ -718,10 +705,12 @@ function saveUnifiedForm(event) {
       spesialisasi,
       status: "Aktif",
     };
-    mekanikData.push(mekanik);
+    mekanikBaru = mekanik;
   }
 
   const sparepartData = getSparepart();
+  /* Sparepart baru yang masih dalam antrian (belum masuk array). */
+  const sparepartBaru = [];
   let spareparts = [];
   const partRows = [
     ...document.querySelectorAll("#unifiedSparepartList .part-row-box"),
@@ -747,8 +736,12 @@ function saveUnifiedForm(event) {
   if (pemakaian.length) {
     const resolved = [];
     for (const pakai of pemakaian) {
+      /* Sparepart baru yang sedang diantri ikut dijadikan kandidat
+         pencarian supaya dua sparepart baru dalam satu form tidak
+         mendapat id/kode kembar. */
+      const kandidat = [...sparepartData, ...sparepartBaru];
       let sparepart = pakai.partId
-        ? sparepartData.find((item) => Number(item.id) === Number(pakai.partId))
+        ? kandidat.find((item) => Number(item.id) === Number(pakai.partId))
         : null;
       if (!sparepart) {
         if (
@@ -765,13 +758,13 @@ function saveUnifiedForm(event) {
           return;
         }
         sparepart = {
-          id: nextNumericId(sparepartData),
-          kode: nextKode("sparepart", sparepartData),
+          id: nextNumericId(kandidat),
+          kode: nextKode("sparepart", kandidat),
           nama: pakai.nama,
           stok: pakai.stok,
           harga: pakai.harga,
         };
-        sparepartData.push(sparepart);
+        sparepartBaru.push(sparepart);
       }
       resolved.push({ sparepart, jumlah: pakai.jumlah });
     }
@@ -811,7 +804,9 @@ function saveUnifiedForm(event) {
       return;
     }
     for (const id of Object.keys(totalPerPart)) {
-      const part = sparepartData.find((item) => Number(item.id) === Number(id));
+      const part = [...sparepartData, ...sparepartBaru].find(
+        (item) => Number(item.id) === Number(id),
+      );
       if (part) part.stok = Number(part.stok) - totalPerPart[id];
     }
     spareparts = draftSpareparts;
@@ -847,10 +842,48 @@ function saveUnifiedForm(event) {
       value("unifiedTanggal") || getTodayLocalDate(),
   });
 
+  /* Seluruh validasi lolos — baru tulis entitas baru ke cache. */
+  if (customerBaru) customers.push(customerBaru);
+  if (mekanikBaru) mekanikData.push(mekanikBaru);
+  sparepartBaru.forEach((part) => sparepartData.push(part));
+
   saveCustomers(customers);
   saveMekanik(mekanikData);
   saveSparepart(sparepartData);
   saveKendaraan(kendaraan);
+
+  /* Jejak aktivitas: entitas utama Kendaraan selalu dicatat, entitas
+     lain hanya kalau ikut dibuat/diperbariki pada simpan ini. */
+  addLog(
+    "Tambah",
+    "Kendaraan",
+    `${polisi} — ${merk} (${customer.nama})`,
+    getKode("kendaraan", kendaraan[kendaraan.length - 1]),
+  );
+  if (customerBaru) {
+    addLog(
+      "Tambah",
+      "Customer",
+      `${customer.nama} (${customer.telepon || "-"})`,
+      getKode("customers", customerBaru),
+    );
+  }
+  if (mekanikBaru) {
+    addLog(
+      "Tambah",
+      "Mekanik",
+      `${mekanik.nama} — ${mekanik.spesialisasi}`,
+      getKode("mekanik", mekanikBaru),
+    );
+  }
+  sparepartBaru.forEach((part) => {
+    addLog(
+      "Tambah",
+      "Sparepart",
+      `${part.nama} (stok ${part.stok})`,
+      getKode("sparepart", part),
+    );
+  });
 
   closeModal("unifiedModal");
   resetUnifiedForm();
@@ -1172,6 +1205,9 @@ function showDashboardDetail(id) {
     const ringkasan = getServiceRingkasan(item);
     content.innerHTML = buildServiceDetailGrid(item, {
       extraItems: [
+        ...(item.requestedBy === "customer"
+          ? [{ label: "Ajuan", value: escapeHTML(describeAjuan(item)) }]
+          : []),
         { label: "Biaya Jasa", value: formatRupiah(ringkasan.biayaJasa) },
         {
           label: "Subtotal Sparepart",
@@ -1316,6 +1352,33 @@ function initDashboardInput() {
   tanggalMekanik?.addEventListener("change", () => {
     if (typeof renderMekanik === "function") renderMekanik();
   });
+
+  document
+    .getElementById("btnPanggilBerikutnya")
+    ?.addEventListener("click", (event) => {
+      if (typeof panggilBerikutnya === "function") {
+        panggilBerikutnya(event.currentTarget);
+      }
+    });
+
+  /* Aksi Terima / Tolak pada panel ajuan (delegasi: daftar di-render
+     ulang setiap kali, jadi listener dipasang satu kali di wadahnya). */
+  document
+    .getElementById("ajuanList")
+    ?.addEventListener("click", (event) => {
+      const terima = event.target.closest?.("[data-terima-ajuan]");
+      if (terima) {
+        if (typeof terimaAjuan === "function") {
+          terimaAjuan(terima.dataset.terimaAjuan, terima);
+        }
+        return;
+      }
+
+      const tolak = event.target.closest?.("[data-tolak-ajuan]");
+      if (tolak && typeof bukaTolakAjuan === "function") {
+        bukaTolakAjuan(tolak.dataset.tolakAjuan);
+      }
+    });
 
   /* Pencarian customer pada modal Input Data: menyaring dropdown
      "Customer Terdaftar" sambil mengetik, lalu LANGSUNG memilih

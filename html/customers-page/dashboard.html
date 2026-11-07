@@ -110,10 +110,15 @@
             <h2 id="customerGreeting">Halo!</h2>
             <p id="customerSubGreeting">Pantau kendaraan dan service Anda di sini.</p>
           </div>
-          <span class="customer-hero-badge">
-            <i class="fa-solid fa-car-side" aria-hidden="true"></i>
-            <span id="heroVehicleCount">0 kendaraan</span>
-          </span>
+          <div class="customer-hero-actions">
+            <span class="customer-hero-badge">
+              <i class="fa-solid fa-car-side" aria-hidden="true"></i>
+              <span id="heroVehicleCount">0 kendaraan</span>
+            </span>
+            <button type="button" class="btn btn-primary" id="btnAjukanService">
+              <i class="fa-solid fa-plus" aria-hidden="true"></i> Ajukan Service
+            </button>
+          </div>
         </section>
 
         <section class="stats-grid">
@@ -197,6 +202,7 @@
                 </div>
               </div>
             </div>
+            <p class="antrian-customer" id="customerQueueInfo"></p>
           </div>
           <div class="panel">
             <div class="panel-header">
@@ -244,6 +250,97 @@
         </section>
       </main>
     </div>
+
+    <!-- MODAL AJUKAN SERVICE (sama dengan halaman kendaraan) -->
+    <div class="modal-overlay" id="requestModal">
+      <div
+        class="modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="requestModal-title"
+      >
+        <div class="modal-header">
+          <div>
+            <h3 id="requestModal-title">Ajukan Service</h3>
+            <p>Permintaan langsung masuk ke antrean service bengkel.</p>
+          </div>
+          <button
+            type="button"
+            class="modal-close"
+            data-close-modal="requestModal"
+            aria-label="Tutup"
+          >
+            ×
+          </button>
+        </div>
+        <form id="requestForm">
+          <div class="modal-body">
+            <p class="form-error" id="requestError" hidden></p>
+            <div class="form-grid">
+              <div class="form-group form-full">
+                <label for="requestVehicle">Pilih Kendaraan</label>
+                <select id="requestVehicle" class="form-control"></select>
+                <span class="form-hint">
+                  Pilih kendaraan terdaftar, atau tambahkan kendaraan baru pada daftar.
+                </span>
+              </div>
+              <div class="form-group form-full" id="newVehicleGroup" hidden>
+                <label for="requestPolisi">No.Police</label>
+                <input
+                  type="text"
+                  id="requestPolisi"
+                  class="form-control"
+                  placeholder="Contoh: B 1234 KZ"
+                />
+              </div>
+              <div class="form-group" id="newJenisGroup" hidden>
+                <label for="requestJenis">Jenis</label>
+                <select id="requestJenis" class="form-control">
+                  <option value="Mobil">Mobil</option>
+                  <option value="Motor">Motor</option>
+                </select>
+              </div>
+              <div class="form-group" id="newMerkGroup" hidden>
+                <label for="requestMerk">Merk</label>
+                <input
+                  type="text"
+                  id="requestMerk"
+                  class="form-control"
+                  placeholder="Contoh: Toyota"
+                />
+              </div>
+              <div class="form-group form-full">
+                <label for="requestKeluhan">Keluhan</label>
+                <input
+                  type="text"
+                  id="requestKeluhan"
+                  class="form-control"
+                  placeholder="Contoh: Ganti oli dan cek rem"
+                  required
+                />
+              </div>
+              <div class="form-group">
+                <label for="requestTanggal">Tanggal Service</label>
+                <input type="date" id="requestTanggal" class="form-control" />
+              </div>
+              <div class="form-group form-full">
+                <span class="form-hint">
+                  Service akan berstatus <strong>Menunggu</strong> sampai mekanik bengkel mengambil
+                  alih pekerjaan Anda.
+                </span>
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-close-modal="requestModal">
+              Batal
+            </button>
+            <button type="submit" class="btn btn-primary">Kirim Permintaan</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
     <script src="../../js/db.js"></script>
     <script src="../../js/customer-auth.js"></script>
     <script src="../../js/global.js"></script>

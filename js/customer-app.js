@@ -102,9 +102,11 @@ function initCustomerDashboard() {
   }
 
   const vehicles = getCustomerVehicles();
-  const berjalan = vehicles.filter((item) => item.status !== "Selesai");
+  /* Ajuan yang ditolak tidak dihitung sebagai service berjalan. */
+  const berjalan = vehicles.filter(
+    (item) => item.status !== "Selesai" && !isAjuanDitolak(item),
+  );
   const selesai = vehicles.filter((item) => item.status === "Selesai");
-  const total = vehicles.reduce((sum, item) => sum + getServiceTotal(item), 0);
 
   setText("customerGreeting", `Halo, ${customer.nama}!`);
   setText(
@@ -115,10 +117,62 @@ function initCustomerDashboard() {
   setText("statKendaraan", vehicles.length);
   setText("statBerjalan", berjalan.length);
   setText("statSelesai", selesai.length);
-  setText("statTagihan", formatRupiah(total));
+
+  /* Status ajuan & posisi antrean customer. Nomor global datang dari
+     RPC queue_positions() — RLS tidak memperbolehkan sesi customer
+     menghitung antrean milik orang lain. */
+  const menungguPersetujuan = [...vehicles]
+    .filter((item) => isAjuanMenunggu(item))
+    .sort((a, b) => Number(a.id) - Number(b.id))[0];
+
+  const ditolakTerakhir = [...vehicles]
+    .filter((item) => isAjuanDitolak(item))
+    .sort((a, b) => Number(b.id) - Number(a.id))[0];
+
+  const antreSaya = [...berjalan]
+    .filter((item) => !isAjuanMenunggu(item))
+    .sort((a, b) => Number(a.id) - Number(b.id))[0];
+  const posisiAntrean = antreSaya ? getNomorAntrian(antreSaya.id) : null;
+
+  let infoAntrean;
+
+  if (menungguPersetujuan) {
+    infoAntrean = `Ajuan service ${menungguPersetujuan.polisi} menunggu persetujuan bengkel.`;
+  } else if (antreSaya && posisiAntrean) {
+    infoAntrean = `Anda antrian ke-${posisiAntrean} dengan nomor ${formatNomorAntrian(posisiAntrean)}.`;
+  } else if (antreSaya) {
+    infoAntrean =
+      "Nomor antrean belum tersedia. Muat ulang halaman bila belum muncul.";
+  } else if (ditolakTerakhir) {
+    const alasan = String(ditolakTerakhir.approvalNote || "").trim();
+    infoAntrean = alasan
+      ? `Ajuan service ${ditolakTerakhir.polisi} ditolak: ${alasan}`
+      : `Ajuan service ${ditolakTerakhir.polisi} ditolak bengkel.`;
+  } else {
+    infoAntrean = "Belum ada service Anda dalam antrean.";
+  }
+
+  setText("customerQueueInfo", infoAntrean);
+
+  /* Dua kartu tagihan: id yang dipakai di dashboard.html adalah
+     statTagihanLunas & statBelumLunas (bukan "statTagihan", yang
+     tidak pernah ada di HTML sehingga selalu tampil Rp0). */
+  const totalLunas = vehicles
+    .filter((item) => (item.pembayaran || "Belum Lunas") === "Lunas")
+    .reduce((sum, item) => sum + getServiceTotal(item), 0);
+
+  const totalBelumLunas = getCustomerBelumLunas().reduce(
+    (sum, item) => sum + getServiceTotal(item),
+    0,
+  );
+
+  setText("statTagihanLunas", formatRupiah(totalLunas));
+  setText("statBelumLunas", formatRupiah(totalBelumLunas));
 
   const counts = {
-    Menunggu: vehicles.filter((item) => item.status === "Menunggu").length,
+    Menunggu: vehicles.filter(
+      (item) => item.status === "Menunggu" && !isAjuanDitolak(item),
+    ).length,
     Dikerjakan: vehicles.filter((item) => item.status === "Dikerjakan").length,
     "Quality Check": vehicles.filter((item) => item.status === "Quality Check")
       .length,
@@ -281,7 +335,12 @@ function initCustomerVehicles() {
   document
     .getElementById("sortKendaraan")
     ?.addEventListener("change", renderVehicleCards);
+}
 
+/* Form ajukan service dipakai di dua halaman: kendaraan dan
+   dashboard. Binding dipisah dari initCustomerVehicles supaya ikut
+   aktif di dashboard yang tidak punya #vehicleCards. */
+function initRequestForm() {
   document
     .getElementById("btnAjukanService")
     ?.addEventListener("click", openRequestModal);
@@ -630,6 +689,8 @@ function submitServiceRequest(event) {
     spareparts: [],
     pembayaran: "Belum Lunas",
     requestedBy: "customer",
+    approval: "Menunggu",
+    approvalNote: "",
   };
 
   kendaraan.push(record);
@@ -647,6 +708,12 @@ function submitServiceRequest(event) {
   renderVehicleCards();
   renderCustomerServiceTable();
   renderCustomerHistoryTable();
+
+  /* Kalau diajukan dari dashboard, segarkan ringkasan status &
+     daftar riwayat terbaru di halaman itu juga. */
+  if (document.getElementById("customerProgressCircle")) {
+    initCustomerDashboard();
+  }
 }
 
 /* =========================================
@@ -695,7 +762,7 @@ function renderCustomerServiceTable() {
 
   const data = vehicles
     .filter((item) => {
-      if (statusFilter && item.status !== statusFilter) {
+      if (!cocokFilterStatus(item, statusFilter)) {
         return false;
       }
 
@@ -703,6 +770,7 @@ function renderCustomerServiceTable() {
         item.polisi,
         item.keluhan,
         item.status,
+        getApprovalValue(item),
         getMekanikNama(item.mekanikId),
       ].some((value) =>
         String(value || "")
@@ -718,7 +786,9 @@ function renderCustomerServiceTable() {
   setText("statTotalService", vehicles.length);
   setText(
     "statMenunggu",
-    vehicles.filter((item) => item.status === "Menunggu").length,
+    vehicles.filter(
+      (item) => item.status === "Menunggu" && !isAjuanDitolak(item),
+    ).length,
   );
   setText(
     "statDikerjakan",
@@ -732,7 +802,7 @@ function renderCustomerServiceTable() {
   if (!sorted.length) {
     table.innerHTML = `
       <tr class="empty-row">
-        <td colspan="9">Belum ada data service.</td>
+        <td colspan="10">Belum ada data service.</td>
       </tr>
     `;
     setText("customerServiceInfo", "Tidak ada data");
@@ -750,10 +820,14 @@ function renderCustomerServiceTable() {
           <td>${escapeHTML(getMekanikNama(item.mekanikId))}</td>
           <td>${escapeHTML(item.tanggalService || "-")}</td>
           <td>
-            <span class="badge ${getStatusClass(item.status)}">
-              ${escapeHTML(item.status || "-")}
-            </span>
+            <div class="status-cell">
+              <span class="badge ${getStatusClass(item.status)}">
+                ${escapeHTML(item.status || "-")}
+              </span>
+              ${buildAjuanBadge(item)}
+            </div>
           </td>
+          <td>${buildAntrianBadge(item.id)}</td>
           <td>${formatRupiah(getServiceTotal(item))}</td>
           <td>
             <button
@@ -825,6 +899,14 @@ function showServiceDetail(id) {
         <span class="detail-label">Status</span>
         <span class="detail-value">${escapeHTML(item.status || "-")}</span>
       </div>
+      ${
+        item.requestedBy === "customer"
+          ? `<div class="detail-item">
+        <span class="detail-label">Ajuan</span>
+        <span class="detail-value">${escapeHTML(describeAjuan(item))}</span>
+      </div>`
+          : ""
+      }
       <div class="detail-item full">
         <span class="detail-label">Perkiraan Biaya</span>
         <span class="detail-value">${formatRupiah(getServiceTotal(item))}</span>
@@ -1123,9 +1205,7 @@ function renderCustomerReviewSection(item) {
   activeReviewServiceId = item.id;
   activeReviewRating = review ? Number(review.rating) : 0;
 
-  const tanggalUlasan = review?.createdAt
-    ? String(review.createdAt).slice(0, 10)
-    : "";
+  const tanggalUlasan = formatTanggalLokal(review?.createdAt) || "";
 
   section.innerHTML = `
     <div class="review-box">
@@ -1675,7 +1755,11 @@ async function saveProfile(event) {
   updateCustomerSession({ nama, email });
 
   if (typeof dbUpdateProfile === "function") {
-    const hasil = await dbUpdateProfile({ nama, telepon, email, alamat });
+    /* profiles.email TIDAK dikirim: kolom itu terkunci guard_profile_write
+       (schema.sql) — email login yang otoritatif ada di Supabase Auth dan
+       disinkronkan ke profiles lewat trigger sync_profile_email. Mengirim
+       email membuat seluruh UPDATE nama/telepon/alamat ikut ditolak. */
+    const hasil = await dbUpdateProfile({ nama, telepon, alamat });
 
     if (!hasil.ok) {
       showError(
@@ -1957,6 +2041,9 @@ function initCustomerApp() {
   }
 
   initCustomerHeader();
+
+  /* Form ajukan service aktif di halaman kendaraan DAN dashboard. */
+  initRequestForm();
 
   if (document.getElementById("customerProgressCircle")) {
     initCustomerDashboard();

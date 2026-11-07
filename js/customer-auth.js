@@ -53,21 +53,6 @@ function isCustomerLoggedIn() {
   return getCustomerSession() !== null;
 }
 
-function setCustomerSession(account, customer) {
-  const session = {
-    customerId: customer.id,
-    accountId: account.id,
-    email: account.email,
-    nama: customer.nama,
-    loginAt: new Date().toISOString(),
-  };
-
-  sessionStorage.setItem(CUSTOMER_SESSION_KEY, JSON.stringify(session));
-  sessionStorage.setItem("workshopCustomerName", customer.nama);
-
-  return session;
-}
-
 function clearCustomerSession() {
   sessionStorage.removeItem(CUSTOMER_SESSION_KEY);
   sessionStorage.removeItem("workshopCustomerName");
@@ -146,24 +131,7 @@ function getCustomerVehicles(customerId = null) {
     .sort((a, b) => Number(b.id) - Number(a.id));
 }
 
-function getCustomerServices(status = null) {
-  const vehicles = getCustomerVehicles();
-
-  if (!status) {
-    return vehicles;
-  }
-
-  return vehicles.filter((item) => item.status === status);
-}
-
-/* Total tagihan customer. */
-
-function getCustomerTotalTagihan() {
-  return getCustomerVehicles().reduce(
-    (total, item) => total + getServiceTotal(item),
-    0,
-  );
-}
+/* Service selesai yang belum lunas (untuk kartu tagihan). */
 
 function getCustomerBelumLunas() {
   return getCustomerVehicles().filter(

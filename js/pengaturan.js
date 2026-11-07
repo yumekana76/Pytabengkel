@@ -88,6 +88,7 @@ function initPengaturanPage() {
         kendaraan: getKendaraan(),
         mekanik: getMekanik(),
         sparepart: getSparepart(),
+        reviews: getReviews(),
       };
       const blob = new Blob([JSON.stringify(backup, null, 2)], {
         type: "application/json",
@@ -109,7 +110,7 @@ function initPengaturanPage() {
       const file = restoreFile.files[0];
       if (!file) return;
       const reader = new FileReader();
-      reader.onload = () => {
+      reader.onload = async () => {
         try {
           const data = JSON.parse(reader.result);
           if (Array.isArray(data.customers)) saveCustomers(data.customers);
@@ -118,7 +119,25 @@ function initPengaturanPage() {
           if (Array.isArray(data.kendaraan)) saveKendaraan(data.kendaraan);
           if (Array.isArray(data.mekanik)) saveMekanik(data.mekanik);
           if (Array.isArray(data.sparepart)) saveSparepart(data.sparepart);
+          /* Ulasan ikut dipulihkan — dulu tidak disertakan backup
+             maupun restore sehingga rating hilang permanen saat pindah
+             perangkat. */
+          if (Array.isArray(data.reviews)) saveReviews(data.reviews);
           if (data.info) saveWorkshopInfo(data.info);
+
+          /* Tunggu antrean sinkronisasi Supabase selesai dulu: tanpa ini
+             redirect 400 ms membatalkan fetch yang masih berjalan dan
+             restore bisa berhenti separuh di server. */
+          const tersinkron = await dbFlush();
+
+          if (!tersinkron) {
+            showPageNotice(
+              "Data dipulihkan di perangkat ini, tetapi gagal dikirim ke server. Periksa koneksi lalu coba lagi.",
+              "error",
+            );
+            return;
+          }
+
           showPageNotice(
             "Restore data berhasil. Membuka dashboard…",
             "success",
@@ -210,6 +229,19 @@ function initPengaturanPage() {
           }
         }
 
+        /* Tunggu antrean sinkronisasi Supabase selesai sebelum menyatakan
+           sukses & redirect — reset bisa berhenti separuh di server kalau
+           fetch yang masih jalan dibatalkan oleh perpindahan halaman. */
+        const tersinkron = await dbFlush();
+
+        if (!tersinkron) {
+          showPageNotice(
+            "Data dihapus di perangkat ini, tetapi gagal dikirim ke server. Periksa koneksi lalu coba lagi.",
+            "error",
+          );
+          return;
+        }
+
         closeModal("resetModal");
         showPageNotice(
           selectedScope === "admin"
@@ -259,6 +291,18 @@ function initPengaturanPage() {
             (review) => !removedServiceIds.has(Number(review.serviceId)),
           ),
         );
+      }
+
+      /* Sama seperti reset di atas: tunggu antrean sinkronisasi selesai
+         sebelum menyatakan sukses & redirect. */
+      const tersinkron = await dbFlush();
+
+      if (!tersinkron) {
+        showPageNotice(
+          "Data dihapus di perangkat ini, tetapi gagal dikirim ke server. Periksa koneksi lalu coba lagi.",
+          "error",
+        );
+        return;
       }
 
       closeModal("resetModal");

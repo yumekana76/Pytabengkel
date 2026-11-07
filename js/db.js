@@ -15,6 +15,9 @@
 var DB = {
   mode: isSupabaseMode() ? "supabase" : "local",
   ready: false,
+  /* Peta posisi antrean (id service -> nomor urut) dari RPC
+     queue_positions(). Null = belum dimuat / RPC belum ada. */
+  antrian: null,
   cache: {
     customers: [],
     services: [],
@@ -33,6 +36,7 @@ var DB = {
     reviews: new Set(),
   },
   queue: Promise.resolve(),
+  writeErrors: 0,
 };
 
 /* ---------------------------------------------------------------------
@@ -57,10 +61,22 @@ function notifyDbError(message) {
 /* Menjalankan operasi tulis satu per satu (menghindari race condition). */
 function dbQueue(task) {
   DB.queue = DB.queue.then(task).catch((error) => {
+    DB.writeErrors += 1;
     notifyDbError(error?.message || String(error));
   });
 
   return DB.queue;
+}
+
+/* Tunggu sampai SEMUA pekerjaan tulis yang sudah masuk antrean selesai.
+   save*() bersifat fire-and-forget (tidak mengembalikan promise), jadi
+   pemanggil yang butuh kepastian — mis. Restore/Reset Data sebelum
+   redirect — memakai fungsi ini. Mengembalikan `true` kalau tidak ada
+   pekerjaan yang gagal selama menunggu. */
+function dbFlush() {
+  const awal = DB.writeErrors;
+
+  return dbQueue(async () => {}).then(() => DB.writeErrors === awal);
 }
 
 /* Mirror ke localStorage supaya data tidak hilang & mode lokal tetap jalan. */
@@ -169,6 +185,8 @@ function serviceToDb(row) {
     spareparts: row.spareparts || [],
     pembayaran: row.pembayaran || "Belum Lunas",
     requested_by: row.requestedBy || "admin",
+    approval: row.approval || "Disetujui",
+    approval_note: row.approvalNote || "",
   };
 }
 
@@ -190,6 +208,15 @@ function serviceFromDb(row) {
     spareparts: row.spareparts || [],
     pembayaran: row.pembayaran || "Belum Lunas",
     requestedBy: row.requested_by || "admin",
+    /* Fallback kalau kolom approval belum ada di database: ajuan
+       customer yang masih "Menunggu" dianggap menunggu persetujuan,
+       sisanya sudah disetujui. */
+    approval:
+      row.approval ||
+      (row.requested_by === "customer" && row.status === "Menunggu"
+        ? "Menunggu"
+        : "Disetujui"),
+    approvalNote: row.approval_note || "",
   };
 }
 
@@ -275,6 +302,29 @@ async function dbInitOnce() {
         return [];
       });
 
+    /* Posisi antrean service (RPC queue_positions) dimuat berbarengan
+       dengan tabel lain. Catch sendiri: kalau fungsi RPC belum dibuat
+       (schema.sql belum dijalankan ulang) halaman lain tetap jalan dan
+       posisi antrean jatuh ke hitung lokal. */
+    const antrianReady = supabaseClient
+      .rpc("queue_positions")
+      .then((result) => {
+        if (result.error) throw result.error;
+        return new Map(
+          (result.data || []).map((row) => [
+            Number(row.service_id),
+            Number(row.nomor),
+          ]),
+        );
+      })
+      .catch((error) => {
+        dbLog(
+          "Gagal memuat antrean (jalankan ulang supabase/schema.sql?):",
+          error.message,
+        );
+        return null;
+      });
+
     const [
       customers,
       services,
@@ -283,6 +333,7 @@ async function dbInitOnce() {
       spareparts,
       info,
       profiles,
+      antrian,
     ] = await Promise.all([
       supabaseClient.from("customers").select("*").order("id"),
       supabaseClient.from("services").select("*").order("id"),
@@ -291,7 +342,10 @@ async function dbInitOnce() {
       supabaseClient.from("spareparts").select("*").order("id"),
       supabaseClient.from("workshop_info").select("*").limit(1),
       supabaseClient.from("profiles").select("*"),
+      antrianReady,
     ]);
+
+    DB.antrian = antrian || null;
 
     if (customers.error) throw customers.error;
     if (services.error) throw services.error;
@@ -495,8 +549,9 @@ function dbLoadFromLocal() {
 }
 
 /* Akun demo mode lokal.
-   Credential diambil dari `js/config.js` (window.SUPABASE_CONFIG.localAccounts)
-   dan tidak pernah ditampilkan di halaman login. */
+   Default credential ada di bawah; bisa dioverride lewat
+   `window.SUPABASE_CONFIG.localAccounts` kalau perlu. Tidak pernah
+   ditampilkan di halaman login. */
 function dbBuildDemoAccounts() {
   const localAccounts = window.SUPABASE_CONFIG?.localAccounts || {};
 
@@ -522,7 +577,7 @@ function dbBuildDemoAccounts() {
     {
       id: 2,
       customerId: null,
-      nama: "Customer",
+      nama: "Budi Setiawan",
       email: customerAccount.email,
       password: customerAccount.password,
       role: "customer",
@@ -663,6 +718,11 @@ function saveCustomers(customers) {
       const ownId = profile?.customer_id ? Number(profile.customer_id) : null;
 
       if (!ownId) {
+        /* Sebelumnya diam saja — perubahan profil customer tidak
+           pernah sampai ke server tanpa kabar apa pun. */
+        notifyDbError(
+          "Perubahan customer tidak tersimpan ke server: profil belum terhubung ke data customer.",
+        );
         return;
       }
 
@@ -908,6 +968,11 @@ function saveReviews(reviews) {
       const ownId = profile?.customer_id ? Number(profile.customer_id) : null;
 
       if (!ownId) {
+        /* Sebelumnya diam saja — user mengira ulasan tersimpan padahal
+           tidak. Beri tahu supaya kegagalan tidak tersembunyi. */
+        notifyDbError(
+          "Ulasan tidak tersimpan ke server: profil belum terhubung ke data customer.",
+        );
         return;
       }
 
@@ -1077,18 +1142,6 @@ async function dbReloadCustomerAccounts() {
   }));
 
   return DB.cache.accounts;
-}
-
-function findCustomerAccountByEmail(email) {
-  const target = String(email || "")
-    .trim()
-    .toLowerCase();
-
-  return (
-    getCustomerAccounts().find(
-      (account) => String(account.email || "").toLowerCase() === target,
-    ) || null
-  );
 }
 
 function getCustomerById(customerId) {

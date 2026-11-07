@@ -25,5 +25,4 @@ dist/
 Thumbs.db
 *.log
 
-# bla bla bla
-README.md
+.aider*

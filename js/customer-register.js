@@ -5,12 +5,6 @@
 
 const registerForm = document.getElementById("registerForm");
 
-let noticeTimer = null;
-
-if (typeof initTheme === "function") {
-  initTheme();
-}
-
 /* TAMPILKAN / SEMBUNYIKAN PASSWORD */
 
 document.getElementById("passwordToggle")?.addEventListener("click", () => {
@@ -100,63 +94,7 @@ if (registerForm) {
   });
 }
 
-/* =========================================
-   HELPER
-   ========================================= */
+/* HELPER (isValidEmail, showNotice, showError, showSuccess,
+   hideMessages) sudah disentralisasi di global.js — halaman ini
+   selalu memuat global.js sebelum skrip ini. */
 
-function isValidEmail(email) {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-}
-
-/* Notifikasi mengambang (gaya sama dengan halaman dashboard). */
-function showNotice(message, type = "error") {
-  let notice = document.getElementById("loginNotice");
-
-  if (!notice) {
-    notice = document.createElement("div");
-    notice.id = "loginNotice";
-    notice.setAttribute("role", "status");
-    notice.className = "page-notice";
-    document.body.appendChild(notice);
-  }
-
-  if (noticeTimer) {
-    window.clearTimeout(noticeTimer);
-    noticeTimer = null;
-  }
-
-  notice.hidden = false;
-  notice.className =
-    "page-notice " + (type === "success" ? "success" : "error");
-  notice.textContent = message;
-
-  noticeTimer = window.setTimeout(() => {
-    notice.hidden = true;
-    notice.textContent = "";
-    notice.className = "page-notice";
-    noticeTimer = null;
-  }, type === "success" ? 2500 : 4000);
-}
-
-function showError(message) {
-  showNotice(message, "error");
-}
-
-function showSuccess(message) {
-  showNotice(message, "success");
-}
-
-function hideMessages() {
-  const notice = document.getElementById("loginNotice");
-
-  if (!notice) return;
-
-  notice.hidden = true;
-  notice.textContent = "";
-  notice.className = "page-notice";
-
-  if (noticeTimer) {
-    window.clearTimeout(noticeTimer);
-    noticeTimer = null;
-  }
-}

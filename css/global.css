@@ -587,6 +587,21 @@ a.stat-card:focus-visible {
   overflow: hidden;
 }
 
+/* Jarak antar panel yang berurutan (form + daftar) di banyak
+   halaman admin & customer. Dulu ada di css/kendaraan.css yang
+   hanya dimuat admin-page/kendaraan.html, jadi 15 halaman lain
+   (keuangan, pengaturan, profil, dst.) kehilangan margin ini. */
+.vehicle-panel {
+  margin-bottom: 20px;
+}
+
+/* Panel tambahan di dashboard admin (Ajuan Service & Antrean Service)
+   memakai jarak antar panel yang sama supaya tidak menempel. */
+.ajuan-panel,
+.antrian-panel {
+  margin-bottom: 20px;
+}
+
 .panel-header {
   display: flex;
   justify-content: space-between;
@@ -847,6 +862,144 @@ tbody tr:last-child td {
 .badge.danger {
   background: var(--danger-bg);
   color: var(--danger-text);
+}
+
+/* Badge nomor antrean service (A-01, A-02, ...). */
+.badge.antrian {
+  background: var(--primary-soft);
+  color: var(--primary);
+}
+.badge.antrian.off {
+  background: var(--surface-3);
+  color: var(--secondary);
+}
+
+/* Panel urutan antrean (dashboard admin). */
+.antrian-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: var(--space-lg) var(--space-xl);
+  max-height: 260px;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.antrian-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface-2);
+}
+
+.antrian-nomor {
+  min-width: 52px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--primary);
+}
+
+.antrian-info {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.antrian-info span {
+  font-size: 12px;
+  color: var(--secondary);
+}
+
+.antrian-empty {
+  padding: 0;
+  color: var(--secondary);
+  font-size: 13px;
+  text-align: center;
+}
+
+/* Posisi antrean customer (dashboard customer). */
+.antrian-customer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: var(--primary-soft);
+  color: var(--primary);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+/* Badge status + ajuan disusun bertumpuk dalam satu sel tabel. */
+.status-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: flex-start;
+}
+
+/* Panel ajuan service menunggu persetujuan (dashboard admin). */
+.ajuan-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: var(--space-lg) var(--space-xl);
+  max-height: 300px;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.ajuan-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface-2);
+}
+
+.ajuan-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.ajuan-info span {
+  color: var(--secondary);
+  font-size: 12px;
+}
+
+.ajuan-aksi {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.ajuan-empty {
+  padding: 0;
+  color: var(--secondary);
+  font-size: 13px;
+  text-align: center;
+}
+
+.ajuan-ringkasan {
+  margin: 0 0 14px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--surface-2);
+  color: var(--secondary);
+  font-size: 13px;
 }
 
 /* =========================================

@@ -526,6 +526,25 @@ var Auth = {
       return null;
     }
 
+    /* Jalur utama: RPC security definer yang membuat profil +
+       menghubungkan ke customer secara idempoten (aman dari policy
+       INSERT self yang hanya untuk admin). */
+    try {
+      const { data: rpcData, error: rpcError } = await supabaseClient.rpc(
+        "ensure_my_profile",
+      );
+
+      if (!rpcError && Array.isArray(rpcData) && rpcData.length) {
+        return rpcData[0];
+      }
+
+      if (rpcError) {
+        console.warn("ensure_my_profile gagal, fallback SELECT:", rpcError.message);
+      }
+    } catch (error) {
+      console.warn("ensure_my_profile error, fallback SELECT:", error?.message || error);
+    }
+
     const { data, error } = await supabaseClient
       .from("profiles")
       .select("*")
@@ -602,11 +621,60 @@ var Auth = {
       return { ok: false, error: "Email atau password salah." };
     }
 
-    const customer = account.customerId
+    const role = account.role === "admin" ? "admin" : "customer";
+
+    /* Akun customer harus terhubung ke baris di tabel customers.
+       Urutan resolusi: id tersimpan -> email -> buat baru (lazy-create),
+       supaya akun demo/lama yang customerId-nya null tidak buntu
+       di portal customer. */
+    let customer = account.customerId
       ? getCustomerById(account.customerId)
       : null;
 
-    const role = account.role === "admin" ? "admin" : "customer";
+    if (!customer && role === "customer") {
+      customer =
+        getCustomers().find(
+          (item) =>
+            String(item.email || "").toLowerCase() === target,
+        ) || null;
+    }
+
+    if (!customer && role === "customer") {
+      const customers = getCustomers();
+      /* nextNumericId ada di global.js (tidak dimuat halaman index) —
+         pakai fallback sederhana kalau helper itu belum tersedia. */
+      const newId =
+        typeof nextNumericId === "function"
+          ? nextNumericId(customers)
+          : Math.max(0, ...customers.map((item) => Number(item.id) || 0)) + 1;
+      customer = {
+        id: newId,
+        kode: nextKode("customers", customers),
+        nama: account.nama || "Customer",
+        telepon: "",
+        email: account.email,
+        alamat: "",
+        catatan: "",
+        registeredAt: new Date().toISOString(),
+        registeredVia: "local",
+      };
+      customers.push(customer);
+      saveCustomers(customers);
+    }
+
+    /* Tautkan akun -> customer supaya login berikutnya langsung cocok. */
+    if (role === "customer" && customer && Number(account.customerId) !== Number(customer.id)) {
+      account.customerId = Number(customer.id);
+      saveCustomerAccounts(getLocalAccounts());
+    }
+
+    if (role === "customer" && !customer) {
+      return {
+        ok: false,
+        error:
+          "Data customer untuk akun ini belum ada dan gagal dibuat otomatis. Hubungi admin bengkel.",
+      };
+    }
 
     authState.user = { email: account.email };
     authState.profile = {

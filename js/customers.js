@@ -657,8 +657,9 @@ async function saveCustomerForm(event) {
   const buatAkun = document.getElementById("customerBuatAkun")?.checked;
   const target = id ? customers.find((item) => Number(item.id) === Number(id)) : customers[customers.length - 1];
 
+  let hasilAkun = null;
   if (buatAkun && target) {
-    await buatAkunCustomer(target);
+    hasilAkun = await buatAkunCustomer(target);
   }
 
   closeModal("customerModal");
@@ -668,11 +669,19 @@ async function saveCustomerForm(event) {
   if (typeof renderCustomers === "function") renderCustomers();
   if (typeof updateCustomerStats === "function") updateCustomerStats();
   if (typeof updateDashboard === "function") updateDashboard();
-  showPageNotice("Data customer tersimpan di tabel.", "success");
+  /* Satu notice gabungan: data tersimpan + hasil pembuatan akun
+     (sebelumnya pesan akun menimpa pesan "data tersimpan"). */
+  const dataTersimpan = "Data customer tersimpan di tabel.";
+  showPageNotice(
+    hasilAkun ? `${dataTersimpan} ${hasilAkun.text}` : dataTersimpan,
+    hasilAkun && !hasilAkun.ok ? "error" : "success",
+  );
 }
 
 /* Buat akun login customer (mode lokal: simpan password,
-   mode Supabase: kirim tautan login ke email). */
+   mode Supabase: kirim tautan login ke email).
+   Mengembalikan { ok, text } — PEMANGGIL yang menampilkan pesan
+   (bukan fungsi ini), supaya tidak ada notice yang saling menimpa. */
 async function buatAkunCustomer(customer) {
   const emailAkun =
     document.getElementById("customerAkunEmail")?.value.trim() ||
@@ -683,11 +692,10 @@ async function buatAkunCustomer(customer) {
     document.getElementById("customerAkunPassword")?.value.trim() || "";
 
   if (!emailAkun) {
-    showPageNotice(
-      "Akun login tidak dibuat: email customer masih kosong.",
-      "error",
-    );
-    return;
+    return {
+      ok: false,
+      text: "Akun login tidak dibuat: email customer masih kosong.",
+    };
   }
 
   if (typeof isSupabaseMode === "function" && isSupabaseMode()) {
@@ -697,26 +705,23 @@ async function buatAkunCustomer(customer) {
     );
 
     if (!result.ok) {
-      showPageNotice(
-        result.error || "Gagal mengirim tautan login ke customer.",
-        "error",
-      );
-      return;
+      return {
+        ok: false,
+        text: result.error || "Gagal mengirim tautan login ke customer.",
+      };
     }
 
-    showPageNotice(
-      `Tautan login berhasil dikirim ke ${emailAkun}.`,
-      "success",
-    );
-    return;
+    return {
+      ok: true,
+      text: `Tautan login berhasil dikirim ke ${emailAkun}.`,
+    };
   }
 
   if (password.length < 6) {
-    showPageNotice(
-      "Akun login tidak dibuat: password minimal 6 karakter.",
-      "error",
-    );
-    return;
+    return {
+      ok: false,
+      text: "Akun login tidak dibuat: password minimal 6 karakter.",
+    };
   }
 
   const bentrok = getCustomerAccounts().find(
@@ -725,11 +730,10 @@ async function buatAkunCustomer(customer) {
   );
 
   if (bentrok) {
-    showPageNotice(
-      "Akun login tidak dibuat: email tersebut sudah dipakai akun lain.",
-      "error",
-    );
-    return;
+    return {
+      ok: false,
+      text: "Akun login tidak dibuat: email tersebut sudah dipakai akun lain.",
+    };
   }
 
   const accounts = getCustomerAccounts();
@@ -755,7 +759,7 @@ async function buatAkunCustomer(customer) {
     saveCustomers(customers);
   }
 
-  showPageNotice(`Akun login customer dibuat (${emailAkun}).`, "success");
+  return { ok: true, text: `Akun login customer dibuat (${emailAkun}).` };
 }
 
 /* HAPUS CUSTOMER */
@@ -1125,19 +1129,16 @@ async function saveCustomerAccountForm(event) {
 
   saveCustomerAccounts(accounts);
 
-  addLog(
-    "Akun",
-    "Customer",
-    `Akun login ${email} untuk ${customer.nama}`,
-    getKode("customers", customer),
-  );
-
-  /* Samakan email pada data customer agar konsisten. */
+  /* Samakan email pada data customer agar konsisten.
+     Dijalankan SEBELUM addLog supaya objek customer sudah tersedia
+     (dulu `customer` tidak pernah dideklarasikan -> ReferenceError,
+     modal menggantung dan log/sinkronisasi tidak jalan). */
 
   const customers = getCustomers();
   const customerIndex = customers.findIndex(
     (item) => Number(item.id) === customerId,
   );
+  const customer = customerIndex !== -1 ? customers[customerIndex] : null;
 
   if (customerIndex !== -1) {
     customers[customerIndex] = {
@@ -1147,6 +1148,13 @@ async function saveCustomerAccountForm(event) {
 
     saveCustomers(customers);
   }
+
+  addLog(
+    "Akun",
+    "Customer",
+    `Akun login ${email} untuk ${customer?.nama || "customer"}`,
+    customer ? getKode("customers", customer) : "",
+  );
 
   closeModal("customerAccountModal");
 

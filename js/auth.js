@@ -6,14 +6,6 @@
 
 var ADMIN_LOGIN_KEY = "workshopLoggedIn";
 
-function isAdminLoggedIn() {
-  try {
-    return sessionStorage.getItem(ADMIN_LOGIN_KEY) === "true";
-  } catch (error) {
-    return false;
-  }
-}
-
 function setAdminSession(nama = "Administrator Bengkel") {
   sessionStorage.setItem(ADMIN_LOGIN_KEY, "true");
   sessionStorage.setItem("workshopUserName", nama);
