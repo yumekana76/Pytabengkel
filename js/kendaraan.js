@@ -13,6 +13,12 @@ function resetKendaraanForm() {
 
   populateVehicleFormRelations();
 
+  const keluhanList = document.getElementById("vehicleKeluhanList");
+  if (keluhanList) {
+    keluhanList.innerHTML = "";
+    addKeluhanRow("vehicleKeluhanList", "");
+  }
+
   const id = document.getElementById("vehicleId");
 
   if (id) {
@@ -109,7 +115,7 @@ function editKendaraan(id, button = null) {
 
   const merk = document.getElementById("vehicleMerk");
 
-  const keluhan = document.getElementById("vehicleKeluhan");
+  const keluhanList = document.getElementById("vehicleKeluhanList");
 
   const status = document.getElementById("vehicleStatus");
 
@@ -153,9 +159,7 @@ function editKendaraan(id, button = null) {
     merk.value = item.merk;
   }
 
-  if (keluhan) {
-    keluhan.value = item.keluhan;
-  }
+  setKeluhanRows("vehicleKeluhanList", item.keluhan);
 
   if (status) {
     status.value = item.status;
@@ -174,6 +178,10 @@ function editKendaraan(id, button = null) {
 
 function saveKendaraanForm(event) {
   event.preventDefault();
+
+  if (saveKendaraanForm._busy) return;
+  saveKendaraanForm._busy = true;
+  setTimeout(() => { saveKendaraanForm._busy = false; }, 0);
   clearFormError("vehicleForm");
   clearPageNotice();
   const value = (id) => document.getElementById(id).value.trim();
@@ -295,7 +303,7 @@ function saveKendaraanForm(event) {
     pelangganId: customer.id,
     jenis: document.getElementById("vehicleJenis").value,
     merk,
-    keluhan: value("vehicleKeluhan"),
+    keluhan: getKeluhanRows("vehicleKeluhanList"),
     status,
     /* Form ini tidak punya field pembayaran: pertahankan nilai lama
        (sudah dijaga guard di atas); service baru selalu "Belum Lunas". */
@@ -667,6 +675,10 @@ function initKendaraanPage() {
   if (form) {
     form.addEventListener("submit", saveKendaraanForm);
   }
+
+  document
+    .getElementById("btnTambahVehicleKeluhan")
+    ?.addEventListener("click", () => addKeluhanRow("vehicleKeluhanList", ""));
 
   if (search) {
     search.addEventListener("input", function () {

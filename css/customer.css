@@ -61,13 +61,16 @@
    gradient hero (bukan primary-di-atas-primary). */
 .customer-hero .btn {
   background: #fff;
-  color: var(--primary);
+  /* Tombol ini berlatar putih di SEMUA tema, jadi warnanya memakai
+     --primary-solid (biru gelap) — bukan --primary-text yang di mode
+     gelap berwarna biru muda dan tidak terbaca di atas putih. */
+  color: var(--primary-solid);
   box-shadow: var(--shadow-sm);
 }
 
 .customer-hero .btn:hover {
   background: rgba(255, 255, 255, 0.9);
-  color: var(--primary-dark);
+  color: var(--primary-solid-hover);
 }
 
 /* KARTU KENDARAAN */
@@ -92,7 +95,7 @@
 
 .vehicle-card:hover {
   transform: translateY(-2px);
-  border-color: var(--primary);
+  border-color: var(--primary-text);
 }
 
 .vehicle-card-head {
@@ -157,7 +160,12 @@
   background: var(--surface);
   box-shadow: var(--shadow-sm);
   margin-bottom: 20px;
-  flex-wrap: wrap;
+  min-width: 0;
+}
+
+.profile-card > div:not(.profile-avatar) {
+  min-width: 0;
+  flex: 1 1 auto;
 }
 
 .profile-avatar {
@@ -176,12 +184,16 @@
 .profile-card h3 {
   font-size: 20px;
   margin-bottom: 4px;
+  word-break: break-word;
+  overflow-wrap: break-word;
 }
 
 .profile-card p {
   color: var(--secondary);
   font-size: 13px;
   line-height: 1.7;
+  word-break: break-word;
+  overflow-wrap: break-word;
 }
 
 /* PILIHAN TEMA */
@@ -205,11 +217,11 @@
 }
 
 .theme-option:hover {
-  border-color: var(--primary);
+  border-color: var(--primary-text);
 }
 
 .theme-option input {
-  accent-color: var(--primary);
+  accent-color: var(--primary-text);
   width: 16px;
   height: 16px;
 }
@@ -226,12 +238,12 @@
 }
 
 .theme-option.active {
-  border-color: var(--primary);
+  border-color: var(--primary-text);
   background: var(--primary-soft);
 }
 
 .theme-option.active .theme-option-icon {
-  background: var(--primary);
+  background: var(--primary-solid);
   color: #fff;
 }
 
@@ -267,7 +279,7 @@
 }
 
 .info-item i {
-  color: var(--primary);
+  color: var(--primary-text);
   margin-top: 3px;
 }
 

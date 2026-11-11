@@ -615,7 +615,7 @@ function skeletonPreset() {
   const isCustomer = key.indexOf("customers-page") !== -1;
 
   const presets = {
-    /* --- Portal admin (sidebar 10 menu) ---
+    /* --- Portal admin (sidebar 11 menu) ---
        cols  = jumlah kolom <th> tabelnya, footer = table-footer
        ("info" = teks kiri saja, "pag" = + tombol pagination),
        toolbar = jumlah select di panel-header. */
@@ -650,7 +650,7 @@ function skeletonPreset() {
       cards: 5,
       chart: true, /* panel grafik pendapatan per bulan */
       toolbar: 3,
-      toolbarButtons: 2, /* Cetak Rekap + CSV */
+      toolbarButtons: 3, /* Cetak Rekap + CSV + Excel */
       tabs: 3,
       cols: 9,
       footer: "pag",
@@ -685,6 +685,7 @@ function skeletonPreset() {
       footer: "info",
     },
     "admin-page/ulasan.html": { cards: 4, toolbar: 2, cols: 8, footer: "pag" },
+    "admin-page/users.html": { cards: 4, toolbar: 2, cols: 5, footer: "info" },
 
     /* --- Portal customer (sidebar 7 menu) --- */
     "customers-page/dashboard.html": {
@@ -727,7 +728,7 @@ function skeletonPreset() {
   return Object.assign(
     {
       cards: 4,
-      nav: isCustomer ? 7 : 10,
+      nav: isCustomer ? 7 : 11,
       rows: 6,
       cols: 9,
       footer: "info",

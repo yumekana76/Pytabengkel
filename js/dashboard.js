@@ -101,7 +101,10 @@ function updateDashboard() {
   if (circle) {
     const total = kendaraanStatus.length;
     if (!total) {
-      circle.style.background = "conic-gradient(#e2e8f0 0 100%)";
+      /* Warna track harus mengikuti tema; nilai hardcoded terang
+         membuat ring putih mencolok di mode gelap. */
+      circle.style.background =
+        "conic-gradient(var(--border) 0 100%)";
     } else {
       const waitingEnd = (ringkasan.menunggu / total) * 100;
       const workingEnd = waitingEnd + (ringkasan.dikerjakan / total) * 100;
@@ -339,8 +342,11 @@ function resetUnifiedServiceFields() {
   const tanggal = document.getElementById("unifiedTanggal");
   if (tanggal) tanggal.value = getTodayLocalDate();
 
-  const keluhan = document.getElementById("unifiedKeluhan");
-  if (keluhan) keluhan.value = "";
+  const keluhanList = document.getElementById("unifiedKeluhanList");
+  if (keluhanList) {
+    keluhanList.innerHTML = "";
+    addKeluhanRow("unifiedKeluhanList", "");
+  }
 
   const biayaJasa = document.getElementById("unifiedBiayaJasa");
   if (biayaJasa) biayaJasa.value = "";
@@ -606,6 +612,11 @@ function resetUnifiedForm() {
     list.innerHTML = "";
     addUnifiedSparepartRow();
   }
+  const keluhanList = document.getElementById("unifiedKeluhanList");
+  if (keluhanList) {
+    keluhanList.innerHTML = "";
+    addKeluhanRow("unifiedKeluhanList", "");
+  }
   const tanggal = document.getElementById("unifiedTanggal");
   if (tanggal && !tanggal.value)
     tanggal.value = getTodayLocalDate();
@@ -614,13 +625,17 @@ function resetUnifiedForm() {
 
 function saveUnifiedForm(event) {
   event.preventDefault();
+
+  if (saveUnifiedForm._busy) return;
+  saveUnifiedForm._busy = true;
+  setTimeout(() => { saveUnifiedForm._busy = false; }, 0);
   clearFormError("unifiedForm");
   clearPageNotice();
   const value = (id) => document.getElementById(id).value.trim();
 
   const polisi = value("unifiedPolisi");
   const merk = value("unifiedMerk");
-  const keluhan = value("unifiedKeluhan");
+  const keluhan = getKeluhanRows("unifiedKeluhanList");
   const namaCustomer = value("unifiedCustomerNama");
   const status = document.getElementById("unifiedStatus").value;
   const biayaJasa = Number(value("unifiedBiayaJasa")) || 0;
@@ -965,10 +980,16 @@ function updateDashboardEditTotalPreview() {
       Number(row.querySelector("[data-dash-part-quantity]")?.value) || 0;
     return total + (Number(part?.harga) || 0) * jumlah;
   }, 0);
-  setText(
-    "dashEditTotalPreview",
-    formatRupiah(biayaJasa + totalSparepart),
+  const subtotal = biayaJasa + totalSparepart;
+  const service = getKendaraan().find(
+    (item) =>
+      Number(item.id) ===
+      Number(document.getElementById("dashEditId")?.value),
   );
+  const diskon = service
+    ? getPromoDiscountForSubtotal(service, subtotal)
+    : 0;
+  setText("dashEditTotalPreview", formatRupiah(subtotal - diskon));
 }
 
 function getDashboardSparepartsFromForm() {
@@ -1061,6 +1082,10 @@ function openDashboardEdit(id, button = null) {
 
 function saveDashboardEdit(event) {
   event.preventDefault();
+
+  if (saveDashboardEdit._busy) return;
+  saveDashboardEdit._busy = true;
+  setTimeout(() => { saveDashboardEdit._busy = false; }, 0);
   clearFormError("dashboardEditForm");
   const id = document.getElementById("dashEditId").value;
   const kendaraan = getKendaraan();
@@ -1446,6 +1471,9 @@ function initDashboardInput() {
   document
     .getElementById("btnTambahUnifiedSparepart")
     ?.addEventListener("click", () => addUnifiedSparepartRow());
+  document
+    .getElementById("btnTambahUnifiedKeluhan")
+    ?.addEventListener("click", () => addKeluhanRow("unifiedKeluhanList", ""));
   document
     .querySelectorAll('[data-close-modal="unifiedModal"]')
     .forEach((button) => {

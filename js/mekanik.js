@@ -143,6 +143,10 @@ function editMekanik(id) {
 
 function saveMekanikForm(event) {
   event.preventDefault();
+
+  if (saveMekanikForm._busy) return;
+  saveMekanikForm._busy = true;
+  setTimeout(() => { saveMekanikForm._busy = false; }, 0);
   clearFormError("mekanikForm");
   clearPageNotice();
   const id = document.getElementById("mekanikId").value;

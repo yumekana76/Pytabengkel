@@ -8,6 +8,7 @@
     />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Pengaturan</title>
+    <link rel="stylesheet" href="../../css/fonts.css" />
     <link rel="stylesheet" href="../../css/global.css" />
     <link
       rel="stylesheet"
@@ -43,6 +44,15 @@
         <h1>Pytabengkel</h1>
       </div>
       <div class="topbar-actions">
+        <a
+          class="topbar-landing"
+          href="../landing.html"
+          aria-label="Kembali ke Landing Page"
+          title="Kembali ke Landing Page"
+        >
+          <i class="fa-solid fa-arrow-left" aria-hidden="true"></i>
+          <span>Landing Page</span>
+        </a>
         <button
           type="button"
           class="icon-btn theme-toggle"
@@ -109,6 +119,13 @@
             ><i class="fa-solid fa-gears nav-icon" aria-hidden="true"></i>
             Sparepart
           </a>
+          <a href="diskon.html" class="nav-link"
+          ><i class="fa-solid fa-tags nav-icon" aria-hidden="true"></i>
+          Diskon
+          </a>
+          <a href="users.html" class="nav-link" data-super-admin-only hidden>
+            <i class="fa-solid fa-crown nav-icon" aria-hidden="true"></i><span>Kelola Pengguna</span>
+          </a>
           <a href="pengaturan.html" class="nav-link active" aria-current="page"
             ><i class="fa-solid fa-gear nav-icon" aria-hidden="true"></i>
             Pengaturan
@@ -128,6 +145,16 @@
             </button>
             <span class="setting-description"
               >Kelola informasi bengkel, seperti nama, alamat, dan kontak.</span
+            >
+          </div>
+          <div class="setting-btn">
+            <button type="button" class="btn btn-secondary" id="btnHeroFoto">
+              <i class="fa-solid fa-image" aria-hidden="true"></i>
+              Hero Landing
+            </button>
+            <span class="setting-description"
+              >Atur foto latar dan teks pada bagian hero landing page (foto
+              maks 5 MB).</span
             >
           </div>
           <div class="setting-btn">
@@ -250,6 +277,101 @@
             <button type="submit" class="btn btn-primary">Simpan</button>
           </div>
         </form>
+      </div>
+    </div>
+    <div class="modal-overlay" id="heroFotoModal">
+      <div
+        class="modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="heroFotoModal-title"
+      >
+        <div class="modal-header">
+          <div>
+            <h3 id="heroFotoModal-title">Hero Landing</h3>
+            <p>Atur foto latar dan teks yang tampil di bagian hero.</p>
+          </div>
+          <button
+            type="button"
+            class="modal-close"
+            data-close-modal="heroFotoModal"
+            aria-label="Tutup"
+          >
+            ×
+          </button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label for="heroLabel">Label Kecil</label>
+            <input
+              type="text"
+              id="heroLabel"
+              class="form-control"
+              maxlength="60"
+              placeholder="Contoh: Promo bulan ini"
+            />
+          </div>
+          <div class="form-group">
+            <label for="heroJudul">Judul</label>
+            <input
+              type="text"
+              id="heroJudul"
+              class="form-control"
+              maxlength="120"
+              placeholder="Contoh: Rawat kendaraan tanpa antre dan tanpa ribet."
+            />
+          </div>
+          <div class="form-group">
+            <label for="heroDeskripsi">Deskripsi</label>
+            <textarea
+              id="heroDeskripsi"
+              class="form-control"
+              rows="3"
+              maxlength="400"
+              placeholder="Tuliskan deskripsi singkat layanan bengkel."
+            ></textarea>
+          </div>
+          <div class="form-group">
+            <label>Foto Latar Hero</label>
+            <div class="hero-foto-preview" id="heroFotoPreviewWrap">
+              <img id="heroFotoPreview" alt="Pratinjau foto hero" hidden />
+              <span class="hero-foto-empty" id="heroFotoEmpty">
+                <i class="fa-solid fa-image" aria-hidden="true"></i>
+                Belum ada foto — latar gradien tema yang digunakan.
+              </span>
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="heroFotoInput">Pilih Foto Baru</label>
+            <input
+              type="file"
+              id="heroFotoInput"
+              class="form-control"
+              accept="image/*"
+            />
+            <span class="setting-description"
+              >Format jpg/png/webp, maksimal 5 MB. Foto lama otomatis
+              diganti.</span
+            >
+          </div>
+          <p class="form-error" id="heroFotoFormError" hidden></p>
+        </div>
+        <div class="modal-footer">
+          <button
+            type="button"
+            class="btn btn-secondary"
+            id="btnHapusHeroFoto"
+            hidden
+          >
+            <i class="fa-solid fa-trash" aria-hidden="true"></i> Hapus Foto
+          </button>
+          <button type="button" class="btn btn-secondary" data-close-modal="heroFotoModal">
+            Batal
+          </button>
+          <button type="button" class="btn btn-primary" id="btnSimpanHeroFoto">
+            <i class="fa-solid fa-floppy-disk" aria-hidden="true"></i> Simpan
+          </button>
+        </div>
       </div>
     </div>
     <div class="modal-overlay" id="resetModal">

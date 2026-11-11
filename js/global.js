@@ -1,6 +1,6 @@
 /* BIAYA SERVICE */
 
-function getServiceTotal(service) {
+function getServiceSubtotal(service) {
   const biayaJasa = Number(service.biayaJasa) || 0;
   const totalSparepart = (service.spareparts || []).reduce(
     (total, item) =>
@@ -8,6 +8,31 @@ function getServiceTotal(service) {
     0,
   );
   return biayaJasa + totalSparepart;
+}
+
+/* Potongan diskon yang menempel pada service. Tipe & nilai disimpan
+   sebagai snapshot saat customer mengklaim promo, jadi perubahan atau
+   penghapusan promo di kemudian hari tidak mengubah tagihan lama. */
+function getPromoDiscountForSubtotal(service, subtotal) {
+  if (!service || !service.promoTipe) return 0;
+
+  const nilai = Number(service.promoNilai) || 0;
+  const dasar = Number(subtotal) || 0;
+
+  if (!nilai || dasar <= 0) return 0;
+
+  const potongan =
+    service.promoTipe === "persen" ? (dasar * nilai) / 100 : nilai;
+
+  return Math.max(0, Math.min(dasar, Math.round(potongan)));
+}
+
+function getServiceDiscount(service) {
+  return getPromoDiscountForSubtotal(service, getServiceSubtotal(service));
+}
+
+function getServiceTotal(service) {
+  return Math.max(0, getServiceSubtotal(service) - getServiceDiscount(service));
 }
 
 function getCustomerVehicleCount(customerId) {
@@ -368,7 +393,7 @@ function setServicePaid(id) {
    ANTREAN SERVICE
    Nomor urut service yang BELUM selesai, diurut
    dari yang masuk paling dulu (id naik).
-   Admin & mode lokal menghitung dari data lengkap;
+   Admin menghitung dari data lengkap;
    sesi customer memakai RPC queue_positions() karena
    RLS hanya memberikan service miliknya sendiri.
    ========================================= */
@@ -394,9 +419,9 @@ function getNomorAntrian(id) {
     return index === -1 ? null : index + 1;
   };
 
-  /* Admin & mode lokal punya data lengkap, jadi hitung langsung —
+  /* Admin punya data lengkap, jadi hitung langsung —
      selalu sinkron walau status baru saja berubah. */
-  if (DB.mode !== "supabase" || dbIsAdmin()) {
+  if (dbIsAdmin()) {
     return hitungLokal();
   }
 
@@ -697,6 +722,10 @@ function bukaTolakAjuan(id) {
 
 function konfirmasiTolakAjuan(event) {
   event.preventDefault();
+
+  if (konfirmasiTolakAjuan._busy) return;
+  konfirmasiTolakAjuan._busy = true;
+  setTimeout(() => { konfirmasiTolakAjuan._busy = false; }, 0);
   clearFormError("tolakAjuanForm");
 
   const alasan = document
@@ -761,6 +790,8 @@ function getServiceRingkasan(service) {
   const subtotalSparepart = items
     .filter((item) => item.nama !== "Biaya Jasa")
     .reduce((sum, item) => sum + item.harga * item.jumlah, 0);
+  const subtotal = getServiceSubtotal(service);
+  const diskon = getServiceDiscount(service);
   const total = getServiceTotal(service);
   const lunas = (service.pembayaran || "Belum Lunas") === "Lunas";
 
@@ -768,6 +799,9 @@ function getServiceRingkasan(service) {
     biayaJasa,
     subtotalSparepart,
     jumlahSparepart: items.filter((item) => item.nama !== "Biaya Jasa").length,
+    subtotal,
+    diskon,
+    promoNama: service.promoNama || service.promoKode || "",
     total,
     lunas,
     sisa: lunas ? 0 : total,
@@ -855,6 +889,16 @@ function buildServiceDetailGrid(service, options = {}) {
     ),
   );
 
+  if (Number(service.promoNilai) > 0) {
+    const diskon = getServiceDiscount(service);
+    parts.push(
+      item(
+        "Diskon",
+        `-${formatRupiah(diskon)}${service.promoNama ? ` — ${escapeHTML(service.promoNama)}` : ""}`,
+      ),
+    );
+  }
+
   /* Item tambahan (mis. rincian transaksi di halaman Keuangan). */
   (options.extraItems || []).forEach((extra) => {
     if (!extra) return;
@@ -925,6 +969,14 @@ function buildServiceInvoice(service) {
         <span>Subtotal Sparepart (${ringkasan.jumlahSparepart} item)</span>
         <span>${formatRupiah(ringkasan.subtotalSparepart)}</span>
       </div>
+      ${
+        ringkasan.diskon
+          ? `<div class="invoice-row">
+              <span>Diskon${ringkasan.promoNama ? ` (${escapeHTML(ringkasan.promoNama)})` : ""}</span>
+              <span>-${formatRupiah(ringkasan.diskon)}</span>
+            </div>`
+          : ""
+      }
       <div class="invoice-row total">
         <span>Total Tagihan</span>
         <span>${formatRupiah(ringkasan.total)}</span>
@@ -1023,8 +1075,9 @@ function buildPrintInvoice(service) {
     (item) => Number(item.id) === Number(service.mekanikId),
   );
   const items = getServiceItems(service);
+  const ringkasan = getServiceRingkasan(service);
   const pembayaran = service.pembayaran || "Belum Lunas";
-  const total = getServiceTotal(service);
+  const total = ringkasan.total;
   const kode = getKode("kendaraan", service);
 
   const rows = items.length
@@ -1084,6 +1137,15 @@ function buildPrintInvoice(service) {
 
       <div class="struk-separator"></div>
 
+      ${
+        ringkasan.diskon
+          ? baris("Subtotal", formatRupiah(ringkasan.subtotal)) +
+            baris(
+              `Diskon${ringkasan.promoNama ? ` ${ringkasan.promoNama}` : ""}`,
+              `-${formatRupiah(ringkasan.diskon)}`,
+            )
+          : ""
+      }
       ${baris("Total Tagihan", `<strong>${formatRupiah(total)}</strong>`)}
       ${baris("Status Bayar", escapeHTML(pembayaran))}
 
@@ -2236,6 +2298,47 @@ function confirmLogout(options) {
 
 /* TOPBAR: NAMA PENGGUNA, TOMBOL TEMA, LOGOUT */
 
+/* Elemen yang hanya boleh terlihat oleh super admin (mis. menu
+   Kelola Pengguna). Elemen ditandai data-super-admin-only + hidden di
+   HTML, lalu dilepas setelah sesi dipastikan super admin. */
+function applyRoleVisibility() {
+  const role = getCurrentProfile()?.role;
+
+  document.querySelectorAll("[data-super-admin-only]").forEach((element) => {
+    if (isSuperAdminRole(role)) {
+      element.removeAttribute("hidden");
+    } else {
+      element.remove();
+    }
+  });
+}
+
+/* Terapkan identitas role pada chip nama di topbar: warna + ikon
+   berbeda agar customer, admin, dan super admin langsung dikenali.
+   Kelas `user-chip-role-<role>` diwarnai oleh css/global.css. */
+function applyUserRoleChip(chip, role) {
+  if (!chip) return;
+
+  const normalized = normalizeRole(role);
+  const iconClass = {
+    customer: "fa-solid fa-user",
+    admin: "fa-solid fa-user-shield",
+    super_admin: "fa-solid fa-crown",
+  };
+
+  chip.classList.remove(
+    "user-chip-role-customer",
+    "user-chip-role-admin",
+    "user-chip-role-super_admin",
+  );
+  chip.classList.add(`user-chip-role-${normalized}`);
+
+  const icon = chip.querySelector("i");
+  if (icon) {
+    icon.className = iconClass[normalized] || iconClass.customer;
+  }
+}
+
 function initTopbar() {
   const userChip = document.getElementById("userChip");
   const userName = document.getElementById("userChipName");
@@ -2243,6 +2346,10 @@ function initTopbar() {
 
   if (userChip && userName) {
     const profile = getCurrentProfile();
+    if (profile?.role) {
+      userChip.title = getRoleLabel(profile.role);
+      applyUserRoleChip(userChip, profile.role);
+    }
     const nama =
       profile?.nama ||
       sessionStorage.getItem("workshopUserName") ||
@@ -2252,6 +2359,20 @@ function initTopbar() {
     if (nama) {
       userName.textContent = nama;
       userChip.hidden = false;
+    }
+
+    /* Tanda khusus super admin agar terlihat jelas di topbar. */
+    let superBadge = userChip.querySelector(".user-chip-super-badge");
+    if (isSuperAdminRole(profile?.role)) {
+      if (!superBadge) {
+        superBadge = document.createElement("span");
+        superBadge.className = "user-chip-super-badge";
+        superBadge.textContent = "Super Admin";
+        userChip.appendChild(superBadge);
+      }
+      superBadge.hidden = false;
+    } else if (superBadge) {
+      superBadge.hidden = true;
     }
   }
 
@@ -2322,6 +2443,10 @@ document.addEventListener("DOMContentLoaded", async function () {
      Waktu tunggu = yang paling lama di antara keduanya, bukan
      jumlah keduanya (dulu berurutan: data dulu, baru sesi). */
   const sessionReady = (async function () {
+    if (role === "super_admin" && typeof requireSuperAdminAuth === "function") {
+      return requireSuperAdminAuth();
+    }
+
     if (role === "admin" && typeof requireAdminAuth === "function") {
       return requireAdminAuth();
     }
@@ -2351,6 +2476,7 @@ document.addEventListener("DOMContentLoaded", async function () {
   hideSkeleton();
 
   /* 4. Tampilan umum */
+  applyRoleVisibility();
   initTopbar();
   initSidebar();
   document.querySelectorAll("[data-close-modal]").forEach(function (button) {
@@ -2405,4 +2531,50 @@ document.addEventListener("DOMContentLoaded", async function () {
   if (typeof initPengaturanPage === "function") initPengaturanPage();
   if (typeof initKeuanganPage === "function") initKeuanganPage();
   if (typeof initUlasanPage === "function") initUlasanPage();
+  if (typeof initDiskonPage === "function") initDiskonPage();
+  if (typeof initUsersPage === "function") initUsersPage();
 });
+
+/* ====== Multi-baris keluhan (mirip sparepart) ====== */
+function addKeluhanRow(containerId, value = "") {
+  const list = document.getElementById(containerId);
+  if (!list) return;
+  const row = document.createElement("div");
+  row.className = "part-row-box keluhan-row-box";
+  row.innerHTML = `
+    <div class="part-row-head">
+      <textarea class="form-control" data-keluhan-text rows="2" placeholder="Contoh: Ganti oli" required>${escapeHTML(value)}</textarea>
+      <button type="button" class="action-btn danger" data-keluhan-remove aria-label="Hapus keluhan">Hapus</button>
+    </div>`;
+  row.querySelector("[data-keluhan-remove]").addEventListener("click", () => {
+    row.remove();
+  });
+  list.appendChild(row);
+}
+
+function getKeluhanRows(containerId) {
+  const list = document.getElementById(containerId);
+  if (!list) return "";
+  return [...list.querySelectorAll("[data-keluhan-text]")]
+    .map((el) => el.value.trim())
+    .filter(Boolean)
+    .join("\n");
+}
+
+function setKeluhanRows(containerId, text) {
+  const list = document.getElementById(containerId);
+  if (!list) return;
+  list.innerHTML = "";
+  const lines = String(text || "")
+    .split(/\n/)
+    .map((s) => s.trim())
+    .filter(Boolean);
+  if (!lines.length) lines.push("");
+  lines.forEach((line) => addKeluhanRow(containerId, line));
+}
+
+function ensureKeluhanRows(containerId) {
+  const list = document.getElementById(containerId);
+  if (!list) return;
+  if (!list.querySelector("[data-keluhan-text]")) addKeluhanRow(containerId, "");
+}

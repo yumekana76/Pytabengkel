@@ -8,6 +8,7 @@
     />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Kendaraan Saya | Pytabengkel</title>
+    <link rel="stylesheet" href="../../css/fonts.css" />
     <link rel="stylesheet" href="../../css/global.css" />
     <link
       rel="stylesheet"
@@ -43,6 +44,15 @@
         <h1>Pytabengkel</h1>
       </div>
       <div class="topbar-actions">
+        <a
+          class="topbar-landing"
+          href="../landing.html"
+          aria-label="Kembali ke Landing Page"
+          title="Kembali ke Landing Page"
+        >
+          <i class="fa-solid fa-arrow-left" aria-hidden="true"></i>
+          <span>Landing Page</span>
+        </a>
         <button
           type="button"
           class="icon-btn theme-toggle"
@@ -238,14 +248,18 @@
                 />
               </div>
               <div class="form-group form-full">
-                <label for="requestKeluhan">Keluhan</label>
-                <input
-                  type="text"
-                  id="requestKeluhan"
-                  class="form-control"
-                  placeholder="Contoh: Ganti oli dan cek rem"
-                  required
-                />
+                <div class="form-label-action">
+                  <label>Keluhan</label>
+                  <button type="button" class="action-btn" id="btnTambahRequestKeluhan">+ Tambah Keluhan</button>
+                </div>
+                <div id="requestKeluhanList" class="service-part-list"></div>
+              </div>
+              <div class="form-group form-full">
+                <label for="requestPromo">Diskon / Promo</label>
+                <select id="requestPromo" class="form-control"></select>
+                <span class="form-hint" id="requestPromoHint">
+                  Pilih promo yang ingin diklaim. Diskon akan dipotong otomatis dari total tagihan.
+                </span>
               </div>
               <div class="form-group">
                 <label for="requestTanggal">Tanggal Service</label>

@@ -1,0 +1,296 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; font-src 'self' https://cdnjs.cloudflare.com; img-src 'self' data: https://*.supabase.co; connect-src 'self' https://*.supabase.co wss://*.supabase.co; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+    />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Pytabengkel - Diskon</title>
+    <link rel="stylesheet" href="../../css/fonts.css" />
+    <link rel="stylesheet" href="../../css/global.css" />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
+    />
+    <link rel="stylesheet" href="../../css/diskon.css" />
+    <script src="../../js/error-logger.js"></script>
+    <script src="../../js/theme.js"></script>
+    <script src="../../js/config.js"></script>
+    <script src="../../js/vendor/supabase.min.js"></script>
+    <script src="../../js/supabase.js"></script>
+    <script>
+      applyThemeBeforePaint();
+      window.__APP_ROLE = "admin";
+    </script>
+  </head>
+  <body>
+    <script>showSkeleton();</script>
+    <header class="topbar">
+      <button
+        type="button"
+        class="burger"
+        id="burgerBtn"
+        aria-label="Buka menu"
+        aria-expanded="false"
+        aria-controls="sidebar"
+      >
+        <i class="fa-solid fa-bars" aria-hidden="true"></i>
+        <i class="fa-solid fa-times icon-close" aria-hidden="true"></i>
+      </button>
+      <div class="brand">
+        <h1>Pytabengkel</h1>
+      </div>
+      <div class="topbar-actions">
+        <a
+          class="topbar-landing"
+          href="../landing.html"
+          aria-label="Kembali ke Landing Page"
+          title="Kembali ke Landing Page"
+        >
+          <i class="fa-solid fa-arrow-left" aria-hidden="true"></i>
+          <span>Landing Page</span>
+        </a>
+        <button
+          type="button"
+          class="icon-btn theme-toggle"
+          data-theme-toggle
+          aria-label="Aktifkan mode gelap"
+          aria-pressed="false"
+          title="Ganti tema terang / gelap"
+        >
+          <i class="fa-solid fa-sun icon-sun" aria-hidden="true"></i>
+          <i class="fa-solid fa-moon icon-moon" aria-hidden="true"></i>
+        </button>
+        <div class="admin" id="userChip" hidden>
+          <i class="fa-solid fa-user-shield" aria-hidden="true"></i>
+          <span id="userChipName">Administrator</span>
+        </div>
+        <button
+          type="button"
+          class="icon-btn logout-btn"
+          id="btnLogout"
+          data-logout-target="/html/index.html?role=admin"
+          aria-label="Keluar"
+          title="Keluar"
+        >
+          <i class="fa-solid fa-right-from-bracket" aria-hidden="true"></i>
+        </button>
+      </div>
+    </header>
+    <div class="layout">
+      <aside class="sidebar" id="sidebar">
+        <nav class="nav">
+          <a href="dashboard.html" class="nav-link"
+            ><i class="fa-solid fa-gauge nav-icon" aria-hidden="true"></i>
+            Dashboard
+          </a>
+          <a href="customers.html" class="nav-link"
+            ><i class="fa-solid fa-users nav-icon" aria-hidden="true"></i>
+            Customers
+          </a>
+          <a href="kendaraan.html" class="nav-link"
+            ><i class="fa-solid fa-car nav-icon" aria-hidden="true"></i>
+            Kendaraan
+          </a>
+          <a href="service.html" class="nav-link"
+            ><i class="fa-solid fa-screwdriver-wrench nav-icon" aria-hidden="true"></i>
+            Service
+          </a>
+          <a href="riwayat.html" class="nav-link"
+            ><i class="fa-solid fa-clock-rotate-left nav-icon" aria-hidden="true"></i>
+            Riwayat
+          </a>
+          <a href="ulasan.html" class="nav-link"
+            ><i class="fa-solid fa-star nav-icon" aria-hidden="true"></i>
+            Ulasan
+          </a>
+          <a href="keuangan.html" class="nav-link"
+            ><i class="fa-solid fa-wallet nav-icon" aria-hidden="true"></i>
+            Keuangan
+          </a>
+          <a href="mekanik.html" class="nav-link"
+            ><i class="fa-solid fa-user-gear nav-icon" aria-hidden="true"></i>
+            Mekanik
+          </a>
+          <a href="sparepart.html" class="nav-link"
+            ><i class="fa-solid fa-gears nav-icon" aria-hidden="true"></i>
+            Sparepart
+          </a>
+          <a href="diskon.html" class="nav-link active" aria-current="page"
+            ><i class="fa-solid fa-tags nav-icon" aria-hidden="true"></i>
+            Diskon
+          </a>
+          <a href="users.html" class="nav-link" data-super-admin-only hidden>
+            <i class="fa-solid fa-crown nav-icon" aria-hidden="true"></i><span>Kelola Pengguna</span>
+          </a>
+          <a href="pengaturan.html" class="nav-link"
+            ><i class="fa-solid fa-gear nav-icon" aria-hidden="true"></i>
+            Pengaturan
+          </a>
+        </nav>
+      </aside>
+      <main class="main">
+        <div class="page-header">
+          <h2>Diskon</h2>
+          <p>Kelola promo dan diskon bengkel, termasuk periode berlaku.</p>
+        </div>
+        <section class="stats-grid">
+          <div class="stat-card">
+            <i class="fa-solid fa-tags stat-icon" aria-hidden="true"></i>
+            <span class="stat-number" id="totalDiskon">0</span>
+            <span class="stat-label">Total Diskon</span>
+          </div>
+          <div class="stat-card">
+            <i class="fa-solid fa-circle-check stat-icon" aria-hidden="true"></i>
+            <span class="stat-number" id="diskonAktif">0</span>
+            <span class="stat-label">Sedang Berlaku</span>
+          </div>
+          <div class="stat-card">
+            <i class="fa-solid fa-circle-pause stat-icon" aria-hidden="true"></i>
+            <span class="stat-number" id="diskonNonaktif">0</span>
+            <span class="stat-label">Tidak Berlaku</span>
+          </div>
+          <div class="stat-card">
+            <i class="fa-solid fa-hand-holding-heart stat-icon" aria-hidden="true"></i>
+            <span class="stat-number" id="totalKlaimDiskon">0</span>
+            <span class="stat-label">Pelanggan Klaim</span>
+          </div>
+        </section>
+        <section class="panel vehicle-panel">
+          <div class="panel-header">
+            <div>
+              <h3>Daftar Diskon</h3>
+              <p>Diskon yang berlaku ditentukan oleh status dan periode. Jumlah klaim dihitung dari service yang memakai promo.</p>
+            </div>
+            <div class="vehicle-toolbar">
+              <select id="filterDiskonStatus" class="form-control filter-select" aria-label="Filter status diskon">
+                <option value="">Semua</option>
+                <option value="berlaku">Berlaku</option>
+                <option value="terjadwal">Belum mulai</option>
+                <option value="nonaktif">Nonaktif/Berakhir</option>
+              </select>
+              <select id="sortDiskon" class="form-control filter-select" aria-label="Urutkan diskon">
+                <option value="id:desc">Urutkan: Terbaru</option>
+                <option value="id:asc">Urutkan: ID</option>
+                <option value="nama:asc">Nama (A-Z)</option>
+                <option value="mulai:desc">Mulai terbaru</option>
+                <option value="sampai:asc">Berakhir terdekat</option>
+              </select>
+              <div class="search-box">
+                <input type="search" id="searchDiskon" placeholder="Cari diskon..." />
+              </div>
+              <button type="button" class="btn btn-primary" id="btnTambahDiskon">
+                <i class="fa-solid fa-plus" aria-hidden="true"></i> Tambah Diskon
+              </button>
+            </div>
+          </div>
+          <div class="table-container">
+            <table class="diskon-table">
+              <caption class="sr-only">Daftar diskon</caption>
+              <thead>
+                <tr>
+                  <th scope="col">No</th>
+                  <th scope="col" class="cell-id-col">ID</th>
+                  <th scope="col">Nama</th>
+                  <th scope="col">Kode</th>
+                  <th scope="col">Nilai</th>
+                  <th scope="col">Periode</th>
+                  <th scope="col">Status</th>
+                  <th scope="col">Diklaim</th>
+                  <th scope="col">Aksi</th>
+                </tr>
+              </thead>
+              <tbody id="diskonPageTable"></tbody>
+            </table>
+          </div>
+          <div class="table-footer"><span id="diskonInfo" aria-live="polite"></span></div>
+        </section>
+      </main>
+    </div>
+
+    <div class="modal-overlay" id="diskonModal">
+      <div class="modal" role="dialog" aria-modal="true" aria-labelledby="diskonModalTitle">
+        <div class="modal-header">
+          <div>
+            <h3 id="diskonModalTitle">Tambah Diskon</h3>
+            <p>Atur nama, nilai, dan periode berlaku diskon.</p>
+          </div>
+          <button type="button" class="modal-close" data-close-modal="diskonModal" aria-label="Tutup">×</button>
+        </div>
+        <form id="diskonForm">
+          <div class="modal-body">
+            <input type="hidden" id="diskonId" />
+            <div class="diskon-form-grid">
+              <div class="form-group form-full">
+                <label for="diskonNama">Nama Diskon</label>
+                <input type="text" id="diskonNama" class="form-control" placeholder="Contoh: Servis Rutin Weekday" required />
+              </div>
+              <div class="form-group">
+                <label for="diskonKode">Kode Promo</label>
+                <input type="text" id="diskonKode" class="form-control" placeholder="Otomatis jika kosong (mis. PROMO20)" />
+              </div>
+              <div class="form-group">
+                <label for="diskonTipe">Tipe Nilai</label>
+                <select id="diskonTipe" class="form-control">
+                  <option value="persen">Persen (%)</option>
+                  <option value="nominal">Nominal (Rp)</option>
+                </select>
+              </div>
+              <div class="form-group form-full">
+                <label for="diskonDeskripsi">Deskripsi</label>
+                <input type="text" id="diskonDeskripsi" class="form-control" placeholder="Penjelasan singkat promo" />
+              </div>
+              <div class="form-group">
+                <label for="diskonNilai">Nilai Diskon</label>
+                <input type="number" id="diskonNilai" class="form-control" min="0" step="1" placeholder="Contoh: 20" required />
+              </div>
+              <div class="form-group">
+                <label class="checkbox-label" for="diskonAktifInput" style="margin-top: 30px; display: inline-flex; gap: 8px; align-items: center;">
+                  <input type="checkbox" id="diskonAktifInput" checked />
+                  <span>Aktifkan diskon</span>
+                </label>
+              </div>
+              <div class="form-group">
+                <label for="diskonMulai">Mulai Berlaku</label>
+                <input type="date" id="diskonMulai" class="form-control" />
+              </div>
+              <div class="form-group">
+                <label for="diskonSampai">Sampai</label>
+                <input type="date" id="diskonSampai" class="form-control" />
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-close-modal="diskonModal">Batal</button>
+            <button type="submit" class="btn btn-primary">Simpan Diskon</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div class="modal-overlay" id="diskonClaimModal">
+      <div class="modal" role="dialog" aria-modal="true" aria-labelledby="diskonClaimTitle">
+        <div class="modal-header">
+          <div>
+            <h3 id="diskonClaimTitle">Klaim Diskon</h3>
+            <p id="diskonClaimInfo">Rincian pelanggan yang mengklaim promo ini.</p>
+          </div>
+          <button type="button" class="modal-close" data-close-modal="diskonClaimModal" aria-label="Tutup">×</button>
+        </div>
+        <div class="modal-body">
+          <div class="detail-grid diskon-claim-grid" id="diskonClaimContent"></div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-close-modal="diskonClaimModal">Tutup</button>
+        </div>
+      </div>
+    </div>
+
+    <script src="../../js/db.js"></script>
+    <script src="../../js/auth.js"></script>
+    <script src="../../js/global.js"></script>
+    <script src="../../js/diskon.js"></script>
+  </body>
+</html>

@@ -273,7 +273,14 @@ function updateServiceTotalPreview() {
       Number(row.querySelector("[data-service-part-quantity]")?.value) || 0;
     return total + (Number(part?.harga) || 0) * jumlah;
   }, 0);
-  setText("serviceTotalPreview", formatRupiah(biayaJasa + totalSparepart));
+  const subtotal = biayaJasa + totalSparepart;
+  const service = getKendaraan().find(
+    (item) => Number(item.id) === Number(activeServiceId),
+  );
+  const diskon = service
+    ? getPromoDiscountForSubtotal(service, subtotal)
+    : 0;
+  setText("serviceTotalPreview", formatRupiah(subtotal - diskon));
 }
 
 function addServiceSparepartRow(selectedId = "", jumlah = 1) {
@@ -499,7 +506,7 @@ function showServicePhotoPreview(files) {
 }
 
 /* Tampilkan zona foto hanya untuk service yang sudah tersimpan di
-   Supabase. Di mode lokal (tanpa storage) zona disembunyikan. */
+   Supabase. Tanpa koneksi Supabase zona disembunyikan. */
 async function showServicePhotoSection(serviceId) {
   const zone = document.getElementById("servicePhotoZone");
   const list = document.getElementById("servicePhotoList");
@@ -616,6 +623,10 @@ function printServiceStruk() {
 
 function saveServiceForm(event) {
   event.preventDefault();
+
+  if (saveServiceForm._busy) return;
+  saveServiceForm._busy = true;
+  setTimeout(() => { saveServiceForm._busy = false; }, 0);
   clearFormError("serviceForm");
   clearPageNotice();
   const vehicleId = document.getElementById("serviceVehicle").value;

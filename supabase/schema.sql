@@ -1,17 +1,21 @@
 -- =========================================================
--- MENJADIKAN AKUN SEBAGAI ADMIN
--- Jalankan hanya melalui SQL Editor oleh pemilik database.
--- Pastikan UUID milik akun yang benar.
+-- HIERARKI ROLE
+--   super_admin : akses penuh + mengelola role pengguna
+--   admin       : operasional bengkel (customer, service, keuangan, ...)
+--   customer    : portal customer (data & tagihan miliknya sendiri)
+--
+-- Pendaftaran baru SELALU menjadi customer. Akun admin/super admin
+-- ditetapkan manual lewat SQL Editor oleh pemilik database.
 -- =========================================================
 
--- Periksa daftar admin yang ada:
+-- Periksa daftar akun staf yang ada:
 -- SELECT id, email, role
 -- FROM public.profiles
--- WHERE role = 'admin';
+-- WHERE role IN ('admin', 'super_admin');
 
 -- Setelah memverifikasi akun, gunakan UUID akun tersebut:
 -- UPDATE public.profiles
--- SET role = 'admin'
+-- SET role = 'super_admin'
 -- WHERE id = 'UUID-AKUN-TERVERIFIKASI'::uuid;
 -- ==========================================================
 
@@ -22,10 +26,17 @@ create extension if not exists "pgcrypto";
 -- ---------------------------------------------------------------------
 do $$
 begin
-  create type public.user_role as enum ('admin', 'customer');
+  create type public.user_role as enum ('customer', 'admin', 'super_admin');
 exception
   when duplicate_object then null;
 end $$;
+
+/* Instalasi lama: enum hanya berisi admin & customer. Tambahkan
+   super_admin tanpa menghapus data. Nilai baru tidak dipakai sebagai
+   literal enum di statement berikutnya pada transaksi yang sama —
+   semua pengecekan memakai role::text — jadi aman dijalankan dari
+   SQL Editor Supabase (PostgreSQL 12+). */
+alter type public.user_role add value if not exists 'super_admin';
 
 -- ---------------------------------------------------------------------
 --  TABEL
@@ -40,6 +51,12 @@ create table if not exists public.workshop_info (
   email       text not null default '',
   jam_buka    text not null default '',
   hari_buka   text not null default '',
+  -- URL publik foto latar hero landing page (bucket site-assets); kosong = gradien tema.
+  hero_foto   text not null default '',
+  -- Teks hero landing page; kosong = teks default di html/landing.html.
+  hero_label     text not null default '',
+  hero_judul     text not null default '',
+  hero_deskripsi text not null default '',
   updated_at  timestamptz not null default now()
 );
 
@@ -144,6 +161,19 @@ alter table if exists public.services
   alter column approval set default 'Disetujui',
   alter column approval set not null;
 
+-- Diskon/promo yang diklaim customer saat mengajukan service.
+-- Nilai disimpan sebagai snapshot supaya tagihan lama tidak berubah
+-- ketika admin mengubah atau menghapus promo tersebut.
+alter table if exists public.services
+  add column if not exists promo_id bigint,
+  add column if not exists promo_kode text not null default '',
+  add column if not exists promo_nama text not null default '',
+  add column if not exists promo_tipe text not null default '',
+  add column if not exists promo_nilai numeric(12, 2) not null default 0;
+
+create index if not exists services_promo_id_idx
+  on public.services (promo_id);
+
 -- Ulasan / rating customer untuk service yang sudah selesai.
 -- Satu service maksimal satu ulasan (dijaminkan oleh unique pada service_id).
 create table if not exists public.reviews (
@@ -231,7 +261,9 @@ create index if not exists idx_client_errors_waktu on public.client_errors (crea
 --  HELPER FUNCTION
 -- ---------------------------------------------------------------------
 
--- Apakah user yang sedang login adalah admin?
+-- Apakah user yang sedang login adalah staf (admin atau super admin)?
+-- Dibandingkan lewat role::text supaya aman dijalankan pada transaksi
+-- yang sama dengan ALTER TYPE ... ADD VALUE 'super_admin'.
 create or replace function public.is_admin()
 returns boolean
 language sql
@@ -240,7 +272,24 @@ security definer
 set search_path = public
 as $$
   select exists (
-    select 1 from public.profiles where id = auth.uid() and role = 'admin'
+    select 1 from public.profiles
+    where id = auth.uid()
+      and role::text in ('admin', 'super_admin')
+  );
+$$;
+
+-- Apakah user yang sedang login adalah super admin?
+create or replace function public.is_super_admin()
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1 from public.profiles
+    where id = auth.uid()
+      and role::text = 'super_admin'
   );
 $$;
 
@@ -289,22 +338,36 @@ returns trigger
 language plpgsql
 as $$
 begin
-  /* Admin & operasi SQL langsung (tanpa JWT) lewat. */
-  if auth.uid() is not null and not public.is_admin() then
-    if new.id is distinct from old.id
-       or new.customer_id is distinct from old.customer_id
-       or new.role is distinct from old.role then
-      raise exception 'Anda tidak boleh mengubah role atau tautan data customer';
+  /* Operasi SQL langsung (tanpa JWT) lewat. */
+  if auth.uid() is not null then
+    /* Perubahan role adalah hak super admin. Admin biasa tetap bisa
+       mengelola data operasional, tetapi tidak bisa menaikkan role
+       siapa pun (termasuk dirinya sendiri). */
+    if new.role is distinct from old.role then
+      if not public.is_super_admin() then
+        raise exception 'Hanya super admin yang boleh mengubah role pengguna';
+      end if;
+
+      if new.id = auth.uid() then
+        raise exception 'Super admin tidak dapat mengubah role akunnya sendiri';
+      end if;
     end if;
 
-    /* Email profil juga dikunci. Email login yang otoritatif ada di
-       Supabase Auth (auth.users) dan disinkronkan ke kolom ini lewat
-       trigger sync_profile_email. Tanpa penguncian ini customer bisa
-       menyetel email profilnya menjadi admin@workshop.com lalu terpromosi
-       lewat perintah admin lama yang berbasis email (lihat blok
-       "CARA MENJADIKAN SEBUAH AKUN MENJADI ADMIN" di bawah). */
-    if new.email is distinct from old.email then
-      raise exception 'Email profil tidak bisa diubah langsung; email login diubah lewat menu ganti email';
+    if not public.is_admin() then
+      if new.id is distinct from old.id
+         or new.customer_id is distinct from old.customer_id then
+        raise exception 'Anda tidak boleh mengubah role atau tautan data customer';
+      end if;
+
+      /* Email profil juga dikunci. Email login yang otoritatif ada di
+         Supabase Auth (auth.users) dan disinkronkan ke kolom ini lewat
+         trigger sync_profile_email. Tanpa penguncian ini customer bisa
+         menyetel email profilnya menjadi admin@workshop.com lalu terpromosi
+         lewat perintah admin lama yang berbasis email (lihat blok
+         "CARA MENJADIKAN SEBUAH AKUN ADMIN / SUPER ADMIN" di bawah). */
+      if new.email is distinct from old.email then
+        raise exception 'Email profil tidak bisa diubah langsung; email login diubah lewat menu ganti email';
+      end if;
     end if;
   end if;
   return new;
@@ -559,6 +622,75 @@ end $$;
 grant execute on function public.ensure_my_profile() to authenticated;
 
 -- ---------------------------------------------------------------------
+--  RPC: admin_set_user_role()
+--  ---------------------------------------------------------------------
+--  Satu-satunya jalur resmi untuk mengubah role akun dari halaman
+--  Kelola Pengguna. security definer + pengecekan is_super_admin()
+--  membuat aturan tetap berlaku walau RLS sebuah baris mengizinkan
+--  UPDATE. Pengaman tambahan:
+--    * super admin tidak bisa menurunkan role akunnya sendiri;
+--    * super admin terakhir tidak bisa diturunkan.
+--  Role dikirim sebagai teks lalu di-cast, sehingga tidak memakai
+--  literal enum 'super_admin' di dalam body fungsi.
+-- ---------------------------------------------------------------------
+create or replace function public.admin_set_user_role(p_user uuid, p_role text)
+returns public.profiles
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_role        public.user_role;
+  v_row         public.profiles%rowtype;
+  v_super_count integer;
+begin
+  if not public.is_super_admin() then
+    raise exception 'Hanya super admin yang boleh mengubah role pengguna';
+  end if;
+
+  if p_user is null then
+    raise exception 'Akun pengguna tidak ditemukan';
+  end if;
+
+  if p_role is null or p_role not in ('customer', 'admin', 'super_admin') then
+    raise exception 'Role tidak dikenal: %', coalesce(p_role, '(kosong)');
+  end if;
+
+  if p_user = auth.uid() then
+    raise exception 'Anda tidak dapat mengubah role akun sendiri';
+  end if;
+
+  select * into v_row from public.profiles where id = p_user;
+
+  if not found then
+    raise exception 'Akun pengguna tidak ditemukan';
+  end if;
+
+  if v_row.role::text = 'super_admin' and p_role <> 'super_admin' then
+    select count(*) into v_super_count
+      from public.profiles
+     where role::text = 'super_admin';
+
+    if v_super_count <= 1 then
+      raise exception 'Minimal harus ada satu super admin';
+    end if;
+  end if;
+
+  v_role := p_role::public.user_role;
+
+  update public.profiles
+     set role = v_role,
+         updated_at = now()
+   where id = p_user
+   returning * into v_row;
+
+  return v_row;
+end $$;
+
+revoke all on function public.admin_set_user_role(uuid, text) from public;
+grant execute on function public.admin_set_user_role(uuid, text) to authenticated;
+
+-- ---------------------------------------------------------------------
 --  ROW LEVEL SECURITY
 --  Customer hanya boleh melihat & mengubah datanya sendiri.
 --  Admin melihat & mengubah semuanya.
@@ -744,20 +876,25 @@ values (1, 'Pytabengkel', 'Jl. Merdeka No. 10, Bandung', '0812-3456-7890',
 on conflict (id) do nothing;
 
 -- =====================================================================
---  CARA MENJADIKAN SEBUAH AKUN MENJADI ADMIN
+--  CARA MENJADIKAN SEBUAH AKUN ADMIN / SUPER ADMIN
 --  Jalankan perintah ini di SQL Editor setelah akunnya dibuat
---  (ganti admin@workshop.com dengan email akun tersebut):
+--  (ganti email contoh dengan email akun tersebut):
 --
 --    update public.profiles
 --    set role = 'admin'
 --    where id = (select id from auth.users where email = 'admin@workshop.com')
 --      and role <> 'admin';
 --
+--    update public.profiles
+--    set role = 'super_admin'
+--    where id = (select id from auth.users where email = 'owner@workshop.com')
+--      and role <> 'super_admin';
+--
 --  Cocokkan lewat auth.users.id, BUKAN profiles.email: perintah
 --  berbasis email berisiko salah sasaran bila ada baris profil yang
 --  emailnya kebetulan sama. Pendaftaran baru selalu berstatus
---  customer (lihat handle_new_user) — role admin hanya dari perintah
---  ini atau ubah SQL langsung.
+--  customer (lihat handle_new_user) — role staf hanya dari perintah
+--  ini atau lewat halaman Kelola Pengguna (super admin).
 -- =====================================================================
 
 -- ---------------------------------------------------------------------
@@ -801,6 +938,49 @@ as $$
 $$;
 
 grant execute on function public.public_reviews() to anon, authenticated;
+
+-- ---------------------------------------------------------------------
+--  INFO BENGKEL PUBLIK
+--  Halaman landing dapat dibaca tanpa login. Hanya kolom info toko
+--  (nama, alamat, kontak, email, jam buka, foto hero) — tidak ada data
+--  pelanggan.
+-- ---------------------------------------------------------------------
+--  Kolom foto & teks hero dipastikan ADA dulu: fungsi di bawah
+--  mereferensikannya, sedangkan tabel yang dibuat versi lama belum
+--  punya kolom ini.
+alter table public.workshop_info add column if not exists hero_foto text not null default '';
+alter table public.workshop_info add column if not exists hero_label text not null default '';
+alter table public.workshop_info add column if not exists hero_judul text not null default '';
+alter table public.workshop_info add column if not exists hero_deskripsi text not null default '';
+
+drop function if exists public.public_workshop_info();
+
+create or replace function public.public_workshop_info()
+returns table (
+  nama      text,
+  alamat    text,
+  kontak    text,
+  email     text,
+  jam_buka  text,
+  hari_buka text,
+  hero_foto text,
+  hero_label text,
+  hero_judul text,
+  hero_deskripsi text
+)
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select nama, alamat, kontak, email, jam_buka, hari_buka, hero_foto,
+         hero_label, hero_judul, hero_deskripsi
+  from public.workshop_info
+  order by id
+  limit 1;
+$$;
+
+grant execute on function public.public_workshop_info() to anon, authenticated;
 
 -- ---------------------------------------------------------------------
 --  POSISI ANTREAN SERVICE
@@ -931,3 +1111,91 @@ drop policy if exists "service photos select" on storage.objects;
 create policy "service photos select" on storage.objects
   for select to authenticated
   using (bucket_id = 'service-photos');
+
+-- ---------------------------------------------------------------------
+--  BUCKET ASET SITUS (foto hero landing page, dst.)
+--  Bucket publik; unggah & hapus object dijaga policy admin-only.
+-- ---------------------------------------------------------------------
+insert into storage.buckets (id, name, public)
+values ('site-assets', 'site-assets', true)
+on conflict (id) do nothing;
+
+drop policy if exists "site assets upload" on storage.objects;
+create policy "site assets upload" on storage.objects
+  for insert to authenticated
+  with check (bucket_id = 'site-assets' and public.is_admin());
+
+drop policy if exists "site assets delete" on storage.objects;
+create policy "site assets delete" on storage.objects
+  for delete to authenticated
+  using (bucket_id = 'site-assets' and public.is_admin());
+
+drop policy if exists "site assets select" on storage.objects;
+create policy "site assets select" on storage.objects
+  for select to authenticated
+  using (bucket_id = 'site-assets');
+
+-- ---------------------------------------------------------------------
+--  PROMO / DISKON (dikelola admin)
+--  Ditampilkan ke publik (landing) hanya jika aktif dan dalam periode.
+--  Customer memakai RPC public_promos() untuk memilih promo saat
+--  mengajukan service; promo yang diklaim disimpan di kolom promo_*
+--  pada tabel services.
+-- ---------------------------------------------------------------------
+create table if not exists public.promos (
+  id         bigint primary key,
+  kode       text    not null default '',
+  nama       text    not null default '',
+  deskripsi  text    not null default '',
+  tipe       text    not null default 'persen' check (tipe in ('persen','nominal')),
+  nilai      numeric not null default 0,
+  mulai      date,
+  sampai     date,
+  aktif      boolean not null default true,
+  created_at timestamptz not null default now()
+);
+
+alter table public.promos enable row level security;
+
+drop policy if exists "promos_select" on public.promos;
+create policy "promos_select" on public.promos for select
+  using (public.is_admin());
+
+drop policy if exists "promos_insert" on public.promos;
+create policy "promos_insert" on public.promos for insert
+  with check (public.is_admin());
+
+drop policy if exists "promos_update" on public.promos;
+create policy "promos_update" on public.promos for update
+  using (public.is_admin()) with check (public.is_admin());
+
+drop policy if exists "promos_delete" on public.promos;
+create policy "promos_delete" on public.promos for delete
+  using (public.is_admin());
+
+drop function if exists public.public_promos();
+create or replace function public.public_promos()
+returns table (
+  id        bigint,
+  kode      text,
+  nama      text,
+  deskripsi text,
+  tipe      text,
+  nilai     numeric,
+  mulai     date,
+  sampai    date
+)
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select id, kode, nama, deskripsi, tipe, nilai, mulai, sampai
+  from public.promos
+  where aktif = true
+    and (mulai is null or mulai <= current_date)
+    and (sampai is null or sampai >= current_date)
+  order by mulai desc nulls last, id desc;
+$$;
+
+grant execute on function public.public_promos() to anon, authenticated;

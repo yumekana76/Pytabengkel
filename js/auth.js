@@ -1,7 +1,7 @@
 /* =========================================
    AUTH ADMIN
    Halaman admin hanya bisa dibuka setelah login
-   berhasil (Supabase Auth, atau mode lokal).
+   berhasil via Supabase Auth.
    ========================================= */
 
 var ADMIN_LOGIN_KEY = "workshopLoggedIn";
@@ -29,7 +29,7 @@ async function requireAdminAuth() {
     return false;
   }
 
-  if (profile.role !== "admin") {
+  if (!isAdminRole(profile.role)) {
     await Auth.signOut();
     clearAdminSession();
     window.location.replace("/html/index.html?role=admin");
@@ -37,6 +37,32 @@ async function requireAdminAuth() {
   }
 
   setAdminSession(profile.nama || "Administrator Bengkel");
+
+  return true;
+}
+
+/**
+ * Guard khusus halaman yang hanya boleh dibuka super admin
+ * (mis. Kelola Pengguna).
+ * @returns {Promise<boolean>} true kalau akses diizinkan.
+ */
+async function requireSuperAdminAuth() {
+  const profile = await Auth.restoreSession();
+
+  if (!profile) {
+    clearAdminSession();
+    window.location.replace("/html/index.html?role=super_admin");
+    return false;
+  }
+
+  if (!isSuperAdminRole(profile.role)) {
+    /* Admin biasa tetap login — cukup kembalikan ke dashboard, bukan
+       memaksa keluar dari akun. */
+    window.location.replace("/html/admin-page/dashboard.html");
+    return false;
+  }
+
+  setAdminSession(profile.nama || "Super Admin Bengkel");
 
   return true;
 }

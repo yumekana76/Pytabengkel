@@ -1,13 +1,26 @@
 {
+  "framework": null,
+  "buildCommand": "node scripts/build-config.js",
+  "outputDirectory": ".",
   "redirects": [
     {
       "source": "/",
-      "destination": "/html/index.html",
+      "destination": "/html/landing.html",
       "permanent": false
     },
     {
       "source": "/index.html",
-      "destination": "/html/index.html",
+      "destination": "/html/landing.html",
+      "permanent": false
+    },
+    {
+      "source": "/landing",
+      "destination": "/html/landing.html",
+      "permanent": false
+    },
+    {
+      "source": "/landing/",
+      "destination": "/html/landing.html",
       "permanent": false
     },
     {

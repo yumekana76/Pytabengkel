@@ -1,0 +1,16 @@
+# File yang TIDAK ikut di-upload ke Vercel (kept out of the deployment)
+# Vercel tetap menjalankan buildCommand lalu memakai outputDirectory.
+
+# Rahasia / environment lokal
+.env
+.env.*
+.vercel/
+
+# Artefak lokal & dependensi
+node_modules/
+*.log
+*.backup.json
+workshop-backup.json
+
+# Browser AI yang tidak relevan dengan deploy
+.freebuff/

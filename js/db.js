@@ -1,13 +1,11 @@
 /* =====================================================================
    DATA LAYER
    ---------------------------------------------------------------------
-   Sumber data tunggal untuk seluruh aplikasi.
+   Sumber data tunggal untuk seluruh aplikasi: SEMUA dari Supabase
+   (tabel + RLS). Tidak ada lagi mode lokal/localStorage — cache di
+   bawah hanya penampung dalam memori untuk satu sesi halaman.
 
-   MODE SUPABASE : data diambil dari tabel Supabase, perubahan dikirim
-                   kembali dengan sinkronisasi (upsert + hapus yang hilang).
-   MODE LOKAL    : data diambil/diambil dari localStorage (fallback demo).
-
-   Antarmuka fungsi tetap SAMA dengan versi localStorage sebelumnya
+   Antarmuka fungsi tetap SAMA dengan versi lama
    (getCustomers / saveCustomers / getKendaraan / ...) sehingga semua
    halaman lama tetap bekerja tanpa perubahan besar.
    ===================================================================== */
@@ -24,6 +22,7 @@ var DB = {
     mechanics: [],
     spareparts: [],
     reviews: [],
+    promos: [],
     accounts: [],
     logs: [],
     info: {},
@@ -34,6 +33,7 @@ var DB = {
     mechanics: new Set(),
     spareparts: new Set(),
     reviews: new Set(),
+    promos: new Set(),
   },
   queue: Promise.resolve(),
   writeErrors: 0,
@@ -52,7 +52,7 @@ function notifyDbError(message) {
 
   if (typeof showPageNotice === "function") {
     showPageNotice(
-      "Perubahan tersimpan di perangkat ini, tetapi gagal dikirim ke server.",
+      "Perubahan gagal dikirim ke server. Periksa koneksi lalu coba lagi.",
       "error",
     );
   }
@@ -60,10 +60,22 @@ function notifyDbError(message) {
 
 /* Menjalankan operasi tulis satu per satu (menghindari race condition). */
 function dbQueue(task) {
-  DB.queue = DB.queue.then(task).catch((error) => {
-    DB.writeErrors += 1;
-    notifyDbError(error?.message || String(error));
-  });
+  DB.queue = DB.queue
+    .then(async () => {
+      try {
+        const result = await task();
+        return result === undefined ? { ok: true } : result;
+      } catch (error) {
+        DB.writeErrors += 1;
+        notifyDbError(error?.message || String(error));
+        return { ok: false, error: error?.message || String(error) };
+      }
+    })
+    .catch((error) => {
+      DB.writeErrors += 1;
+      notifyDbError(error?.message || String(error));
+      return { ok: false, error: error?.message || String(error) };
+    });
 
   return DB.queue;
 }
@@ -79,14 +91,36 @@ function dbFlush() {
   return dbQueue(async () => {}).then(() => DB.writeErrors === awal);
 }
 
-/* Mirror ke localStorage supaya data tidak hilang & mode lokal tetap jalan. */
-function dbPersistLocal(key, value) {
+/* ---------------------------------------------------------------------
+   BERSIHKAN DATA LOKAL WARISAN MODE LAMA
+   ---------------------------------------------------------------------
+   Versi sebelumnya menyimpan mirror data (dan password demo) di
+   localStorage. Jalankan sekali lalu buang key-nya. Yang TIDAK disentuh:
+   tema (workshop_theme), preferensi "ingat email", buffer error
+   (workshop_client_errors), dan sesi auth milik supabase-js.
+   --------------------------------------------------------------------- */
+(function purgeLegacyLocalData() {
+  var LEGACY_KEYS = [
+    "workshop_customers",
+    "workshop_kendaraan",
+    "workshop_mekanik",
+    "workshop_sparepart",
+    "workshop_reviews",
+    "workshop_promos",
+    "workshop_info",
+    "workshop_customer_accounts",
+    "workshop_activity_logs",
+  ];
+
   try {
-    localStorage.setItem(key, JSON.stringify(value));
+    LEGACY_KEYS.forEach(function (key) {
+      localStorage.removeItem(key);
+    });
+    sessionStorage.removeItem("workshopSession");
   } catch (error) {
-    dbLog("Gagal menyimpan mirror local:", error);
+    /* storage tidak tersedia (mis. mode privat) — abaikan. */
   }
-}
+})();
 
 /* ---------------------------------------------------------------------
    MAPPER KOLOM  <->  SHAPE APLIKASI
@@ -187,6 +221,11 @@ function serviceToDb(row) {
     requested_by: row.requestedBy || "admin",
     approval: row.approval || "Disetujui",
     approval_note: row.approvalNote || "",
+    promo_id: row.promoId ? Number(row.promoId) : null,
+    promo_kode: row.promoKode || "",
+    promo_nama: row.promoNama || "",
+    promo_tipe: row.promoTipe || "",
+    promo_nilai: Number(row.promoNilai) || 0,
   };
 }
 
@@ -217,6 +256,11 @@ function serviceFromDb(row) {
         ? "Menunggu"
         : "Disetujui"),
     approvalNote: row.approval_note || "",
+    promoId: row.promo_id ? Number(row.promo_id) : null,
+    promoKode: row.promo_kode || "",
+    promoNama: row.promo_nama || "",
+    promoTipe: row.promo_tipe || "",
+    promoNilai: Number(row.promo_nilai) || 0,
   };
 }
 
@@ -243,6 +287,55 @@ function reviewFromDb(row) {
   };
 }
 
+function promoToDb(row) {
+  return {
+    id: Number(row.id),
+    kode: row.kode || "",
+    nama: row.nama || "",
+    deskripsi: row.deskripsi || "",
+    tipe: row.tipe === "nominal" ? "nominal" : "persen",
+    nilai: Number(row.nilai) || 0,
+    mulai: row.mulai || null,
+    sampai: row.sampai || null,
+    aktif: row.aktif !== false,
+  };
+}
+
+function promoFromDb(row) {
+  return {
+    id: Number(row.id),
+    kode: row.kode || "",
+    nama: row.nama || "",
+    deskripsi: row.deskripsi || "",
+    tipe: row.tipe === "nominal" ? "nominal" : "persen",
+    nilai: Number(row.nilai) || 0,
+    mulai: row.mulai || "",
+    sampai: row.sampai || "",
+    aktif: row.aktif !== false,
+  };
+}
+
+/* Promo/diskon: aktif=true dan berada dalam rentang mulai–sampai (bila diisi). */
+function isPromoActive(promo, now) {
+  if (!promo || promo.aktif === false) return false;
+  var at = now instanceof Date ? now : new Date();
+  if (promo.mulai) {
+    var start = new Date(String(promo.mulai));
+    if (/^\d{4}-\d{2}-\d{2}$/.test(String(promo.mulai))) {
+      start.setHours(0, 0, 0, 0);
+    }
+    if (!isNaN(start) && at < start) return false;
+  }
+  if (promo.sampai) {
+    var end = new Date(String(promo.sampai));
+    if (/^\d{4}-\d{2}-\d{2}$/.test(String(promo.sampai))) {
+      end.setHours(23, 59, 59, 999);
+    }
+    if (!isNaN(end) && at > end) return false;
+  }
+  return true;
+}
+
 /* ---------------------------------------------------------------------
    INISIALISASI
    --------------------------------------------------------------------- */
@@ -267,14 +360,9 @@ async function dbInit() {
 
 async function dbInitOnce() {
   if (!supabaseClient) {
-    /* Production tanpa Supabase: JANGAN diam-diam pakai localStorage.
-       Halaman sudah menampilkan pesan konfigurasi dari supabase.js. */
-    if (typeof LOCAL_MODE_ALLOWED === "boolean" && !LOCAL_MODE_ALLOWED) {
-      DB.ready = true;
-      return DB.cache;
-    }
-
-    dbLoadFromLocal();
+    /* Tanpa credential: JANGAN diam-diam pakai localStorage (mode lokal
+       sudah dihapus). Halaman sudah menampilkan pesan konfigurasi dari
+       supabase.js — cache dikosongkan supaya tidak ada data palsu. */
     DB.ready = true;
     return DB.cache;
   }
@@ -297,6 +385,23 @@ async function dbInitOnce() {
       .catch((error) => {
         dbLog(
           "Gagal memuat reviews (jalankan ulang supabase/schema.sql?):",
+          error.message,
+        );
+        return [];
+      });
+
+    /* Promo/diskon dimuat terpisah: tabel mungkin belum ada di deployment lama. */
+    const promosReady = supabaseClient
+      .from("promos")
+      .select("*")
+      .order("id")
+      .then((result) => {
+        if (result.error) throw result.error;
+        return (result.data || []).map(promoFromDb);
+      })
+      .catch((error) => {
+        dbLog(
+          "Gagal memuat promos (jalankan ulang supabase/schema.sql?):",
           error.message,
         );
         return [];
@@ -371,6 +476,7 @@ async function dbInitOnce() {
     DB.cache.mechanics = ensureKode(rawMechanics, "mekanik");
     DB.cache.spareparts = ensureKode(rawSpareparts, "sparepart");
     DB.cache.reviews = ensureKode(await reviewsReady, "reviews");
+    DB.cache.promos = ensureKode(await promosReady, "promos");
     DB.cache.info = info.data?.[0]
       ? {
           nama: info.data[0].nama,
@@ -379,6 +485,10 @@ async function dbInitOnce() {
           email: info.data[0].email,
           jamBuka: info.data[0].jam_buka,
           hariBuka: info.data[0].hari_buka,
+          heroFoto: info.data[0].hero_foto || "",
+          heroLabel: info.data[0].hero_label || "",
+          heroJudul: info.data[0].hero_judul || "",
+          heroDeskripsi: info.data[0].hero_deskripsi || "",
         }
       : {};
     DB.cache.accounts = (profiles.data || []).map((row) => ({
@@ -423,17 +533,12 @@ async function dbInitOnce() {
         ),
       ]);
     }
-
-    /* Mirror ke localStorage supaya tetap ada cadangan di perangkat. */
-    dbPersistLocal("workshop_customers", DB.cache.customers);
-    dbPersistLocal("workshop_kendaraan", DB.cache.services);
-    dbPersistLocal("workshop_mekanik", DB.cache.mechanics);
-    dbPersistLocal("workshop_sparepart", DB.cache.spareparts);
-    dbPersistLocal("workshop_reviews", DB.cache.reviews);
-    dbPersistLocal("workshop_info", DB.cache.info);
   } catch (error) {
     console.error("Gagal memuat data dari Supabase:", error);
-    dbLoadFromLocal();
+    notifyDbError(
+      "Gagal memuat data dari Supabase: " +
+        (error?.message || String(error)),
+    );
   }
 
   DB.ready = true;
@@ -453,6 +558,7 @@ function dbSyncKnown() {
     DB.cache.spareparts.map((item) => Number(item.id)),
   );
   DB.known.reviews = new Set(DB.cache.reviews.map((item) => Number(item.id)));
+  DB.known.promos = new Set(DB.cache.promos.map((item) => Number(item.id)));
 }
 
 /* Simpan kode yang belum ada di server (hasil backfill). */
@@ -484,128 +590,6 @@ async function dbPushAll(table, rows, mapper) {
   }
 }
 
-/* ---------------------------------------------------------------------
-   MODE LOKAL
-   --------------------------------------------------------------------- */
-
-function dbLoadFromLocal() {
-  DB.cache.customers = ensureKode(
-    readLocalArray("workshop_customers", []),
-    "customers",
-  );
-  DB.cache.services = ensureKode(
-    readLocalArray("workshop_kendaraan", []),
-    "kendaraan",
-  );
-  DB.cache.mechanics = ensureKode(
-    readLocalArray("workshop_mekanik", []),
-    "mekanik",
-  );
-  DB.cache.spareparts = ensureKode(
-    readLocalArray("workshop_sparepart", []),
-    "sparepart",
-  );
-  DB.cache.reviews = ensureKode(
-    readLocalArray("workshop_reviews", []),
-    "reviews",
-  );
-
-  try {
-    DB.cache.info = JSON.parse(localStorage.getItem("workshop_info") || "{}");
-  } catch (error) {
-    DB.cache.info = {};
-  }
-
-  /* Info bengkel default (bisa diubah admin di halaman Pengaturan). */
-  DB.cache.info = {
-    nama: DB.cache.info.nama || "Pytabengkel",
-    alamat: DB.cache.info.alamat || "Jl. Merdeka No. 10, Bandung",
-    kontak: DB.cache.info.kontak || "0812-3456-7890",
-    email: DB.cache.info.email || "halo@pytabengkel.co.id",
-    jamBuka: DB.cache.info.jamBuka || "08.00 - 17.00 WIB",
-    hariBuka: DB.cache.info.hariBuka || "Senin - Sabtu",
-  };
-
-  const accounts = readLocalArray("workshop_customer_accounts", []);
-
-  DB.cache.logs = readLocalArray("workshop_activity_logs", []);
-
-  DB.cache.accounts = accounts.map((item) => ({
-    id: item.id,
-    customerId: item.customerId ? Number(item.customerId) : null,
-    email: item.email,
-    nama: item.nama,
-    password: item.password,
-    role: item.role || "customer",
-  }));
-
-  /* Seed akun demo kalau belum ada (mode lokal). */
-  if (!DB.cache.accounts.length) {
-    DB.cache.accounts = dbBuildDemoAccounts();
-    dbPersistLocal("workshop_customer_accounts", DB.cache.accounts);
-  }
-
-  dbSyncKnown();
-}
-
-/* Akun demo mode lokal.
-   Default credential ada di bawah; bisa dioverride lewat
-   `window.SUPABASE_CONFIG.localAccounts` kalau perlu. Tidak pernah
-   ditampilkan di halaman login. */
-function dbBuildDemoAccounts() {
-  const localAccounts = window.SUPABASE_CONFIG?.localAccounts || {};
-
-  const adminAccount = localAccounts.admin || {
-    email: "admin@workshop.com",
-    password: "admin123",
-  };
-
-  const customerAccount = localAccounts.customer || {
-    email: "customer@workshop.com",
-    password: "customer123",
-  };
-
-  return [
-    {
-      id: 1,
-      customerId: null,
-      nama: "Administrator Bengkel",
-      email: adminAccount.email,
-      password: adminAccount.password,
-      role: "admin",
-    },
-    {
-      id: 2,
-      customerId: null,
-      nama: "Budi Setiawan",
-      email: customerAccount.email,
-      password: customerAccount.password,
-      role: "customer",
-    },
-  ];
-}
-
-function readLocalArray(key, fallback) {
-  try {
-    const raw = localStorage.getItem(key);
-
-    if (raw === null) {
-      dbPersistLocal(key, fallback);
-      return fallback.map((item) => ({ ...item }));
-    }
-
-    const parsed = JSON.parse(raw);
-
-    if (Array.isArray(parsed)) {
-      return parsed;
-    }
-  } catch (error) {
-    console.error(`Data ${key} rusak:`, error);
-  }
-
-  return fallback.map((item) => ({ ...item }));
-}
-
 /* =========================================
    KODE ID (knd-001, cst-001, ...)
    Nomor urut tiap tabel memakai awalan huruf
@@ -618,6 +602,7 @@ var KODE_PREFIX = {
   mekanik: "mek",
   sparepart: "spp",
   reviews: "rev",
+  promos: "prm",
 };
 
 function formatKode(prefix, nomor, panjang = 3) {
@@ -682,6 +667,10 @@ function getBengkelInfoLengkap() {
     email: info.email || "",
     jamBuka: info.jamBuka || "",
     hariBuka: info.hariBuka || "",
+    heroFoto: info.heroFoto || "",
+    heroLabel: info.heroLabel || "",
+    heroJudul: info.heroJudul || "",
+    heroDeskripsi: info.heroDeskripsi || "",
   };
 }
 
@@ -697,7 +686,6 @@ function getCustomers() {
 
 function saveCustomers(customers) {
   DB.cache.customers = customers;
-  dbPersistLocal("workshop_customers", customers);
 
   if (!supabaseClient) {
     return;
@@ -770,11 +758,14 @@ function getKendaraan() {
 }
 
 function saveKendaraan(data) {
+  const previous = Array.isArray(DB.cache.services)
+    ? DB.cache.services.slice()
+    : [];
+  const knownPrevious = new Set(DB.known.services);
   DB.cache.services = data;
-  dbPersistLocal("workshop_kendaraan", data);
 
   if (!supabaseClient) {
-    return;
+    return Promise.resolve({ ok: true });
   }
 
   const known = DB.known.services;
@@ -783,7 +774,7 @@ function saveKendaraan(data) {
 
   DB.known.services = current;
 
-  dbQueue(async () => {
+  return dbQueue(async () => {
     const payload = data.map(serviceToDb);
 
     if (!dbIsAdmin()) {
@@ -792,7 +783,12 @@ function saveKendaraan(data) {
       const ownId = profile?.customer_id ? Number(profile.customer_id) : null;
 
       if (!ownId) {
-        return;
+        notifyDbError(
+          "Perubahan service tidak tersimpan ke server: profil belum terhubung ke data customer.",
+        );
+        DB.cache.services = previous;
+        DB.known.services = knownPrevious;
+        return { ok: false, error: "profil belum terhubung" };
       }
 
       const own = payload.filter((row) => row.customer_id === ownId);
@@ -804,10 +800,13 @@ function saveKendaraan(data) {
 
         if (error) {
           notifyDbError(error.message);
+          DB.cache.services = previous;
+          DB.known.services = knownPrevious;
+          return { ok: false, error: error.message };
         }
       }
 
-      return;
+      return { ok: true };
     }
 
     if (payload.length) {
@@ -817,13 +816,25 @@ function saveKendaraan(data) {
 
       if (error) {
         notifyDbError(error.message);
-        return;
+        DB.cache.services = previous;
+        DB.known.services = knownPrevious;
+        return { ok: false, error: error.message };
       }
     }
 
     if (removed.length) {
-      await supabaseClient.from("services").delete().in("id", removed);
+      const { error } = await supabaseClient
+        .from("services")
+        .delete()
+        .in("id", removed);
+
+      if (error) {
+        notifyDbError(error.message);
+        return { ok: false, error: error.message };
+      }
     }
+
+    return { ok: true };
   });
 }
 
@@ -835,7 +846,6 @@ function getMekanik() {
 
 function saveMekanik(data) {
   DB.cache.mechanics = data;
-  dbPersistLocal("workshop_mekanik", data);
 
   if (!supabaseClient) {
     return;
@@ -895,7 +905,6 @@ function getSparepart() {
 
 function saveSparepart(sparepart) {
   DB.cache.spareparts = sparepart;
-  dbPersistLocal("workshop_sparepart", sparepart);
 
   if (!supabaseClient) {
     return;
@@ -946,11 +955,14 @@ function getReviewByServiceId(serviceId) {
 }
 
 function saveReviews(reviews) {
+  const previous = Array.isArray(DB.cache.reviews)
+    ? DB.cache.reviews.slice()
+    : [];
+  const knownPrevious = new Set(DB.known.reviews);
   DB.cache.reviews = reviews;
-  dbPersistLocal("workshop_reviews", reviews);
 
   if (!supabaseClient) {
-    return;
+    return Promise.resolve({ ok: true });
   }
 
   const known = DB.known.reviews;
@@ -959,7 +971,7 @@ function saveReviews(reviews) {
 
   DB.known.reviews = current;
 
-  dbQueue(async () => {
+  return dbQueue(async () => {
     let payload = reviews.map(reviewToDb);
 
     /* Customer hanya boleh menyimpan ulasan miliknya sendiri. */
@@ -968,12 +980,12 @@ function saveReviews(reviews) {
       const ownId = profile?.customer_id ? Number(profile.customer_id) : null;
 
       if (!ownId) {
-        /* Sebelumnya diam saja — user mengira ulasan tersimpan padahal
-           tidak. Beri tahu supaya kegagalan tidak tersembunyi. */
         notifyDbError(
           "Ulasan tidak tersimpan ke server: profil belum terhubung ke data customer.",
         );
-        return;
+        DB.cache.reviews = previous;
+        DB.known.reviews = knownPrevious;
+        return { ok: false, error: "profil belum terhubung" };
       }
 
       payload = payload.filter((row) => row.customer_id === ownId);
@@ -986,13 +998,68 @@ function saveReviews(reviews) {
 
       if (error) {
         notifyDbError(error.message);
-        return;
+        DB.cache.reviews = previous;
+        DB.known.reviews = knownPrevious;
+        return { ok: false, error: error.message };
       }
     }
 
     /* Penghapusan baris hanya dari sisi admin (mis. penataan data). */
     if (dbIsAdmin() && removed.length) {
-      await supabaseClient.from("reviews").delete().in("id", removed);
+      const { error } = await supabaseClient
+        .from("reviews")
+        .delete()
+        .in("id", removed);
+      if (error) {
+        notifyDbError(error.message);
+        return { ok: false, error: error.message };
+      }
+    }
+
+    return { ok: true };
+  });
+}
+
+/* PROMO / DISKON */
+
+function getPromos() {
+  return DB.cache.promos || [];
+}
+
+function savePromos(promos) {
+  DB.cache.promos = promos;
+
+  if (!supabaseClient) {
+    return;
+  }
+
+  var known = DB.known.promos || new Set();
+  var current = new Set(promos.map(function (item) { return Number(item.id); }));
+  var removed = [];
+  known.forEach(function (id) { if (!current.has(id)) removed.push(id); });
+
+  DB.known.promos = current;
+
+  if (!dbIsAdmin()) {
+    return;
+  }
+
+  dbQueue(async function () {
+    var payload = promos.map(promoToDb);
+
+    if (payload.length) {
+      var result = await supabaseClient
+        .from("promos")
+        .upsert(payload, { onConflict: "id" });
+
+      if (result.error) {
+        notifyDbError(result.error.message);
+        return;
+      }
+    }
+
+    if (removed.length) {
+      await supabaseClient.from("promos").delete().in("id", removed);
     }
   });
 }
@@ -1000,7 +1067,7 @@ function saveReviews(reviews) {
 /* ---------------------------------------------------------------------
    FOTO SERVICE (Supabase Storage)
    Hanya admin yang mengunggah/menghapus; customer hanya membaca foto
-   service miliknya (RLS service_photos). Mode lokal: tidak tersedia.
+   service miliknya (RLS service_photos). Butuh koneksi Supabase.
    --------------------------------------------------------------------- */
 
 async function getServicePhotos(serviceId) {
@@ -1093,6 +1160,74 @@ async function deleteServicePhoto(photo) {
   }
 }
 
+/* ---------------------------------------------------------------------
+   FOTO HERO LANDING
+   Satu file di bucket "site-assets"; URL publiknya disimpan di
+   workshop_info.hero_foto dan dibaca landing page lewat RPC anon.
+   --------------------------------------------------------------------- */
+
+async function uploadHeroPhoto(file) {
+  if (!supabaseClient) {
+    throw new Error("Foto hanya tersedia pada mode Supabase.");
+  }
+
+  if (!dbIsAdmin()) {
+    throw new Error("Hanya admin yang dapat mengganti foto hero.");
+  }
+
+  if (!file || !String(file.type || "").startsWith("image/")) {
+    throw new Error("File harus berupa gambar (jpg/png/webp).");
+  }
+
+  if (file.size > 5 * 1024 * 1024) {
+    throw new Error("Ukuran foto maksimal 5 MB.");
+  }
+
+  const extRaw =
+    String(file.name || "")
+      .split(".")
+      .pop() || "jpg";
+  const ext = extRaw.toLowerCase().replace(/[^a-z0-9]/g, "") || "jpg";
+  const path = `hero-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+
+  const { error: uploadError } = await supabaseClient.storage
+    .from("site-assets")
+    .upload(path, file, { upsert: false, contentType: file.type });
+
+  if (uploadError) {
+    throw new Error(uploadError.message);
+  }
+
+  const { data: pub } = supabaseClient.storage
+    .from("site-assets")
+    .getPublicUrl(path);
+
+  return pub.publicUrl;
+}
+
+/* Hapus object foto hero lama dari storage (best-effort: URL yang bukan
+   milik bucket site-assets — misal hasil backup — dibiarkan). */
+async function removeHeroPhoto(url) {
+  if (!supabaseClient || !url) {
+    return;
+  }
+
+  const marker = "/site-assets/";
+  const index = String(url).indexOf(marker);
+
+  if (index === -1) {
+    return;
+  }
+
+  const path = String(url).slice(index + marker.length).split("?")[0];
+
+  if (!path) {
+    return;
+  }
+
+  await supabaseClient.storage.from("site-assets").remove([path]);
+}
+
 /* AKUN CUSTOMER */
 
 function getCustomerAccounts() {
@@ -1109,7 +1244,6 @@ function saveCustomerAccounts(accounts) {
     role: item.role || "customer",
   }));
 
-  dbPersistLocal("workshop_customer_accounts", DB.cache.accounts);
 
   /* Di mode Supabase akun dibuat lewat Supabase Auth, bukan tabel ini. */
 }
@@ -1182,7 +1316,7 @@ function logFromDb(row) {
   };
 }
 
-/* Muat log aktivitas terbaru dari Supabase (fallback ke localStorage). */
+/* Muat log aktivitas terbaru dari Supabase (satu-satunya sumber). */
 async function dbLoadLogs() {
   if (!supabaseClient) {
     return DB.cache.logs || [];
@@ -1213,7 +1347,6 @@ function getLogs() {
    menghapus baris di server. */
 async function clearActivityLogs() {
   DB.cache.logs = [];
-  dbPersistLocal("workshop_activity_logs", []);
 
   if (!supabaseClient || !dbIsAdmin()) {
     return;
@@ -1231,7 +1364,6 @@ async function clearActivityLogs() {
 
 function saveLogs(logs) {
   DB.cache.logs = logs;
-  dbPersistLocal("workshop_activity_logs", logs);
 
   if (!supabaseClient || !dbIsAdmin()) {
     return;
@@ -1269,7 +1401,6 @@ function addLog(aksi, entitas, keterangan = "", kode = "") {
 
   DB.cache.logs = [...(DB.cache.logs || []), entry].slice(-200);
 
-  dbPersistLocal("workshop_activity_logs", DB.cache.logs);
 
   if (supabaseClient && dbIsAdmin()) {
     dbQueue(async () => {
@@ -1291,8 +1422,19 @@ function getWorkshopInfo() {
 }
 
 function saveWorkshopInfo(info) {
-  DB.cache.info = info;
-  dbPersistLocal("workshop_info", info);
+  /* Foto & teks hero TIDAK ikut ditimpa kalau tidak disertakan pemanggil
+     (form Informasi Bengkel, restore backup lama, dsb). */
+  const prev = DB.cache.info || {};
+  const keep = (key) =>
+    info[key] !== undefined ? info[key] : prev[key] || "";
+
+  DB.cache.info = {
+    ...info,
+    heroFoto: keep("heroFoto"),
+    heroLabel: keep("heroLabel"),
+    heroJudul: keep("heroJudul"),
+    heroDeskripsi: keep("heroDeskripsi"),
+  };
 
   if (!supabaseClient || !dbIsAdmin()) {
     return;
@@ -1309,6 +1451,10 @@ function saveWorkshopInfo(info) {
           email: info.email || "",
           jam_buka: info.jamBuka || "",
           hari_buka: info.hariBuka || "",
+          hero_foto: DB.cache.info.heroFoto,
+          hero_label: DB.cache.info.heroLabel,
+          hero_judul: DB.cache.info.heroJudul,
+          hero_deskripsi: DB.cache.info.heroDeskripsi,
         },
       ],
       { onConflict: "id" },
@@ -1359,5 +1505,6 @@ async function dbUpdateProfile(patch = {}) {
    --------------------------------------------------------------------- */
 
 function dbIsAdmin() {
-  return getCurrentProfile()?.role === "admin";
+  return isAdminRole(getCurrentProfile()?.role);
 }
+

@@ -1,0 +1,565 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; font-src 'self' https://cdnjs.cloudflare.com; img-src 'self' data: https://*.supabase.co; connect-src 'self' https://*.supabase.co wss://*.supabase.co; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+    />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="Pytabengkel — promo service, ulasan pelanggan, layanan bengkel, dan kontak dalam satu halaman."
+    />
+    <title>Pytabengkel | Promo, Layanan & Kontak</title>
+    <link rel="stylesheet" href="../css/fonts.css" />
+    <link rel="stylesheet" href="../css/global.css" />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
+    />
+    <link rel="stylesheet" href="../css/customer.css" />
+    <link rel="stylesheet" href="../css/ulasan.css" />
+    <link rel="stylesheet" href="../css/landing.css" />
+    <script src="../js/error-logger.js"></script>
+    <script src="../js/theme.js"></script>
+    <script src="../js/config.js"></script>
+    <script src="../js/vendor/supabase.min.js"></script>
+    <script src="../js/supabase.js"></script>
+    <script>
+      applyThemeBeforePaint();
+    </script>
+  </head>
+  <body>
+    <header class="topbar lp-header">
+      <div class="lp-header-row">
+        <a href="#beranda" class="brand lp-brand-link">
+          <span class="lp-brand-text">
+            <strong>Pytabengkel</strong>
+            <small>Workshop & Care</small>
+          </span>
+        </a>
+        <div class="topbar-actions">
+          <button
+            type="button"
+            class="icon-btn theme-toggle"
+            data-theme-toggle
+            aria-label="Aktifkan mode gelap"
+            aria-pressed="false"
+            title="Ganti tema terang / gelap"
+          >
+            <i class="fa-solid fa-sun icon-sun" aria-hidden="true"></i>
+            <i class="fa-solid fa-moon icon-moon" aria-hidden="true"></i>
+          </button>
+          <a
+            href="index.html?role=customer"
+            class="btn btn-primary lp-topbar-login"
+            data-auth-link
+            data-profile-label="Profil"
+          >
+            <i class="fa-solid fa-right-to-bracket" aria-hidden="true"></i>
+            <span>Masuk</span>
+          </a>
+        </div>
+      </div>
+
+      <div class="lp-header-nav">
+        <nav class="lp-nav lp-landing-nav" aria-label="Navigasi landing page">
+          <a href="#beranda" class="nav-link active" aria-current="page">
+            <i class="fa-solid fa-house nav-icon" aria-hidden="true"></i>
+            <span>Beranda</span>
+          </a>
+          <a href="#keunggulan" class="nav-link">
+            <i class="fa-solid fa-shield-halved nav-icon" aria-hidden="true"></i>
+            <span>Keunggulan</span>
+          </a>
+          <a href="#promo" class="nav-link">
+            <i class="fa-solid fa-tags nav-icon" aria-hidden="true"></i>
+            <span>Promo & Diskon</span>
+          </a>
+          <a href="#layanan" class="nav-link">
+            <i class="fa-solid fa-screwdriver-wrench nav-icon" aria-hidden="true"></i>
+            <span>Layanan</span>
+          </a>
+          <a href="#cara-kerja" class="nav-link">
+            <i class="fa-solid fa-list-check nav-icon" aria-hidden="true"></i>
+            <span>Alur Service</span>
+          </a>
+          <a href="#ulasan" class="nav-link">
+            <i class="fa-solid fa-star nav-icon" aria-hidden="true"></i>
+            <span>Ulasan</span>
+          </a>
+          <a href="#faq" class="nav-link">
+            <i class="fa-solid fa-circle-question nav-icon" aria-hidden="true"></i>
+            <span>FAQ</span>
+          </a>
+          <a href="#kontak" class="nav-link">
+            <i class="fa-solid fa-address-book nav-icon" aria-hidden="true"></i>
+            <span>Kontak</span>
+          </a>
+
+        </nav>
+      </div>
+    </header>
+
+    <div class="layout lp-layout">
+      <main class="main">
+        <section class="lp-hero" id="beranda">
+          <div class="lp-hero-copy">
+            <span class="lp-hero-eyebrow">
+              <i class="fa-solid fa-tags" aria-hidden="true"></i>
+              <span id="lpHeroLabel">Promo bulan ini</span>
+            </span>
+            <h2 id="lpHeroJudul">Rawat kendaraan tanpa antre dan tanpa ribet.</h2>
+            <p id="lpHeroDeskripsi">
+              Dari servis berkala, tune-up, ganti oli, hingga perbaikan menyeluruh.
+              Dapatkan promo terbaik, cek review jujur pelanggan kami, dan konsultasi
+              langsung dengan teknisi bengkel.
+            </p>
+            <div class="lp-hero-actions">
+              <a href="#promo" class="btn btn-primary">
+                <i class="fa-solid fa-arrow-down" aria-hidden="true"></i>
+                Lihat Promo
+              </a>
+              <a href="#layanan" class="btn btn-secondary">
+                <i class="fa-solid fa-screwdriver-wrench" aria-hidden="true"></i>
+                <span>Layanan Kami</span>
+              </a>
+            </div>
+            <div class="lp-hero-trust">
+              <span><i class="fa-solid fa-circle-check" aria-hidden="true"></i> <span id="lpPromoCount">Promo aktif</span></span>
+              <span class="lp-hero-dot" aria-hidden="true"></span>
+              <span class="lp-hero-rating">
+                <span class="lp-hero-stars" id="lpHeroStars" aria-hidden="true"></span>
+                <span id="lpHeroRating">Ulasan asli pelanggan</span>
+              </span>
+              <span class="lp-hero-dot" aria-hidden="true"></span>
+              <span>
+                <i class="fa-solid fa-location-dot" aria-hidden="true"></i>
+                <span id="lpHeroAlamat">Lokasi strategis</span>
+              </span>
+            </div>
+          </div>
+        </section>
+
+        <!-- KEUNGGULAN / KENAPA MEMILIH KAMI -->
+        <section class="panel vehicle-panel" id="keunggulan">
+          <div class="panel-header">
+            <div>
+              <h3>Kenapa Harus Pytabengkel?</h3>
+              <p>Pelayanan bengkel terpercaya dengan standar pengerjaan rapi dan transparan.</p>
+            </div>
+            <div class="vehicle-toolbar">
+              <span class="badge done">
+                <i class="fa-solid fa-shield-halved" aria-hidden="true"></i>
+                Kualitas Terjamin
+              </span>
+            </div>
+          </div>
+          <div class="panel-body">
+            <div class="lp-features-grid">
+              <div class="lp-feature-card">
+                <div class="lp-feature-icon">
+                  <i class="fa-solid fa-mobile-screen-button" aria-hidden="true"></i>
+                </div>
+                <h4>Pantau dari Mana Saja</h4>
+                <p>Mulai dari antrean masuk, pengerjaan montir, hingga tes kelayakan jalan bisa Anda ikuti langsung lewat HP.</p>
+              </div>
+              <div class="lp-feature-card">
+                <div class="lp-feature-icon">
+                  <i class="fa-solid fa-receipt" aria-hidden="true"></i>
+                </div>
+                <h4>Biaya Jelas &amp; Terbuka</h4>
+                <p>Estimasi biaya kami sampaikan di awal. Tidak ada biaya dadakan atau penggantian part tanpa izin Anda.</p>
+              </div>
+              <div class="lp-feature-card">
+                <div class="lp-feature-icon">
+                  <i class="fa-solid fa-award" aria-hidden="true"></i>
+                </div>
+                <h4>Teknisi Handal &amp; Teliti</h4>
+                <p>Ditangani mekanik berpengalaman dengan alat diagnostik akurat untuk mencari sumber masalah kendaraan.</p>
+              </div>
+              <div class="lp-feature-card">
+                <div class="lp-feature-icon">
+                  <i class="fa-solid fa-box-open" aria-hidden="true"></i>
+                </div>
+                <h4>Suku Cadang Asli</h4>
+                <p>Setiap part pengganti dijamin 100% original dan otomatis tercatat di buku riwayat servis digital Anda.</p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="panel vehicle-panel" id="promo">
+          <div class="panel-header">
+            <div>
+              <h3>Promo & Diskon</h3>
+              <p>Penawaran yang sedang berlaku di Pytabengkel.</p>
+            </div>
+            <div class="vehicle-toolbar">
+              <span class="badge done">
+                <i class="fa-solid fa-circle-check" aria-hidden="true"></i>
+                Berlaku bulan ini
+              </span>
+            </div>
+          </div>
+          <div class="panel-body">
+                        <div class="lp-promo-grid" aria-live="polite">
+              <div class="review-card review-card-empty">Memuat promo...</div>
+            </div>
+            <p class="lp-promo-note">
+              <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
+              Promo berlaku untuk kendaraan terdaftar, tidak dapat digabung
+              dengan promo lain, dan selama periode promo masih berlangsung.
+            </p>
+          </div>
+        </section>
+
+        <section class="panel vehicle-panel" id="layanan">
+          <div class="panel-header">
+            <div>
+              <h3>Layanan Bengkel</h3>
+              <p>Pekerjaan dan perawatan kendaraan yang tersedia di bengkel kami.</p>
+            </div>
+          </div>
+          <div class="panel-body">
+            <div class="lp-service-grid">
+              <div class="lp-service-card">
+                <div class="lp-service-icon-wrap">
+                  <i class="fa-solid fa-oil-can" aria-hidden="true"></i>
+                </div>
+                <div class="lp-service-details">
+                  <strong>Servis Rutin & Tune Up</strong>
+                  <p>Ganti oli mesin/transmisi, filter oli, busi, dan pembersihan filter udara.</p>
+                  <span class="lp-service-tag"><i class="fa-solid fa-clock"></i> 45 - 60 Menit</span>
+                </div>
+              </div>
+              <div class="lp-service-card">
+                <div class="lp-service-icon-wrap">
+                  <i class="fa-solid fa-wrench" aria-hidden="true"></i>
+                </div>
+                <div class="lp-service-details">
+                  <strong>Perbaikan & Diagnosa Mesin</strong>
+                  <p>Computerized engine scanner, diagnosa keluhan suara/getaran, dan overhaul mesin.</p>
+                  <span class="lp-service-tag"><i class="fa-solid fa-microchip"></i> Scanning Akurat</span>
+                </div>
+              </div>
+              <div class="lp-service-card">
+                <div class="lp-service-icon-wrap">
+                  <i class="fa-solid fa-gears" aria-hidden="true"></i>
+                </div>
+                <div class="lp-service-details">
+                  <strong>Suku Cadang & Kaki-kaki</strong>
+                  <p>Rem, shockbreaker, bearing, rack end, dan penggantian sparepart original bergaransi.</p>
+                  <span class="lp-service-tag"><i class="fa-solid fa-shield-halved"></i> Garansi Suku Cadang</span>
+                </div>
+              </div>
+              <div class="lp-service-card">
+                <div class="lp-service-icon-wrap">
+                  <i class="fa-solid fa-clipboard-check" aria-hidden="true"></i>
+                </div>
+                <div class="lp-service-details">
+                  <strong>Quality Control & Test Drive</strong>
+                  <p>Pemeriksaan 25 titik standar keamanan dan uji jalan sebelum diserahkan ke pelanggan.</p>
+                  <span class="lp-service-tag"><i class="fa-solid fa-circle-check"></i> 25 Titik Cek</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ALUR SERVICE / CARA KERJA -->
+        <section class="panel vehicle-panel" id="cara-kerja">
+          <div class="panel-header">
+            <div>
+              <h3>Alur Servis Praktis &amp; Jelas</h3>
+              <p>4 langkah mudah agar mobil atau motor Anda kembali prima.</p>
+            </div>
+            <div class="vehicle-toolbar">
+              <span class="badge working">
+                <i class="fa-solid fa-bolt" aria-hidden="true"></i>
+                Proses Terarah
+              </span>
+            </div>
+          </div>
+          <div class="panel-body">
+            <div class="lp-steps-grid">
+              <div class="lp-step-card">
+                <span class="lp-step-badge">1</span>
+                <div class="lp-step-icon">
+                  <i class="fa-solid fa-calendar-plus" aria-hidden="true"></i>
+                </div>
+                <h4>Pesan / Ajukan Servis</h4>
+                <p>Masuk ke portal, pilih kendaraan Anda, dan ceritakan keluhan atau perawatan yang diinginkan.</p>
+              </div>
+              <div class="lp-step-card">
+                <span class="lp-step-badge">2</span>
+                <div class="lp-step-icon">
+                  <i class="fa-solid fa-magnifying-glass-chart" aria-hidden="true"></i>
+                </div>
+                <h4>Cek Fisik &amp; Estimasi</h4>
+                <p>Teknisi memeriksa kondisi kendaraan, lalu memberi saran pengerjaan serta rincian biaya sebelum mulai.</p>
+              </div>
+              <div class="lp-step-card">
+                <span class="lp-step-badge">3</span>
+                <div class="lp-step-icon">
+                  <i class="fa-solid fa-screwdriver-wrench" aria-hidden="true"></i>
+                </div>
+                <h4>Pengerjaan &amp; Tes Jalan</h4>
+                <p>Montir mengerjakan servis dengan rapi dan melakukan uji keamanan sebelum mobil diserahkan kembali.</p>
+              </div>
+              <div class="lp-step-card">
+                <span class="lp-step-badge">4</span>
+                <div class="lp-step-icon">
+                  <i class="fa-solid fa-circle-check" aria-hidden="true"></i>
+                </div>
+                <h4>Selesai &amp; Siap Jalan</h4>
+                <p>Ambil kendaraan, dapatkan invoice resmi bergaransi, dan bagikan pengalaman servis Anda.</p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="panel vehicle-panel" id="ulasan">
+          <div class="panel-header">
+            <div>
+              <h3>Ulasan Pelanggan</h3>
+              <p>Penilaian dikirim setelah service berstatus selesai.</p>
+            </div>
+            <div class="vehicle-toolbar">
+              <span class="lp-rating-inline">
+                <strong id="lpRatingValue">-</strong>
+                <span class="lp-stars" id="lpRatingStars" aria-hidden="true"></span>
+                <span id="lpReviewCount">Belum ada ulasan</span>
+              </span>
+            </div>
+          </div>
+          <div class="panel-body">
+            <div
+              class="lp-review-filter"
+              id="lpReviewFilter"
+              role="group"
+              aria-label="Filter ulasan berdasarkan bintang"
+              hidden
+            >
+              <button type="button" class="lp-filter-chip is-active" data-rating="0" aria-pressed="true">
+                Semua <span class="lp-filter-count">0</span>
+              </button>
+              <button type="button" class="lp-filter-chip" data-rating="5" aria-pressed="false">
+                5 <i class="fa-solid fa-star" aria-hidden="true"></i>
+                <span class="lp-filter-count">0</span>
+              </button>
+              <button type="button" class="lp-filter-chip" data-rating="4" aria-pressed="false">
+                4 <i class="fa-solid fa-star" aria-hidden="true"></i>
+                <span class="lp-filter-count">0</span>
+              </button>
+              <button type="button" class="lp-filter-chip" data-rating="3" aria-pressed="false">
+                3 <i class="fa-solid fa-star" aria-hidden="true"></i>
+                <span class="lp-filter-count">0</span>
+              </button>
+              <button type="button" class="lp-filter-chip" data-rating="2" aria-pressed="false">
+                2 <i class="fa-solid fa-star" aria-hidden="true"></i>
+                <span class="lp-filter-count">0</span>
+              </button>
+              <button type="button" class="lp-filter-chip" data-rating="1" aria-pressed="false">
+                1 <i class="fa-solid fa-star" aria-hidden="true"></i>
+                <span class="lp-filter-count">0</span>
+              </button>
+            </div>
+            <div class="lp-review-grid" id="lpReviewList">
+              <div class="review-card review-card-empty">
+                Memuat ulasan pelanggan…
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- FAQ SECTION -->
+        <section class="panel vehicle-panel" id="faq">
+          <div class="panel-header">
+            <div>
+              <h3>Pertanyaan Umum (FAQ)</h3>
+              <p>Hal yang sering ditanyakan seputar layanan dan portal Pytabengkel.</p>
+            </div>
+            <div class="vehicle-toolbar">
+              <span class="badge qc">
+                <i class="fa-solid fa-circle-question" aria-hidden="true"></i>
+                Pusat Bantuan
+              </span>
+            </div>
+          </div>
+          <div class="panel-body">
+            <div class="lp-faq-grid">
+              <details class="lp-faq-item" open>
+                <summary class="lp-faq-question">
+                  <span>Bagaimana cara mendaftar dan mengajukan servis online?</span>
+                  <i class="fa-solid fa-chevron-down lp-faq-chevron" aria-hidden="true"></i>
+                </summary>
+                <div class="lp-faq-answer">
+                  <p>Klik tombol <strong>"Masuk Portal"</strong> di kanan atas atau hero banner. Jika belum punya akun, pilih <em>Daftar Akun Baru</em>. Setelah masuk, daftarkan plat nomor kendaraan Anda lalu pilih menu <em>Ajukan Servis</em> dengan menyertakan keluhan.</p>
+                </div>
+              </details>
+
+              <details class="lp-faq-item">
+                <summary class="lp-faq-question">
+                  <span>Apakah saya bisa memantau status servis secara live?</span>
+                  <i class="fa-solid fa-chevron-down lp-faq-chevron" aria-hidden="true"></i>
+                </summary>
+                <div class="lp-faq-answer">
+                  <p>Tentu saja! Di dashboard portal customer, progress kendaraan diperbarui secara langsung: mulai dari status <strong>Menunggu Antrean</strong>, <strong>Sedang Dikerjakan Mekanik</strong>, <strong>Quality Check</strong>, hingga <strong>Selesai</strong>.</p>
+                </div>
+              </details>
+
+              <details class="lp-faq-item">
+                <summary class="lp-faq-question">
+                  <span>Bagaimana cara menggunakan kode promo atau diskon?</span>
+                  <i class="fa-solid fa-chevron-down lp-faq-chevron" aria-hidden="true"></i>
+                </summary>
+                <div class="lp-faq-answer">
+                  <p>Pilih promo yang tersedia di bagian Promo &amp; Diskon lalu klik <strong>Klaim</strong>. Promo otomatis terpilih pada bagian <em>Diskon / Promo</em> di form ajukan servis, dan total tagihan langsung dipotong sesuai jenis diskon. Satu service hanya memakai satu promo.</p>
+                </div>
+              </details>
+
+              <details class="lp-faq-item">
+                <summary class="lp-faq-question">
+                  <span>Apakah suku cadang yang digunakan dijamin original dan bergaransi?</span>
+                  <i class="fa-solid fa-chevron-down lp-faq-chevron" aria-hidden="true"></i>
+                </summary>
+                <div class="lp-faq-answer">
+                  <p>Semua sparepart yang digunakan bengkel kami merupakan komponen original dan berkualitas bersertifikasi. Kami memberikan garansi servis dan pengerjaan mekanik demi ketenangan berkendara Anda.</p>
+                </div>
+              </details>
+            </div>
+          </div>
+        </section>
+
+        <!-- CTA BANNER PRIOR TO CONTACT -->
+        <section class="lp-cta-banner">
+          <div class="lp-cta-content">
+            <h3>Siap Merawat Kendaraan Anda Hari Ini?</h3>
+            <p>Konsultasikan kebutuhan perawatan kendaraan Anda atau kunjungi bengkel kami sekarang juga.</p>
+            <div class="lp-cta-actions">
+              <a href="#kontak" class="btn btn-primary">
+                <i class="fa-solid fa-location-dot" aria-hidden="true"></i>
+                <span>Lihat Lokasi &amp; Kontak</span>
+              </a>
+              <a href="#promo" class="btn btn-secondary">
+                <i class="fa-solid fa-tags" aria-hidden="true"></i>
+                <span>Cek Promo Menarik</span>
+              </a>
+            </div>
+          </div>
+        </section>
+
+        <section class="panel vehicle-panel" id="kontak">
+          <div class="panel-header">
+            <div>
+              <h3>Kontak & Lokasi</h3>
+              <p>Hubungi bengkel atau datang langsung ke lokasi.</p>
+            </div>
+          </div>
+          <div class="panel-body">
+            <div class="lp-contact-grid">
+              <div class="info-list">
+                <div class="info-item">
+                  <i class="fa-solid fa-location-dot" aria-hidden="true"></i>
+                  <div>
+                    <strong>Alamat</strong>
+                    <span id="lpInfoAlamat">Jl. Merdeka No. 10, Bandung</span>
+                  </div>
+                </div>
+                <div class="info-item">
+                  <i class="fa-solid fa-phone" aria-hidden="true"></i>
+                  <div>
+                    <strong>Telepon / WhatsApp</strong>
+                    <a id="lpInfoKontak" href="tel:081234567890">0812-3456-7890</a>
+                  </div>
+                </div>
+                <div class="info-item">
+                  <i class="fa-solid fa-envelope" aria-hidden="true"></i>
+                  <div>
+                    <strong>Email</strong>
+                    <a id="lpInfoEmail" href="mailto:halo@pytabengkel.co.id">
+                      halo@pytabengkel.co.id
+                    </a>
+                  </div>
+                </div>
+                <div class="info-item">
+                  <i class="fa-solid fa-clock" aria-hidden="true"></i>
+                  <div>
+                    <strong>Jam buka</strong>
+                    <span>
+                      <span id="lpInfoHari">Senin - Sabtu</span>,
+                      <span id="lpInfoJam">08.00 - 17.00 WIB</span>
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="lp-contact-card">
+                <span class="lp-contact-icon">
+                  <i class="fa-solid fa-headset" aria-hidden="true"></i>
+                </span>
+                <h4>Butuh bantuan segera?</h4>
+                <p>
+                  Tim kami siap menjawab pertanyaan dan melayani konsultasi servis Anda setiap hari kerja.
+                </p>
+                <a
+                  href="https://wa.me/6281234567890"
+                  class="btn btn-primary"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <i class="fa-brands fa-whatsapp" aria-hidden="true"></i>
+                  <span>Chat WhatsApp Bengkel</span>
+                </a>
+              </div>
+            </div>
+          </div>
+        </section>
+
+      </main>
+
+      <footer class="lp-footer">
+        <div class="lp-footer-top">
+          <div class="lp-footer-brand">
+            <div class="lp-brand-link">
+              <span class="lp-brand-text">
+                <strong>Pytabengkel</strong>
+                <small>Workshop &amp; Care</small>
+              </span>
+            </div>
+            <p class="lp-footer-tagline">
+              Solusi perawatan bengkel modern, transparan, dan terpercaya untuk semua tipe kendaraan Anda.
+            </p>
+          </div>
+          <div class="lp-footer-col">
+            <h5>Navigasi</h5>
+            <ul class="lp-footer-menu">
+              <li><a href="#beranda">Beranda</a></li>
+              <li><a href="#keunggulan">Keunggulan</a></li>
+              <li><a href="#promo">Promo &amp; Diskon</a></li>
+              <li><a href="#layanan">Layanan</a></li>
+            </ul>
+          </div>
+          <div class="lp-footer-col">
+            <h5>Lainnya</h5>
+            <ul class="lp-footer-menu">
+              <li><a href="#cara-kerja">Alur Servis</a></li>
+              <li><a href="#ulasan">Ulasan Pelanggan</a></li>
+              <li><a href="#faq">FAQ</a></li>
+              <li><a href="#kontak">Kontak Kami</a></li>
+            </ul>
+          </div>
+        </div>
+        <div class="lp-footer-bottom">
+          <span>&copy; <span id="lpYear">2026</span> Pytabengkel. Hak cipta dilindungi.</span>
+          <span class="lp-footer-badge">Sistem Manajemen Servis Bengkel</span>
+        </div>
+      </footer>
+    </div>
+
+    <script src="../js/global.js"></script>
+    <script src="../js/landing.js"></script>
+  </body>
+</html>

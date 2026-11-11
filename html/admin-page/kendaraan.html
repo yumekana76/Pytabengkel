@@ -8,6 +8,7 @@
     />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Pytabengkel - Kendaraan</title>
+    <link rel="stylesheet" href="../../css/fonts.css" />
     <link rel="stylesheet" href="../../css/global.css" />
     <link
       rel="stylesheet"
@@ -42,6 +43,15 @@
         <h1>Pytabengkel</h1>
       </div>
       <div class="topbar-actions">
+        <a
+          class="topbar-landing"
+          href="../landing.html"
+          aria-label="Kembali ke Landing Page"
+          title="Kembali ke Landing Page"
+        >
+          <i class="fa-solid fa-arrow-left" aria-hidden="true"></i>
+          <span>Landing Page</span>
+        </a>
         <button
           type="button"
           class="icon-btn theme-toggle"
@@ -107,6 +117,13 @@
           <a href="sparepart.html" class="nav-link"
             ><i class="fa-solid fa-gears nav-icon" aria-hidden="true"></i>
             Sparepart
+          </a>
+          <a href="diskon.html" class="nav-link"
+          ><i class="fa-solid fa-tags nav-icon" aria-hidden="true"></i>
+          Diskon
+          </a>
+          <a href="users.html" class="nav-link" data-super-admin-only hidden>
+            <i class="fa-solid fa-crown nav-icon" aria-hidden="true"></i><span>Kelola Pengguna</span>
           </a>
           <a href="pengaturan.html" class="nav-link"
             ><i class="fa-solid fa-gear nav-icon" aria-hidden="true"></i>
@@ -324,14 +341,11 @@
                 />
               </div>
               <div class="form-group form-full">
-                <label for="vehicleKeluhan"> Keluhan </label>
-                <input
-                  type="text"
-                  id="vehicleKeluhan"
-                  class="form-control"
-                  placeholder="Contoh: Ganti oli"
-                  required
-                />
+                <div class="form-label-action">
+                  <label>Keluhan</label>
+                  <button type="button" class="action-btn" id="btnTambahVehicleKeluhan">+ Tambah Keluhan</button>
+                </div>
+                <div id="vehicleKeluhanList" class="service-part-list"></div>
               </div>
               <div class="form-group">
                 <label for="vehicleStatus"> Status </label>

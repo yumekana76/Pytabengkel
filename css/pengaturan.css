@@ -31,3 +31,44 @@
     width: 100%;
   }
 }
+
+/* Jarak antar isian teks hero di modal Pengaturan. */
+#heroFotoModal .modal-body .form-group {
+  margin-bottom: 14px;
+}
+#heroFotoModal .modal-body .form-group:last-of-type {
+  margin-bottom: 0;
+}
+
+/* Pratinjau foto hero landing (modal Pengaturan). */
+.hero-foto-preview {
+  display: grid;
+  place-items: center;
+  min-height: 180px;
+  margin-bottom: 16px;
+  padding: 10px;
+  background: var(--surface);
+  border: 1px dashed var(--border);
+  border-radius: 14px;
+  overflow: hidden;
+}
+.hero-foto-preview img {
+  max-width: 100%;
+  max-height: 260px;
+  border-radius: 10px;
+  object-fit: cover;
+}
+.hero-foto-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 24px 12px;
+  color: var(--secondary);
+  font-size: 13px;
+  text-align: center;
+}
+.hero-foto-empty i {
+  font-size: 30px;
+  opacity: 0.6;
+}

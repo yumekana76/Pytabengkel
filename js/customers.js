@@ -461,8 +461,8 @@ function selectCustomerLookup(id) {
 /* Tampilkan / sembunyikan kolom akun login sesuai checkbox. */
 function toggleCustomerAccountFields() {
   const aktif = document.getElementById("customerBuatAkun")?.checked;
-  const supabaseMode =
-    typeof isSupabaseMode === "function" && isSupabaseMode();
+  /* Mode lokal sudah dihapus — akun selalu via Supabase Auth. */
+  const supabaseMode = true;
 
   const emailGroup = document.getElementById("customerAkunEmailGroup");
   const passwordGroup = document.getElementById("customerAkunPasswordGroup");
@@ -678,8 +678,8 @@ async function saveCustomerForm(event) {
   );
 }
 
-/* Buat akun login customer (mode lokal: simpan password,
-   mode Supabase: kirim tautan login ke email).
+/* Buat akun login customer: kirim tautan login ke email
+   (Supabase Auth — tidak ada lagi penyimpanan password lokal).
    Mengembalikan { ok, text } — PEMANGGIL yang menampilkan pesan
    (bukan fungsi ini), supaya tidak ada notice yang saling menimpa. */
 async function buatAkunCustomer(customer) {
@@ -717,49 +717,12 @@ async function buatAkunCustomer(customer) {
     };
   }
 
-  if (password.length < 6) {
-    return {
-      ok: false,
-      text: "Akun login tidak dibuat: password minimal 6 karakter.",
-    };
-  }
-
-  const bentrok = getCustomerAccounts().find(
-    (item) =>
-      String(item.email || "").toLowerCase() === emailAkun.toLowerCase(),
-  );
-
-  if (bentrok) {
-    return {
-      ok: false,
-      text: "Akun login tidak dibuat: email tersebut sudah dipakai akun lain.",
-    };
-  }
-
-  const accounts = getCustomerAccounts();
-
-  accounts.push({
-    id: nextNumericId(accounts),
-    customerId: Number(customer.id),
-    nama: customer.nama,
-    email: emailAkun,
-    password,
-    createdAt: new Date().toISOString(),
-  });
-
-  saveCustomerAccounts(accounts);
-
-  const customers = getCustomers();
-  const index = customers.findIndex(
-    (item) => Number(item.id) === Number(customer.id),
-  );
-
-  if (index !== -1 && customers[index].email !== emailAkun) {
-    customers[index] = { ...customers[index], email: emailAkun };
-    saveCustomers(customers);
-  }
-
-  return { ok: true, text: `Akun login customer dibuat (${emailAkun}).` };
+  /* Mode lokal sudah dihapus — tanpa koneksi Supabase,
+     pengiriman akun tidak bisa diproses. */
+  return {
+    ok: false,
+    text: "Aplikasi belum terhubung ke Supabase. Muat ulang halaman setelah konfigurasi diisi.",
+  };
 }
 
 /* HAPUS CUSTOMER */
@@ -994,7 +957,7 @@ function manageCustomerAccount(id) {
 
   /* Di mode Supabase password dikelola Supabase Auth,
      jadi admin cukup mengirim link login ke customer. */
-  const supabaseMode = typeof isSupabaseMode === "function" && isSupabaseMode();
+  const supabaseMode = true; /* mode lokal sudah dihapus */
 
   const passwordGroup = document.getElementById("customerAccountPasswordGroup");
   const hint = document.getElementById("customerAccountHint");
@@ -1057,9 +1020,14 @@ async function saveCustomerAccountForm(event) {
     return;
   }
 
-  /* MODE SUPABASE: kirim magic link, password diurus Supabase. */
+  /* MODE SUPABASE (satu-satunya mode): kirim magic link. */
 
-  if (typeof isSupabaseMode === "function" && isSupabaseMode()) {
+  if (typeof isSupabaseMode !== "function" || !isSupabaseMode()) {
+    showError("Aplikasi belum terhubung ke Supabase. Muat ulang halaman setelah konfigurasi diisi.");
+    return;
+  }
+
+  {
     const result = await Auth.sendLoginLink(
       email,
       `${window.location.origin}/html/customers-page/dashboard.html`,
@@ -1088,78 +1056,7 @@ async function saveCustomerAccountForm(event) {
 
     closeModal("customerAccountModal");
     showPageNotice(`Link login berhasil dikirim ke ${email}.`, "success");
-    return;
   }
-
-  /* MODE LOKAL: simpan password di localStorage. */
-
-  const accounts = getCustomerAccounts();
-
-  const index = accounts.findIndex(
-    (item) => Number(item.customerId) === customerId,
-  );
-
-  if (index === -1) {
-    if (!password || password.length < 6) {
-      showError("Password minimal 6 karakter untuk akun baru.");
-      return;
-    }
-
-    accounts.push({
-      id: nextNumericId(accounts),
-      customerId,
-      nama: document.getElementById("customerAccountNama").value.trim(),
-      email,
-      password,
-      createdAt: new Date().toISOString(),
-    });
-  } else {
-    if (password && password.length < 6) {
-      showError("Password minimal 6 karakter.");
-      return;
-    }
-
-    accounts[index] = {
-      ...accounts[index],
-      email,
-      nama: document.getElementById("customerAccountNama").value.trim(),
-      ...(password ? { password } : {}),
-    };
-  }
-
-  saveCustomerAccounts(accounts);
-
-  /* Samakan email pada data customer agar konsisten.
-     Dijalankan SEBELUM addLog supaya objek customer sudah tersedia
-     (dulu `customer` tidak pernah dideklarasikan -> ReferenceError,
-     modal menggantung dan log/sinkronisasi tidak jalan). */
-
-  const customers = getCustomers();
-  const customerIndex = customers.findIndex(
-    (item) => Number(item.id) === customerId,
-  );
-  const customer = customerIndex !== -1 ? customers[customerIndex] : null;
-
-  if (customerIndex !== -1) {
-    customers[customerIndex] = {
-      ...customers[customerIndex],
-      email,
-    };
-
-    saveCustomers(customers);
-  }
-
-  addLog(
-    "Akun",
-    "Customer",
-    `Akun login ${email} untuk ${customer?.nama || "customer"}`,
-    customer ? getKode("customers", customer) : "",
-  );
-
-  closeModal("customerAccountModal");
-
-  if (typeof renderCustomers === "function") renderCustomers();
-  showPageNotice("Akun login customer tersimpan.", "success");
 }
 
 /* INIT CUSTOMER */
@@ -1253,3 +1150,31 @@ function initCustomerPage() {
 
   /* Penutupan modal sudah ditangani global.js */
 }
+
+/* Spam-click guard untuk handler form async. */
+(function () {
+  function wrap(name) {
+    const orig = window[name];
+    if (typeof orig !== "function") return;
+    const wrapped = async function (event) {
+      if (wrapped._busy) return;
+      wrapped._busy = true;
+      const submitter =
+        (event && event.submitter) ||
+        (event && event.target && typeof event.target.querySelector === "function"
+          ? event.target.querySelector("button[type='submit'], button:not([type])")
+          : null) ||
+        document.querySelector("button[type='submit']");
+      if (submitter) submitter.disabled = true;
+      try {
+        return await orig.apply(this, arguments);
+      } finally {
+        wrapped._busy = false;
+        if (submitter) submitter.disabled = false;
+      }
+    };
+    window[name] = wrapped;
+  }
+  wrap("saveCustomerForm");
+  wrap("saveCustomerAccountForm");
+})();
