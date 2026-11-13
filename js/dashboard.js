@@ -101,7 +101,10 @@ function updateDashboard() {
   if (circle) {
     const total = kendaraanStatus.length;
     if (!total) {
-      circle.style.background = "conic-gradient(#e2e8f0 0 100%)";
+      /* Warna track harus mengikuti tema; nilai hardcoded terang
+         membuat ring putih mencolok di mode gelap. */
+      circle.style.background =
+        "conic-gradient(var(--border) 0 100%)";
     } else {
       const waitingEnd = (ringkasan.menunggu / total) * 100;
       const workingEnd = waitingEnd + (ringkasan.dikerjakan / total) * 100;
@@ -330,17 +333,18 @@ function getUniqueCustomerVehicles(customerId) {
 }
 
 /* Saat kendaraan dipilih, hanya identitas kendaraan yang diambil.
-   Status, tanggal, keluhan, biaya, dan sparepart adalah data per
-   service sehingga harus mulai bersih untuk service baru. */
+   Tanggal, keluhan, biaya, dan sparepart adalah data per service
+   sehingga harus mulai bersih untuk service baru. Status selalu
+   Menunggu (ditampilkan sebagai teks tetap, bukan pilihan). */
 function resetUnifiedServiceFields() {
-  const status = document.getElementById("unifiedStatus");
-  if (status) status.value = "Menunggu";
-
   const tanggal = document.getElementById("unifiedTanggal");
   if (tanggal) tanggal.value = getTodayLocalDate();
 
-  const keluhan = document.getElementById("unifiedKeluhan");
-  if (keluhan) keluhan.value = "";
+  const keluhanList = document.getElementById("unifiedKeluhanList");
+  if (keluhanList) {
+    keluhanList.innerHTML = "";
+    addKeluhanRow("unifiedKeluhanList", "");
+  }
 
   const biayaJasa = document.getElementById("unifiedBiayaJasa");
   if (biayaJasa) biayaJasa.value = "";
@@ -510,6 +514,7 @@ function addUnifiedSparepartRow() {
         <input type="number" class="form-control" data-part-jumlah min="1" placeholder="0" value="" />
       </div>
     </div>`;
+  attachHargaRibuanOtomatis(row.querySelector("[data-part-harga]"));
   const select = row.querySelector("[data-part-select]");
   /* Baris kosong di atas, baris yang sudah dipilih pindah ke bawah. */
   const moveRow = (hasSelection) => {
@@ -580,16 +585,26 @@ function addUnifiedSparepartRow() {
 function updateUnifiedTotalPreview() {
   const biayaJasa =
     Number(document.getElementById("unifiedBiayaJasa")?.value) || 0;
-  let totalSparepart = 0;
+  const spareparts = [];
   document
     .querySelectorAll("#unifiedSparepartList .part-row-box")
     .forEach((row) => {
       const harga = Number(row.querySelector("[data-part-harga]")?.value) || 0;
       const jumlah =
         Number(row.querySelector("[data-part-jumlah]")?.value) || 0;
-      totalSparepart += harga * jumlah;
+      const sparepartId =
+        Number(row.querySelector("[data-part-select]")?.value) || null;
+      spareparts.push({ sparepartId, harga, jumlah });
     });
-  setText("unifiedTotalPreview", formatRupiah(biayaJasa + totalSparepart));
+  const totalSparepart = spareparts.reduce(
+    (total, part) => total + part.harga * part.jumlah,
+    0,
+  );
+  const subtotal = biayaJasa + totalSparepart;
+  const promos = getCheckedClaimPromos("unifiedPromoList");
+  /* Diskon mengikuti sasaran tiap promo (total / jasa / sparepart). */
+  const diskon = getClaimPromoDiscount(promos, biayaJasa, spareparts);
+  setText("unifiedTotalPreview", formatRupiah(subtotal - diskon));
 }
 
 function resetUnifiedForm() {
@@ -606,29 +621,51 @@ function resetUnifiedForm() {
     list.innerHTML = "";
     addUnifiedSparepartRow();
   }
+  const keluhanList = document.getElementById("unifiedKeluhanList");
+  if (keluhanList) {
+    keluhanList.innerHTML = "";
+    addKeluhanRow("unifiedKeluhanList", "");
+  }
   const tanggal = document.getElementById("unifiedTanggal");
   if (tanggal && !tanggal.value)
     tanggal.value = getTodayLocalDate();
+  /* Input terpadu selalu membuat service baru, jadi klaim diskon
+     dimulai dari "Tanpa diskon". */
+  populateClaimPromoList("unifiedPromoList", "unifiedPromoHint", "");
   updateUnifiedTotalPreview();
 }
 
 function saveUnifiedForm(event) {
   event.preventDefault();
+
+  if (saveUnifiedForm._busy) return;
+  saveUnifiedForm._busy = true;
+  setTimeout(() => { saveUnifiedForm._busy = false; }, 0);
   clearFormError("unifiedForm");
   clearPageNotice();
   const value = (id) => document.getElementById(id).value.trim();
 
   const polisi = value("unifiedPolisi");
   const merk = value("unifiedMerk");
-  const keluhan = value("unifiedKeluhan");
+  const keluhan = getKeluhanRows("unifiedKeluhanList");
   const namaCustomer = value("unifiedCustomerNama");
-  const status = document.getElementById("unifiedStatus").value;
+  /* Service baru selalu masuk antrean sebagai "Menunggu"; form Input
+     Data tidak lagi menyediakan pilihan status. */
+  const status = "Menunggu";
   const biayaJasa = Number(value("unifiedBiayaJasa")) || 0;
+
   if (!polisi || !merk || !keluhan || !namaCustomer) {
     showFormError(
       "unifiedForm",
       "No. polisi, merk, keluhan, dan nama customer wajib diisi.",
     );
+    return;
+  }
+
+  /* Klaim diskon — divalidasi sebelum entitas apa pun diantrikan. */
+  const promoResult = readClaimPromos("unifiedPromoList", "");
+  if (promoResult.error) {
+    showFormError("unifiedForm", promoResult.error);
     return;
   }
 
@@ -824,7 +861,7 @@ function saveUnifiedForm(event) {
   }
 
   const kendaraan = getKendaraan();
-  kendaraan.push({
+  const recordService = {
     id: nextNumericId(kendaraan),
     kode: nextKode("kendaraan", kendaraan),
     polisi,
@@ -840,7 +877,9 @@ function saveUnifiedForm(event) {
     spareparts,
     tanggalService:
       value("unifiedTanggal") || getTodayLocalDate(),
-  });
+  };
+  applyClaimPromo(recordService, promoResult.promos);
+  kendaraan.push(recordService);
 
   /* Seluruh validasi lolos — baru tulis entitas baru ke cache. */
   if (customerBaru) customers.push(customerBaru);
@@ -951,24 +990,40 @@ function updateDashboardEditTotalPreview() {
   const biayaJasa =
     Number(document.getElementById("dashEditBiayaJasa")?.value) || 0;
   const sparepart = getSparepart();
-  const totalSparepart = [
+  const spareparts = [
     ...document.querySelectorAll(
       "#dashboardEditSparepartList .service-part-row",
     ),
-  ].reduce((total, row) => {
+  ].map((row) => {
+    const sparepartId =
+      Number(row.querySelector("[data-dash-part]")?.value) || null;
     const part = sparepart.find(
-      (item) =>
-        Number(item.id) ===
-        Number(row.querySelector("[data-dash-part]")?.value),
+      (item) => Number(item.id) === Number(sparepartId),
     );
     const jumlah =
       Number(row.querySelector("[data-dash-part-quantity]")?.value) || 0;
-    return total + (Number(part?.harga) || 0) * jumlah;
-  }, 0);
-  setText(
-    "dashEditTotalPreview",
-    formatRupiah(biayaJasa + totalSparepart),
+    return {
+      sparepartId,
+      nama: part?.nama || "",
+      harga: Number(part?.harga) || 0,
+      jumlah,
+    };
+  });
+  const totalSparepart = spareparts.reduce(
+    (total, part) => total + part.harga * part.jumlah,
+    0,
   );
+  const subtotal = biayaJasa + totalSparepart;
+  const service = getKendaraan().find(
+    (item) =>
+      Number(item.id) ===
+      Number(document.getElementById("dashEditId")?.value),
+  );
+  /* Diskon dihitung dari pilihan dropdown, bukan snapshot tersimpan,
+     supaya pratinjau ikut berubah saat promo dipilih/dilepas. */
+  const promos = getCheckedClaimPromos("dashEditPromoList");
+  const diskon = getClaimPromoDiscount(promos, biayaJasa, spareparts);
+  setText("dashEditTotalPreview", formatRupiah(subtotal - diskon));
 }
 
 function getDashboardSparepartsFromForm() {
@@ -1015,7 +1070,7 @@ function openDashboardEdit(id, button = null) {
   clearFormError("dashboardEditForm");
 
   document.getElementById("dashEditId").value = item.id;
-  document.getElementById("dashEditStatus").value = item.status;
+  setServiceStatusStep("dashEditStatusStep", item.status);
   document.getElementById("dashEditTanggal").value = String(
     item.tanggalService || "",
   ).slice(0, 10);
@@ -1023,6 +1078,14 @@ function openDashboardEdit(id, button = null) {
     item.pembayaran || "Belum Lunas";
   document.getElementById("dashEditBiayaJasa").value =
     Number(item.biayaJasa) || "";
+
+  /* Klaim diskon: tampilkan promo yang sedang menempel pada service
+     ini supaya pilihan lama tidak hilang saat form dibuka. */
+  populateClaimPromoList(
+    "dashEditPromoList",
+    "dashEditPromoHint",
+    getServicePromos(item).map((promo) => promo.kode),
+  );
 
   const mekanikSelect = document.getElementById("dashEditMekanik");
   /* Mekanik berstatus Izin tidak bisa dipilih, kecuali mekanik
@@ -1061,6 +1124,10 @@ function openDashboardEdit(id, button = null) {
 
 function saveDashboardEdit(event) {
   event.preventDefault();
+
+  if (saveDashboardEdit._busy) return;
+  saveDashboardEdit._busy = true;
+  setTimeout(() => { saveDashboardEdit._busy = false; }, 0);
   clearFormError("dashboardEditForm");
   const id = document.getElementById("dashEditId").value;
   const kendaraan = getKendaraan();
@@ -1097,6 +1164,16 @@ function saveDashboardEdit(event) {
     return;
   }
 
+  /* Klaim diskon — divalidasi sebelum ada perubahan stok apa pun. */
+  const promoResult = readClaimPromos(
+    "dashEditPromoList",
+    getServicePromos(kendaraan[index]).map((promo) => promo.kode),
+  );
+  if (promoResult.error) {
+    showFormError("dashboardEditForm", promoResult.error);
+    return;
+  }
+
   let spareparts;
   try {
     spareparts = getDashboardSparepartsFromForm();
@@ -1113,6 +1190,15 @@ function saveDashboardEdit(event) {
     biayaJasa,
     spareparts,
   };
+
+  const transitionError = validateServiceStatusTransition(
+    kendaraan[index].status || "Menunggu",
+    status,
+  );
+  if (transitionError) {
+    showFormError("dashboardEditForm", transitionError);
+    return;
+  }
 
   const statusError = validateServiceStatus(status, draft);
   if (statusError) {
@@ -1167,13 +1253,20 @@ function saveDashboardEdit(event) {
     biayaJasa,
     spareparts,
   };
+  applyClaimPromo(kendaraan[index], promoResult.promos);
   saveKendaraan(kendaraan);
   saveSparepart(stokTersedia);
 
   addLog(
     "Update",
     "Service",
-    `${kendaraan[index].polisi} — status ${status}, pembayaran ${pembayaran}`,
+    `${kendaraan[index].polisi} — status ${status}, pembayaran ${pembayaran}${
+      getServicePromos(kendaraan[index]).length
+        ? `, promo ${getServicePromos(kendaraan[index])
+            .map((promo) => promo.kode)
+            .join(" + ")}`
+        : ""
+    }`,
     getKode("kendaraan", kendaraan[index]),
   );
 
@@ -1307,6 +1400,13 @@ function initDashboardEdit() {
   document
     .getElementById("dashEditBiayaJasa")
     ?.addEventListener("input", updateDashboardEditTotalPreview);
+  attachHargaRibuanOtomatis("dashEditBiayaJasa");
+  document
+    .getElementById("dashEditPromoList")
+    ?.addEventListener("change", () => {
+      updateClaimPromoListHint("dashEditPromoList", "dashEditPromoHint");
+      updateDashboardEditTotalPreview();
+    });
   document
     .getElementById("btnDashboardDetailLunas")
     ?.addEventListener("click", tandaiDashboardDetailLunas);
@@ -1435,6 +1535,28 @@ function initDashboardInput() {
     if (event.key === "Enter") event.preventDefault();
   });
   resetUnifiedForm();
+
+  /* Tombol Klaim di landing (admin/super) membawa ?klaim=KODE: buka
+     form Input Data dengan promo tersebut langsung tercentang. */
+  const klaimParams = new URLSearchParams(window.location.search);
+  const klaimKode = (klaimParams.get("klaim") || "").trim().toUpperCase();
+  if (klaimKode) {
+    klaimParams.delete("klaim");
+    const sisa = klaimParams.toString();
+    window.history.replaceState(
+      {},
+      "",
+      window.location.pathname +
+        (sisa ? "?" + sisa : "") +
+        window.location.hash,
+    );
+    populateClaimPromoList("unifiedPromoList", "unifiedPromoHint", [
+      klaimKode,
+    ]);
+    updateUnifiedTotalPreview();
+    openModal("unifiedModal");
+  }
+
   button.addEventListener("click", () => {
     resetUnifiedForm();
     openModal("unifiedModal");
@@ -1443,9 +1565,19 @@ function initDashboardInput() {
   document
     .getElementById("unifiedBiayaJasa")
     ?.addEventListener("input", updateUnifiedTotalPreview);
+  attachHargaRibuanOtomatis("unifiedBiayaJasa");
+  document
+    .getElementById("unifiedPromoList")
+    ?.addEventListener("change", () => {
+      updateClaimPromoListHint("unifiedPromoList", "unifiedPromoHint");
+      updateUnifiedTotalPreview();
+    });
   document
     .getElementById("btnTambahUnifiedSparepart")
     ?.addEventListener("click", () => addUnifiedSparepartRow());
+  document
+    .getElementById("btnTambahUnifiedKeluhan")
+    ?.addEventListener("click", () => addKeluhanRow("unifiedKeluhanList", ""));
   document
     .querySelectorAll('[data-close-modal="unifiedModal"]')
     .forEach((button) => {

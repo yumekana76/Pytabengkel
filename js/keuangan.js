@@ -715,6 +715,326 @@ function exportKeuanganCsv() {
   showPageNotice(`${data.length} transaksi diekspor ke CSV.`, "success");
 }
 
+/* ---------- Helper XLSX (ZIP + XML) ---------- */
+
+function crc32Xlsx(data) {
+  let crc = -1;
+  for (let i = 0; i < data.length; i++) {
+    crc = (crc >>> 8) ^ crcTableXlsx[(crc ^ data[i]) & 0xff];
+  }
+  return (crc ^ -1) >>> 0;
+}
+
+const crcTableXlsx = (() => {
+  const table = new Uint32Array(256);
+  for (let n = 0; n < 256; n++) {
+    let c = n;
+    for (let k = 0; k < 8; k++) {
+      c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
+    }
+    table[n] = c >>> 0;
+  }
+  return table;
+})();
+
+function textToBytesXlsx(text) {
+  return new TextEncoder().encode(text);
+}
+
+function concatBytesXlsx(parts) {
+  let total = 0;
+  for (const part of parts) total += part.length;
+  const out = new Uint8Array(total);
+  let pos = 0;
+  for (const part of parts) {
+    out.set(part, pos);
+    pos += part.length;
+  }
+  return out;
+}
+
+function colLetterXlsx(index) {
+  let n = index + 1;
+  let result = "";
+  while (n > 0) {
+    const rem = (n - 1) % 26;
+    result = String.fromCharCode(65 + rem) + result;
+    n = Math.floor((n - 1) / 26);
+  }
+  return result;
+}
+
+function escapeXmlXlsx(value) {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&apos;");
+}
+
+function buildSheetXmlXlsx(rows) {
+  const rowXml = rows
+    .map((row, rowIndex) => {
+      const cells = row
+        .map((cell, colIndex) => {
+          const ref = `${colLetterXlsx(colIndex)}${rowIndex + 1}`;
+          if (typeof cell === "number" && Number.isFinite(cell)) {
+            return `<c r="${ref}"><v>${cell}</v></c>`;
+          }
+          const text = escapeXmlXlsx(cell ?? "");
+          return `<c r="${ref}" t="inlineStr"><is><t xml:space="preserve">${text}</t></is></c>`;
+        })
+        .join("");
+      return `<row r="${rowIndex + 1}">${cells}</row>`;
+    })
+    .join("");
+  return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+ <sheetData>${rowXml}</sheetData>
+</worksheet>`;
+}
+
+function buildXlsxZip(entries) {
+  // entries: [{ name: string, data: Uint8Array }]
+  const localChunks = [];
+  const centralChunks = [];
+  let offset = 0;
+  const encoder = new TextEncoder();
+
+  const infos = entries.map((entry) => {
+    const nameBytes = encoder.encode(entry.name);
+    const data = entry.data;
+    const crc = crc32Xlsx(data);
+    const localHeader = new Uint8Array(30 + nameBytes.length);
+    const view = new DataView(localHeader.buffer);
+    view.setUint32(0, 0x04034b50, true);
+    view.setUint16(4, 20, true);
+    view.setUint16(6, 0, true);
+    view.setUint16(8, 0, true); // stored
+    view.setUint16(10, 0, true); // mod time
+    view.setUint16(12, 0, true); // mod date
+    view.setUint32(14, crc, true);
+    view.setUint32(18, data.length, true);
+    view.setUint32(22, data.length, true);
+    view.setUint16(26, nameBytes.length, true);
+    view.setUint16(28, 0, true);
+    localHeader.set(nameBytes, 30);
+
+    const info = {
+      name: entry.name,
+      nameBytes,
+      data,
+      crc,
+      offset,
+      localHeader,
+    };
+    localChunks.push(localHeader, data);
+    offset += localHeader.length + data.length;
+    return info;
+  });
+
+  let centralSize = 0;
+  for (const info of infos) {
+    const cd = new Uint8Array(46 + info.nameBytes.length);
+    const view = new DataView(cd.buffer);
+    view.setUint32(0, 0x02014b50, true);
+    view.setUint16(4, 20, true);
+    view.setUint16(6, 20, true);
+    view.setUint16(8, 0, true);
+    view.setUint16(10, 0, true);
+    view.setUint16(12, 0, true);
+    view.setUint16(14, 0, true);
+    view.setUint32(16, info.crc, true);
+    view.setUint32(20, info.data.length, true);
+    view.setUint32(24, info.data.length, true);
+    view.setUint16(28, info.nameBytes.length, true);
+    view.setUint16(30, 0, true);
+    view.setUint16(32, 0, true);
+    view.setUint16(34, 0, true);
+    view.setUint16(36, 0, true);
+    view.setUint32(38, 0, true); // external attrs
+    view.setUint32(42, info.offset, true);
+    cd.set(info.nameBytes, 46);
+    centralChunks.push(cd);
+    centralSize += cd.length;
+  }
+
+  const eocd = new Uint8Array(22);
+  const eocdView = new DataView(eocd.buffer);
+  eocdView.setUint32(0, 0x06054b50, true);
+  eocdView.setUint16(4, 0, true);
+  eocdView.setUint16(6, 0, true);
+  eocdView.setUint16(8, infos.length, true);
+  eocdView.setUint16(10, infos.length, true);
+  eocdView.setUint32(12, centralSize, true);
+  eocdView.setUint32(16, offset, true);
+  eocdView.setUint16(20, 0, true);
+
+  const all = [...localChunks, ...centralChunks, eocd];
+  return concatBytesXlsx(all);
+}
+
+/* Unduh rekap keuangan (ringkasan bulanan + transaksi) sebagai file Excel asli (.xlsx). */
+function exportKeuanganExcel() {
+  if (!dbIsAdmin()) {
+    showPageNotice("Rekap keuangan hanya bisa diekspor oleh admin.", "error");
+    return;
+  }
+
+  const data = getKeuanganFiltered(
+    document.getElementById("searchKeuangan")?.value || "",
+  );
+
+  if (!data.length) {
+    showPageNotice("Tidak ada transaksi untuk diekspor.", "error");
+    return;
+  }
+
+  const tahun = getSelectedTahunKeuangan();
+  const bulan = document.getElementById("filterBulanKeuangan")?.value || "";
+  const hari = document.getElementById("filterHariKeuangan")?.value || "";
+  const bulanDipilih = bulan
+    ? [Number(bulan)]
+    : Array.from({ length: 12 }, (_, index) => index + 1);
+
+  const rekapRows = bulanDipilih.map((nomorBulan) => {
+    const rows = data.filter(
+      (item) => Number(String(item.tanggalService || "").slice(5, 7)) === nomorBulan,
+    );
+    const lunas = rows.filter(
+      (item) => (item.pembayaran || "Belum Lunas") === "Lunas",
+    );
+    const belum = rows.filter(
+      (item) => (item.pembayaran || "Belum Lunas") !== "Lunas",
+    );
+    const pendapatan = lunas.reduce((sum, item) => sum + item.total, 0);
+    const tagihan = belum.reduce((sum, item) => sum + item.total, 0);
+
+    return [
+      NAMA_BULAN_PENDEK[nomorBulan - 1],
+      rows.length,
+      lunas.length,
+      belum.length,
+      pendapatan,
+      tagihan,
+    ];
+  });
+
+  const totalLunas = data.filter(
+    (item) => (item.pembayaran || "Belum Lunas") === "Lunas",
+  );
+  const totalBelum = data.filter(
+    (item) => (item.pembayaran || "Belum Lunas") !== "Lunas",
+  );
+  const totalPendapatan = totalLunas.reduce((sum, item) => sum + item.total, 0);
+  const totalTagihan = totalBelum.reduce((sum, item) => sum + item.total, 0);
+
+  rekapRows.push([
+    "Total",
+    data.length,
+    totalLunas.length,
+    totalBelum.length,
+    totalPendapatan,
+    totalTagihan,
+  ]);
+
+  const rekapSheetRows = [
+    ["Rekap Keuangan"],
+    [`Periode: ${[
+      bulan ? NAMA_BULAN_PENDEK[Number(bulan) - 1] : "Semua Bulan",
+      hari ? `tanggal ${hari}` : "",
+      tahun,
+    ]
+      .filter(Boolean)
+      .join(" ")}`],
+    [`Dicetak: ${new Date().toLocaleString("id-ID")}`],
+    [],
+    ["Bulan", "Service", "Lunas", "Belum Lunas", "Pendapatan Lunas", "Sisa Tagihan"],
+    ...rekapRows,
+  ];
+
+  const transaksiSheetRows = [
+    [
+      "Kode",
+      "Tanggal",
+      "No. Polisi",
+      "Pelanggan",
+      "Mekanik",
+      "Keluhan",
+      "Biaya Jasa",
+      "Sparepart",
+      "Total",
+      "Pembayaran",
+    ],
+    ...data.map((item) => [
+      getKode("kendaraan", item),
+      item.tanggalService || "",
+      item.polisi || "",
+      item.pelanggan || "",
+      getMekanikNama(item.mekanikId),
+      item.keluhan || "",
+      item.biayaJasa || 0,
+      item.total - (item.biayaJasa || 0),
+      item.total,
+      item.pembayaran || "Belum Lunas",
+    ]),
+  ];
+
+  const workbookXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+ <sheets>
+  <sheet name="Rekap Bulanan" sheetId="1" r:id="rId1"/>
+  <sheet name="Transaksi" sheetId="2" r:id="rId2"/>
+ </sheets>
+</workbook>`;
+
+  const workbookRelsXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+ <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/>
+ <Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet2.xml"/>
+</Relationships>`;
+
+  const packageRelsXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+ <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/>
+</Relationships>`;
+
+  const contentTypesXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+ <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+ <Default Extension="xml" ContentType="application/xml"/>
+ <Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>
+ <Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>
+ <Override PartName="/xl/worksheets/sheet2.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>
+</Types>`;
+
+  const entries = [
+    { name: "[Content_Types].xml", data: textToBytesXlsx(contentTypesXml) },
+    { name: "_rels/.rels", data: textToBytesXlsx(packageRelsXml) },
+    { name: "xl/workbook.xml", data: textToBytesXlsx(workbookXml) },
+    { name: "xl/_rels/workbook.xml.rels", data: textToBytesXlsx(workbookRelsXml) },
+    { name: "xl/worksheets/sheet1.xml", data: textToBytesXlsx(buildSheetXmlXlsx(rekapSheetRows)) },
+    { name: "xl/worksheets/sheet2.xml", data: textToBytesXlsx(buildSheetXmlXlsx(transaksiSheetRows)) },
+  ];
+
+  const zipBytes = buildXlsxZip(entries);
+  const blob = new Blob([zipBytes], {
+    type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+
+  link.href = url;
+  link.download = `rekap-keuangan-${tahun}.xlsx`;
+  link.click();
+  URL.revokeObjectURL(url);
+
+  showPageNotice(`${data.length} transaksi diekspor ke Excel.`, "success");
+}
+
+
+
 function initKeuanganPage() {
   const table = document.getElementById("keuanganTable");
   if (!table) return;
@@ -761,6 +1081,10 @@ function initKeuanganPage() {
   document
     .getElementById("btnExportCsv")
     ?.addEventListener("click", exportKeuanganCsv);
+
+  document
+    .getElementById("btnExportExcel")
+    ?.addEventListener("click", exportKeuanganExcel);
   document
     .getElementById("sortKeuangan")
     .addEventListener("change", () =>

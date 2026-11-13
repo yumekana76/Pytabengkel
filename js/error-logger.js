@@ -123,8 +123,8 @@
           var request = client.from("client_errors").insert(payload);
 
           /* Abaikan hasil: logging tidak boleh menggagalkan halaman.
-             PostgREST builder mendukung .then(); mode lokal tidak
-             akan pernah sampai ke sini (client null). */
+             PostgREST builder mendukung .then(); blok ini tidak
+             dijalankan sama sekali kalau client null. */
           if (request && typeof request.then === "function") {
             request.then(
               function () {},

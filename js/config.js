@@ -3,25 +3,27 @@
    ---------------------------------------------------------------------
    Cara pakai:
 
-   1. DEVELOPMENT (default)
-      - Buka file ini, isi url + anonKey Supabase (boleh kosong)
-      - Kalau kosong -> mode LOKAL, data disimpan di localStorage
+   1. CREDENTIAL SUPABASE TIDAK LAGI DITULIS DI FILE INI.
+      Sumbernya: environment variable `SUPABASE_URL` + `SUPABASE_ANON_KEY`
+      (Vercel Environment Variables untuk deploy, atau file `.env` lokal).
 
-   2. PRODUCTION
-      - Jangan edit file ini. Buat file `config.prod.js` di folder yang
-        sama (js/config.prod.js) berisi credential asli:
+      - DEVELOPMENT lokal:
+          cp .env.example .env        # lalu isi
+          node scripts/build-config.js
+        Perintah terakhir membuat `js/config.prod.js` (gitignored) yang
+        dimuat OTOMATIS oleh blok auto-load di bawah — tidak perlu
+        menambahkan <script> di setiap halaman.
+        (Kalau Anda sudah menambahkan tag config.prod.js manual sebelum
+        file ini, auto-load otomatis menyerah.)
 
-          window.SUPABASE_CONFIG_OVERRIDE = {
-            url: "https://xxxx.supabase.co",
-            anonKey: "eyJhbGciOi...",
-          };
+      - PRODUCTION (Vercel):
+        build step `scripts/build-config.js` (lihat vercel.json)
+        menulis `js/config.prod.js` dari Environment Variables.
 
-        File itu dimuat OTOMATIS oleh blok auto-load di bawah —
-        TIDAK perlu menambahkan <script> di setiap halaman.
-        (Kalau Anda sudah menambahkan tag config.prod.js manual
-        sebelum file ini, auto-load otomatis menyerah.)
-
-      - Mode lokal otomatis MATI di production (lihat mode di bawah).
+   2. SATU MODE: SUPABASE
+      Tidak ada lagi mode lokal/localStorage. Semua data dibaca & ditulis
+      ke Supabase. Kalau url + anonKey kosong (config.prod.js belum ada),
+      halaman menampilkan pesan konfigurasi yang jelas — bukan data dummy.
    ===================================================================== */
 
 /* ---------------------------------------------------------------------
@@ -57,10 +59,13 @@
   }
 })();
 
-/* Konfigurasi dasar (diklasifikasi, tidak diubah saat build) */
+/* Konfigurasi dasar (diklasifikasi, tidak diubah saat build).
+   url + anonKey SENGAJA dikosongkan di sini: credential datang dari
+   js/config.prod.js (hasil generate scripts/build-config.js dari
+   environment variable). Lihat .env.example. */
 const SUPABASE_DEFAULTS = {
-  url: "https://ggmjihuasfcjxvuewryn.supabase.co",
-  anonKey: "sb_publishable_kx2HEvryTZWqtxDDiTtRsA_SMRsGEUH",
+  url: "",
+  anonKey: "",
 
   /* Halaman tujuan setelah login. */
   adminRedirect: "dashboard.html",
@@ -72,6 +77,18 @@ const SUPABASE_DEFAULTS = {
 
   /* Batas waktu (ms) untuk satu permintaan ke Supabase. */
   requestTimeout: 15000,
+
+  /* Service notifikasi WhatsApp (folder whatsapp-service/, Baileys).
+     Kosongkan = notifikasi WA nonaktif.
+     - waServerUrl: URL server WA, mis. http://localhost:3000
+       (di production harus URL publik https).
+     - waApiKey: nilai API_KEY yang sama dengan whatsapp-service/.env.
+       CATATAN: nilai ini ikut terkirim ke browser — cukup untuk proyek
+       demo; untuk produksi pertimbangkan penandatanganan request di
+       server. Sumbernya: environment variable WA_SERVER_URL +
+       WA_API_KEY (lihat scripts/build-config.js). */
+  waServerUrl: "",
+  waApiKey: "",
 };
 
 /* Environment: "dev" | "prod" (bisa di-override lewat query ?env=) */
@@ -101,14 +118,9 @@ window.__applySupabaseConfig = function () {
   window.SUPABASE_CONFIG.env = APP_ENV;
   window.SUPABASE_CONFIG.isProduction = APP_ENV === "prod";
 
-  /* ---------------------------------------------------------------------
-     MODE LOKAL TIDAK BOLEH AKTIF DI PRODUCTION
-     Di production, aplikasi WAJIB terhubung ke Supabase. Kalau credential
-     belum diisi, halaman ditampilkan dengan pesan error yang jelas
-     (bukan diam-diam memakai localStorage).
-     --------------------------------------------------------------------- */
-  window.SUPABASE_CONFIG.localModeAllowed =
-    !window.SUPABASE_CONFIG.isProduction;
+  /* Mode lokal/localStorage sudah dihapus — aplikasi selalu memakai
+     Supabase. Kalau credential belum diisi, supabase.js menampilkan
+     pesan konfigurasi yang jelas (bukan diam-diam pakai localStorage). */
 
   return window.SUPABASE_CONFIG;
 };

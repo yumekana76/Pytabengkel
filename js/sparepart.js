@@ -86,6 +86,10 @@ function editSparepart(id) {
 
 function saveSparepartForm(event) {
   event.preventDefault();
+
+  if (saveSparepartForm._busy) return;
+  saveSparepartForm._busy = true;
+  setTimeout(() => { saveSparepartForm._busy = false; }, 0);
   clearFormError("sparepartForm");
   clearPageNotice();
   const id = document.getElementById("sparepartId").value;
@@ -195,6 +199,7 @@ function initSparepartPage() {
   document
     .getElementById("sparepartForm")
     .addEventListener("submit", saveSparepartForm);
+  attachHargaRibuanOtomatis("sparepartHarga");
   document
     .getElementById("searchSparepart")
     .addEventListener(

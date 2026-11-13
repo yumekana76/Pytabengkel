@@ -4,10 +4,11 @@
     <meta charset="UTF-8" />
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; font-src 'self' https://cdnjs.cloudflare.com; img-src 'self' data: https://*.supabase.co; connect-src 'self' https://*.supabase.co wss://*.supabase.co; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+      content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; font-src 'self' https://cdnjs.cloudflare.com; img-src 'self' data: https://*.supabase.co; connect-src 'self' https://*.supabase.co wss://*.supabase.co http://localhost:3000; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
       />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Login | Pytabengkel</title>
+    <link rel="stylesheet" href="../css/fonts.css" />
     <link rel="stylesheet" href="../css/login.css" />
     <link
       rel="stylesheet"
@@ -25,71 +26,17 @@
     <script>applyThemeBeforePaint();</script>
   </head>
   <body>
-    <main class="login-container">
-      <section class="login-info">
-        <div class="brand">
-          <div class="brand-icon">
-            <i class="fa-solid fa-screwdriver-wrench" aria-hidden="true"></i>
-          </div>
-          <span>Pytabengkel</span>
-        </div>
-        <div class="info-content">
-          <h1 id="heroTitle">Kelola Bengkel Lebih Mudah.</h1>
-          <p id="heroText">
-            Kelola customer, kendaraan, service, mekanik, dan riwayat pekerjaan dalam satu sistem.
-          </p>
-          <div class="features" id="heroFeatures">
-            <div class="feature">
-              <span class="feature-icon"><i class="fa-solid fa-check" aria-hidden="true"></i></span>
-              <span>Kelola data customer dan kendaraan</span>
-            </div>
-            <div class="feature">
-              <span class="feature-icon"><i class="fa-solid fa-check" aria-hidden="true"></i></span>
-              <span>Pantau status service kendaraan</span>
-            </div>
-            <div class="feature">
-              <span class="feature-icon"><i class="fa-solid fa-check" aria-hidden="true"></i></span>
-              <span>Simpan riwayat service dengan mudah</span>
-            </div>
-          </div>
-        </div>
-        <div class="testimoni-section" id="testimoniSection" hidden>
-          <div class="testimoni-head">
-            <h3>
-              <i class="fa-solid fa-star" aria-hidden="true"></i>
-              Apa Kata Pelanggan
-            </h3>
-            <div class="testimoni-summary">
-              <span class="testimoni-rata" id="testimoniRata">-</span>
-              <span id="testimoniStars"></span>
-              <span class="testimoni-jumlah" id="testimoniJumlah"></span>
-            </div>
-          </div>
-          <div
-            class="testimoni-filter testimoni-panel-filter"
-            id="testimoniFilter"
-            role="group"
-            aria-label="Filter ulasan berdasarkan bintang"
-          ></div>
-          <div class="testimoni-list" id="publicTestimoni"></div>
-        </div>
-        <br>
-        <div class="copyright">© 2026 Pytabengkel</div>
-      </section>
-
-      <section class="login-form-container">
+    <main class="login-standalone">
+      <div class="login-form-wrap">
         <div class="login-top-actions">
-          <button
-            type="button"
-            class="theme-toggle reviews-toggle"
-            id="reviewsToggle"
-            aria-expanded="false"
-            aria-controls="loginInfo"
-            aria-label="Lihat ulasan pelanggan"
-            title="Lihat ulasan pelanggan"
+          <a
+            href="landing.html"
+            class="theme-toggle"
+            aria-label="Kembali ke beranda"
+            title="Kembali ke beranda"
           >
-            <i class="fa-solid fa-star" aria-hidden="true"></i>
-          </button>
+            <i class="fa-solid fa-house" aria-hidden="true"></i>
+          </a>
           <button
             type="button"
             class="theme-toggle"
@@ -102,14 +49,19 @@
             <i class="fa-solid fa-moon icon-moon" aria-hidden="true"></i>
           </button>
         </div>
-        <div class="login-form-wrap">
-          <div class="role-switch" role="tablist" aria-label="Pilih portal">
+        <a href="landing.html" class="login-brand-header">
+            <span class="login-brand-text">
+              <strong>Pytabengkel</strong>
+              <small>Workshop &amp; Care</small>
+            </span>
+          </a>
+          <div class="role-switch" role="tablist" aria-label="Pilih portal" hidden style="display:none">
             <button
               type="button"
-              class="role-tab active"
+              class="role-tab"
               data-role="admin"
               role="tab"
-              aria-selected="true"
+              aria-selected="false"
             >
               <i class="fa-solid fa-user-shield" aria-hidden="true"></i>
               Administrator
@@ -117,13 +69,28 @@
             <button
               type="button"
               class="role-tab"
-              data-role="customer"
+              data-role="super_admin"
               role="tab"
               aria-selected="false"
+            >
+              <i class="fa-solid fa-crown" aria-hidden="true"></i>
+              Super Admin
+            </button>
+            <button
+              type="button"
+              class="role-tab active"
+              data-role="customer"
+              role="tab"
+              aria-selected="true"
             >
               <i class="fa-solid fa-user" aria-hidden="true"></i>
               Customer
             </button>
+          </div>
+
+          <div class="admin-login-notice" id="adminLoginNotice" hidden>
+            <i class="fa-solid fa-shield-halved" aria-hidden="true"></i>
+            <span id="adminLoginNoticeText">Mode Login Admin</span>
           </div>
 
           <form class="login-form" id="loginForm">
@@ -200,9 +167,6 @@
             </div>
           </form>
 
-          <!-- Form reset password (gaya sama dengan halaman daftar).
-              Hanya dipakai di MODE LOKAL. Di production, reset
-              dilakukan lewat tautan email. -->
           <div class="reset-box" id="resetBox" hidden>
             <div class="login-header" style="margin-bottom: 18px">
               <h2>Atur Ulang Password</h2>
@@ -253,45 +217,7 @@
             </form>
           </div>
         </div>
-      </section>
     </main>
-
-    <!-- Modal semua ulasan (dibuka tombol "Lihat semua ulasan") -->
-    <div
-      class="testimoni-modal-overlay"
-      id="testimoniModal"
-      hidden
-      aria-hidden="true"
-    >
-      <div
-        class="testimoni-modal"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="testimoniModalTitle"
-      >
-        <div class="testimoni-modal-head">
-          <div>
-            <h2 id="testimoniModalTitle">Semua Ulasan</h2>
-            <p id="testimoniModalSub"></p>
-          </div>
-          <button
-            type="button"
-            class="testimoni-modal-close"
-            id="testimoniModalClose"
-            aria-label="Tutup"
-          >
-            <i class="fa-solid fa-xmark" aria-hidden="true"></i>
-          </button>
-        </div>
-        <div
-          class="testimoni-filter testimoni-modal-filter"
-          id="testimoniModalFilter"
-          role="group"
-          aria-label="Filter ulasan berdasarkan bintang"
-        ></div>
-        <div class="testimoni-modal-list" id="testimoniModalList"></div>
-      </div>
-    </div>
 
     <!-- WAJIB urut: db -> auth -> global -> halaman, supaya db.js
          (panggil isSupabaseMode()), login.js (panggil Auth), dan
@@ -301,6 +227,5 @@
     <script src="../js/auth.js"></script>
     <script src="../js/global.js"></script>
     <script src="../js/login.js"></script>
-    <script src="../js/testimoni.js"></script>
   </body>
 </html>

@@ -77,6 +77,196 @@ function initPengaturanPage() {
     });
   }
 
+  /* ---------------- HERO LANDING ----------------
+     Foto latar (bucket site-assets) + teks (label, judul, deskripsi)
+     yang tampil di hero landing page. Admin dan super_admin sama-sama
+     bisa mengubahnya (halaman ini sudah dijaga requireAdminAuth lewat
+     window.__APP_ROLE). */
+  const HERO_DEFAULTS = {
+    heroLabel: "Promo bulan ini",
+    heroJudul: "Rawat kendaraan tanpa antre dan tanpa ribet.",
+    heroDeskripsi:
+      "Dari servis berkala, tune-up, ganti oli, hingga perbaikan " +
+      "menyeluruh. Dapatkan promo terbaik, cek review jujur pelanggan " +
+      "kami, dan konsultasi langsung dengan teknisi bengkel.",
+  };
+
+  const heroFotoButton = document.getElementById("btnHeroFoto");
+  const heroFotoInput = document.getElementById("heroFotoInput");
+  const heroFotoPreview = document.getElementById("heroFotoPreview");
+  const heroFotoEmpty = document.getElementById("heroFotoEmpty");
+  const heroFotoError = document.getElementById("heroFotoFormError");
+  const heroFotoHapus = document.getElementById("btnHapusHeroFoto");
+  const heroFotoSimpan = document.getElementById("btnSimpanHeroFoto");
+  const heroLabelInput = document.getElementById("heroLabel");
+  const heroJudulInput = document.getElementById("heroJudul");
+  const heroDeskripsiInput = document.getElementById("heroDeskripsi");
+
+  let heroFotoPending = null; /* File baru yang belum diunggah. */
+
+  function readHeroText() {
+    return {
+      heroLabel: heroLabelInput ? heroLabelInput.value.trim() : "",
+      heroJudul: heroJudulInput ? heroJudulInput.value.trim() : "",
+      heroDeskripsi: heroDeskripsiInput ? heroDeskripsiInput.value.trim() : "",
+    };
+  }
+
+  function showHeroFotoError(message) {
+    if (!heroFotoError) return;
+    heroFotoError.textContent = message || "";
+    heroFotoError.hidden = !message;
+  }
+
+  function refreshHeroFotoPreview() {
+    if (!heroFotoPreview) return;
+
+    const current = getBengkelInfoLengkap().heroFoto;
+
+    function show(url) {
+      if (url) {
+        heroFotoPreview.src = url;
+        heroFotoPreview.hidden = false;
+        if (heroFotoEmpty) heroFotoEmpty.hidden = true;
+      } else {
+        heroFotoPreview.removeAttribute("src");
+        heroFotoPreview.hidden = true;
+        if (heroFotoEmpty) heroFotoEmpty.hidden = false;
+      }
+    }
+
+    if (heroFotoHapus) {
+      heroFotoHapus.hidden = !current;
+    }
+
+    if (heroFotoPending) {
+      /* data: URL — blob: diblokir CSP img-src halaman ini. */
+      const reader = new FileReader();
+      reader.onload = () => show(String(reader.result || ""));
+      reader.readAsDataURL(heroFotoPending);
+    } else {
+      show(current || "");
+    }
+  }
+
+  if (heroFotoButton) {
+    heroFotoButton.addEventListener("click", () => {
+      const current = getBengkelInfoLengkap();
+
+      heroFotoPending = null;
+      showHeroFotoError("");
+      if (heroFotoInput) heroFotoInput.value = "";
+      if (heroLabelInput) {
+        heroLabelInput.value = current.heroLabel || HERO_DEFAULTS.heroLabel;
+      }
+      if (heroJudulInput) {
+        heroJudulInput.value = current.heroJudul || HERO_DEFAULTS.heroJudul;
+      }
+      if (heroDeskripsiInput) {
+        heroDeskripsiInput.value =
+          current.heroDeskripsi || HERO_DEFAULTS.heroDeskripsi;
+      }
+      refreshHeroFotoPreview();
+      openModal("heroFotoModal");
+    });
+  }
+
+  if (heroFotoInput) {
+    heroFotoInput.addEventListener("change", () => {
+      const file = heroFotoInput.files && heroFotoInput.files[0];
+      showHeroFotoError("");
+
+      if (!file) {
+        heroFotoPending = null;
+        refreshHeroFotoPreview();
+        return;
+      }
+
+      if (!String(file.type || "").startsWith("image/")) {
+        heroFotoPending = null;
+        heroFotoInput.value = "";
+        showHeroFotoError("File harus berupa gambar (jpg/png/webp).");
+        refreshHeroFotoPreview();
+        return;
+      }
+
+      if (file.size > 5 * 1024 * 1024) {
+        heroFotoPending = null;
+        heroFotoInput.value = "";
+        showHeroFotoError("Ukuran foto maksimal 5 MB.");
+        refreshHeroFotoPreview();
+        return;
+      }
+
+      heroFotoPending = file;
+      refreshHeroFotoPreview();
+    });
+  }
+
+  if (heroFotoSimpan) {
+    heroFotoSimpan.addEventListener("click", async () => {
+      const teks = readHeroText();
+
+      if (!teks.heroJudul) {
+        showHeroFotoError("Judul hero wajib diisi.");
+        return;
+      }
+
+      heroFotoSimpan.disabled = true;
+      showHeroFotoError("");
+
+      try {
+        const lama = getBengkelInfoLengkap().heroFoto;
+        let url = lama;
+
+        if (heroFotoPending) {
+          url = await uploadHeroPhoto(heroFotoPending);
+          if (lama && lama !== url) {
+            removeHeroPhoto(lama).catch(() => {});
+          }
+        }
+
+        /* Foto (kalau baru diunggah) & teks disimpan bersama supaya
+           hero langsung tampil sesuai isian. */
+        saveWorkshopInfo({
+          ...getBengkelInfoLengkap(),
+          ...teks,
+          heroFoto: url,
+        });
+
+        heroFotoPending = null;
+        if (heroFotoInput) heroFotoInput.value = "";
+        refreshHeroFotoPreview();
+        closeModal("heroFotoModal");
+        showPageNotice("Hero landing disimpan.", "success");
+      } catch (error) {
+        showHeroFotoError(error.message || "Gagal menyimpan hero landing.");
+      } finally {
+        heroFotoSimpan.disabled = false;
+        refreshHeroFotoPreview();
+      }
+    });
+  }
+
+  if (heroFotoHapus) {
+    heroFotoHapus.addEventListener("click", async () => {
+      const lama = getBengkelInfoLengkap().heroFoto;
+      if (!lama) return;
+
+      heroFotoHapus.disabled = true;
+
+      try {
+        saveWorkshopInfo({ ...getBengkelInfoLengkap(), heroFoto: "" });
+        removeHeroPhoto(lama).catch(() => {});
+        refreshHeroFotoPreview();
+        closeModal("heroFotoModal");
+        showPageNotice("Foto latar hero landing dihapus.", "success");
+      } finally {
+        heroFotoHapus.disabled = false;
+      }
+    });
+  }
+
   const backupButton = document.getElementById("btnBackupData");
   if (backupButton) {
     backupButton.addEventListener("click", () => {
@@ -132,7 +322,7 @@ function initPengaturanPage() {
 
           if (!tersinkron) {
             showPageNotice(
-              "Data dipulihkan di perangkat ini, tetapi gagal dikirim ke server. Periksa koneksi lalu coba lagi.",
+              "Data dipulihkan di halaman, tetapi gagal dikirim ke server. Periksa koneksi lalu coba lagi.",
               "error",
             );
             return;
@@ -164,10 +354,10 @@ function initPengaturanPage() {
   document
     .getElementById("btnConfirmReset")
     ?.addEventListener("click", async () => {
-      /* Lewat lapisan data (save*), BUKAN localStorage langsung:
-         - mode lokal : cache + mirror localStorage ikut dikosongkan
-         - mode Supabase : baris di server ikut terhapus (fungsi save*)
-           sehingga reset benar-benar berlaku, bukan hanya "kelihatan" sukses
+      /* Lewat lapisan data (save*), BUKAN storage langsung:
+         cache dalam memori di-reset lalu baris di server ikut terhapus
+         (fungsi save*) — jadi reset benar-benar berlaku, bukan hanya
+         "kelihatan" sukses. Tidak ada lagi mirror localStorage.
 
          Akun admin & customer TIDAK ikut dihapus. Data customer yang
          tertaut ke akun juga dipertahankan supaya customer_id pada sesi
@@ -236,7 +426,7 @@ function initPengaturanPage() {
 
         if (!tersinkron) {
           showPageNotice(
-            "Data dihapus di perangkat ini, tetapi gagal dikirim ke server. Periksa koneksi lalu coba lagi.",
+            "Data dihapus di halaman, tetapi gagal dikirim ke server. Periksa koneksi lalu coba lagi.",
             "error",
           );
           return;
@@ -299,7 +489,7 @@ function initPengaturanPage() {
 
       if (!tersinkron) {
         showPageNotice(
-          "Data dihapus di perangkat ini, tetapi gagal dikirim ke server. Periksa koneksi lalu coba lagi.",
+          "Data dihapus di halaman, tetapi gagal dikirim ke server. Periksa koneksi lalu coba lagi.",
           "error",
         );
         return;
@@ -367,7 +557,7 @@ function populateResetAccountOptions() {
   const seenCustomerIds = new Set();
 
   getCustomerAccounts()
-    .filter((account) => (account.role || "customer") !== "admin")
+    .filter((account) => !isAdminRole(account.role))
     .forEach((account) => {
       const customer = findCustomerForAccount(account, customers);
 

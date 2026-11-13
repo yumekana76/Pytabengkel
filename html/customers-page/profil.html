@@ -4,10 +4,11 @@
     <meta charset="UTF-8" />
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; font-src 'self' https://cdnjs.cloudflare.com; img-src 'self' data: https://*.supabase.co; connect-src 'self' https://*.supabase.co wss://*.supabase.co; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+      content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; font-src 'self' https://cdnjs.cloudflare.com; img-src 'self' data: https://*.supabase.co; connect-src 'self' https://*.supabase.co wss://*.supabase.co http://localhost:3000; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
     />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Profil Saya | Pytabengkel</title>
+    <link rel="stylesheet" href="../../css/fonts.css" />
     <link rel="stylesheet" href="../../css/global.css" />
     <link
       rel="stylesheet"
@@ -43,6 +44,15 @@
         <h1>Pytabengkel</h1>
       </div>
       <div class="topbar-actions">
+        <a
+          class="topbar-landing"
+          href="../landing.html"
+          aria-label="Kembali ke Landing Page"
+          title="Kembali ke Landing Page"
+        >
+          <i class="fa-solid fa-arrow-left" aria-hidden="true"></i>
+          <span>Landing Page</span>
+        </a>
         <button
           type="button"
           class="icon-btn theme-toggle"
@@ -72,7 +82,7 @@
     </header>
     <div class="layout">
       <aside class="sidebar" id="sidebar">
-        <nav class="nav">
+        <nav class="nav" aria-label="Navigasi portal customer">
           <a href="dashboard.html" class="nav-link">
             <i class="fa-solid fa-gauge nav-icon" aria-hidden="true"></i>
             <span>Dashboard</span>
@@ -105,9 +115,11 @@
         </nav>
       </aside>
       <main class="main">
-        <div class="page-header">
-          <h2>Profil Saya</h2>
-          <p>Perubahan profil langsung tersinkron dengan data customer di bengkel.</p>
+        <div class="page-header page-header-row">
+          <div>
+            <h2>Profil Saya</h2>
+            <p>Perubahan profil langsung tersinkron dengan data customer di bengkel.</p>
+          </div>
         </div>
 
         <section class="profile-card">

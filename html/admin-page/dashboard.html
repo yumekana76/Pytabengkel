@@ -4,10 +4,11 @@
     <meta charset="UTF-8" />
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; font-src 'self' https://cdnjs.cloudflare.com; img-src 'self' data: https://*.supabase.co; connect-src 'self' https://*.supabase.co wss://*.supabase.co; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+      content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; font-src 'self' https://cdnjs.cloudflare.com; img-src 'self' data: https://*.supabase.co; connect-src 'self' https://*.supabase.co wss://*.supabase.co http://localhost:3000; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
     />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Pytabengkel | Dashboard</title>
+    <link rel="stylesheet" href="../../css/fonts.css" />
     <link rel="stylesheet" href="../../css/global.css" />
     <link
       rel="stylesheet"
@@ -43,6 +44,15 @@
         <h1>Pytabengkel</h1>
       </div>
       <div class="topbar-actions">
+        <a
+          class="topbar-landing"
+          href="../landing.html"
+          aria-label="Kembali ke Landing Page"
+          title="Kembali ke Landing Page"
+        >
+          <i class="fa-solid fa-arrow-left" aria-hidden="true"></i>
+          <span>Landing Page</span>
+        </a>
         <button
           type="button"
           class="icon-btn theme-toggle"
@@ -101,6 +111,12 @@
           </a>
           <a href="sparepart.html" class="nav-link">
             <i class="fa-solid fa-gears nav-icon" aria-hidden="true"></i><span>Sparepart</span>
+          </a>
+          <a href="diskon.html" class="nav-link"
+          ><i class="fa-solid fa-tags nav-icon" aria-hidden="true"></i><span>Diskon</span>
+          </a>
+          <a href="users.html" class="nav-link" data-super-admin-only hidden>
+            <i class="fa-solid fa-crown nav-icon" aria-hidden="true"></i><span>Kelola Pengguna</span>
           </a>
           <a href="pengaturan.html" class="nav-link">
             <i class="fa-solid fa-gear nav-icon" aria-hidden="true"></i><span>Pengaturan</span>
@@ -469,27 +485,30 @@
                 <div class="form-section-title">Service</div>
               </div>
               <div class="form-group">
-                <label for="unifiedStatus">Status Service</label>
-                <select id="unifiedStatus" class="form-control">
-                  <option value="Menunggu">Menunggu</option>
-                  <option value="Dikerjakan">Dikerjakan</option>
-                  <option value="Quality Check">Quality Check</option>
-                  <option value="Selesai">Selesai</option>
-                </select>
+                <label for="unifiedStatusInfo">Status Service</label>
+                <p id="unifiedStatusInfo" class="form-static-value">Menunggu</p>
+                <span class="form-hint">
+                  Service baru selalu dimulai dengan status Menunggu.
+                  Perubahan status dilakukan dari menu Service.
+                </span>
               </div>
               <div class="form-group">
                 <label for="unifiedTanggal">Tanggal Service</label>
                 <input type="date" id="unifiedTanggal" class="form-control" />
               </div>
               <div class="form-group form-full">
-                <label for="unifiedKeluhan">Keluhan</label>
-                <input
-                  type="text"
-                  id="unifiedKeluhan"
-                  class="form-control"
-                  placeholder="Contoh: Ganti oli"
-                  required
-                />
+                <label id="unifiedPromoLabel">Diskon / Promo</label>
+                <div id="unifiedPromoList" class="promo-check-list" role="group" aria-labelledby="unifiedPromoLabel"></div>
+                <span class="form-hint" id="unifiedPromoHint">
+                  Centang satu atau lebih promo yang ingin diklaim. Diskon akan dipotong otomatis dari total tagihan.
+                </span>
+              </div>
+              <div class="form-group form-full">
+                <div class="form-label-action">
+                  <label>Keluhan</label>
+                  <button type="button" class="action-btn" id="btnTambahUnifiedKeluhan">+ Tambah Keluhan</button>
+                </div>
+                <div id="unifiedKeluhanList" class="service-part-list"></div>
               </div>
 
               <div class="form-group form-full">
@@ -528,6 +547,9 @@
                   min="0"
                   placeholder="0"
                 />
+                <span class="form-hint">
+                  Ketik angka ribuan, otomatis ditambah 000 (mis. 80 → 80.000).
+                </span>
               </div>
 
               <div class="form-group form-full">
@@ -543,7 +565,7 @@
                 <div id="unifiedSparepartList" class="service-part-list"></div>
               </div>
               <div class="form-group">
-                <label for="unifiedTotalPreview">Total Tagihan (Jasa + Sparepart)</label>
+                <label for="unifiedTotalPreview">Total Tagihan (Setelah Diskon)</label>
                 <output id="unifiedTotalPreview" class="total-preview">Rp0</output>
               </div>
             </div>
@@ -592,18 +614,32 @@
             </p>
             <p class="form-hint" id="dashEditRequirementNote">
               Status <strong>Quality Check</strong> dan <strong>Selesai</strong>
-              hanya bisa dipilih setelah mekanik ditugaskan, biaya jasa diisi,
+              hanya bisa dicapai setelah mekanik ditugaskan, biaya jasa diisi,
               dan minimal satu sparepart ditambahkan.
             </p>
             <div class="form-grid">
-              <div class="form-group">
-                <label for="dashEditStatus">Status Service</label>
-                <select id="dashEditStatus" class="form-control">
-                  <option value="Menunggu">Menunggu</option>
-                  <option value="Dikerjakan">Dikerjakan</option>
-                  <option value="Quality Check">Quality Check</option>
-                  <option value="Selesai">Selesai</option>
-                </select>
+              <div class="form-group" id="dashEditStatusStep">
+                <label>Status Service</label>
+                <input
+                  type="hidden"
+                  id="dashEditStatus"
+                  data-status-input
+                  value="Menunggu"
+                />
+                <div class="status-step-control">
+                  <span class="badge waiting" data-status-badge>Menunggu</span>
+                  <button
+                    type="button"
+                    class="action-btn"
+                    data-status-next
+                    data-next-status="Dikerjakan"
+                  >
+                    → Dikerjakan
+                  </button>
+                </div>
+                <p class="form-hint" data-status-hint>
+                  Status maju satu langkah setiap kali tombol diklik.
+                </p>
               </div>
               <div class="form-group">
                 <label for="dashEditMekanik">Mekanik</label>
@@ -629,10 +665,20 @@
                   min="0"
                   placeholder="0"
                 />
+                <span class="form-hint">
+                  Ketik angka ribuan, otomatis ditambah 000 (mis. 80 → 80.000).
+                </span>
               </div>
               <div class="form-group">
                 <label for="dashEditTotalPreview">Total Tagihan</label>
                 <output id="dashEditTotalPreview" class="total-preview">Rp0</output>
+              </div>
+              <div class="form-group form-full">
+                <label id="dashEditPromoLabel">Diskon / Promo</label>
+                <div id="dashEditPromoList" class="promo-check-list" role="group" aria-labelledby="dashEditPromoLabel"></div>
+                <span class="form-hint" id="dashEditPromoHint">
+                  Centang satu atau lebih promo yang ingin diklaim. Diskon akan dipotong otomatis dari total tagihan.
+                </span>
               </div>
               <div class="form-group form-full">
                 <div class="form-label-action">

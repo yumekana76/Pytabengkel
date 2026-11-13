@@ -337,21 +337,163 @@ function initCustomerVehicles() {
     ?.addEventListener("change", renderVehicleCards);
 }
 
+/* Promo aktif untuk form ajukan service. Customer tidak boleh membaca
+   tabel promos langsung (RLS), jadi daftar diambil dari RPC publik. */
+var activeRequestPromos = [];
+
+async function fetchActivePromos() {
+  if (!supabaseClient) return [];
+
+  let data = [];
+
+  try {
+    const result = await supabaseClient.rpc("public_promos");
+
+    if (result.error) {
+      console.warn("Gagal memuat promo aktif:", result.error.message);
+      return [];
+    }
+
+    data = result.data || [];
+  } catch (error) {
+    console.warn("Gagal memuat promo aktif:", error);
+    return [];
+  }
+
+  return (data || [])
+    .map((promo) => ({
+      id: Number(promo.id),
+      kode: String(promo.kode || "").trim().toUpperCase(),
+      nama: promo.nama || "Promo",
+      deskripsi: promo.deskripsi || "",
+      tipe: promo.tipe === "nominal" ? "nominal" : "persen",
+      nilai: Number(promo.nilai) || 0,
+      mulai: promo.mulai || "",
+      sampai: promo.sampai || "",
+      aktif: true,
+      target:
+        promo.target === "jasa" || promo.target === "sparepart"
+          ? promo.target
+          : "total",
+      sparepartIds: normalizeSparepartIds(
+        Array.isArray(promo.sparepart_ids) && promo.sparepart_ids.length
+          ? promo.sparepart_ids
+          : promo.sparepart_id,
+      ),
+      sparepartId: promo.sparepart_id ? Number(promo.sparepart_id) : null,
+      sparepartNama: promo.sparepart_nama || "",
+    }))
+    .filter((promo) => promo.kode);
+}
+
+function formatRequestPromoLabel(promo) {
+  const nilai =
+    promo.tipe === "nominal"
+      ? formatRupiah(promo.nilai)
+      : `${promo.nilai}%`;
+  const sasaran =
+    typeof getPromoTargetText === "function" &&
+    normalizePromoTarget(promo.target) !== "total"
+      ? ` · ${getPromoTargetText(promo.target, getPromoSparepartNama(promo))}`
+      : "";
+  return `${promo.nama} — ${nilai}${sasaran}`;
+}
+
+function updateRequestPromoHint() {
+  const hint = document.getElementById("requestPromoHint");
+
+  if (!hint) return;
+
+  const promos = getCheckedClaimPromos("requestPromoList");
+
+  if (promos.length) {
+    const rincian = promos.map((promo) => {
+      const nilai =
+        promo.tipe === "nominal"
+          ? formatRupiah(promo.nilai)
+          : `${promo.nilai}%`;
+      const sasaran =
+        typeof getPromoTargetText === "function"
+          ? getPromoTargetText(promo.target, getPromoSparepartNama(promo))
+          : "total tagihan";
+      return `${promo.nama} (${nilai} dari ${sasaran.toLowerCase()})`;
+    });
+    hint.textContent = `Klaim ${rincian.join(" + ")}. Diskon dihitung otomatis dan dipotong dari total tagihan.`;
+    return;
+  }
+
+  hint.textContent = activeRequestPromos.length
+    ? "Centang satu atau lebih promo yang ingin diklaim. Diskon akan dipotong otomatis dari total tagihan."
+    : "Belum ada promo aktif saat ini. Service tetap bisa diajukan tanpa diskon.";
+}
+
+function populateRequestPromoOptions(promos, selectedCode) {
+  const list = document.getElementById("requestPromoList");
+
+  if (!list) return;
+
+  const previous =
+    selectedCode === null
+      ? getCheckedClaimPromos("requestPromoList").map((promo) => promo.kode)
+      : kodePromoList(selectedCode);
+
+  activeRequestPromos = promos;
+  list.__claimPromos = promos;
+  list.innerHTML = promos.length
+    ? promos
+        .map(
+          (promo) => `<label class="promo-check-item">
+            <input type="checkbox" value="${escapeHTML(promo.kode)}"${
+              previous.includes(promo.kode) ? " checked" : ""
+            } />
+            <span>${escapeHTML(formatRequestPromoLabel(promo))}</span>
+          </label>`,
+        )
+        .join("")
+    : '<p class="form-hint">Belum ada promo aktif saat ini.</p>';
+
+  updateRequestPromoHint();
+}
+
 /* Form ajukan service dipakai di dua halaman: kendaraan dan
    dashboard. Binding dipisah dari initCustomerVehicles supaya ikut
    aktif di dashboard yang tidak punya #vehicleCards. */
 function initRequestForm() {
   document
     .getElementById("btnAjukanService")
-    ?.addEventListener("click", openRequestModal);
+    ?.addEventListener("click", () => openRequestModal());
 
   document
     .getElementById("requestVehicle")
     ?.addEventListener("change", toggleRequestVehicleFields);
 
   document
+    .getElementById("requestPromoList")
+    ?.addEventListener("change", updateRequestPromoHint);
+
+  document
     .getElementById("requestForm")
     ?.addEventListener("submit", submitServiceRequest);
+
+  document
+    .getElementById("btnTambahRequestKeluhan")
+    ?.addEventListener("click", () => addKeluhanRow("requestKeluhanList", ""));
+
+  /* Buka form ajukan langsung jika diarahkan dari landing (sudah login). */
+  const params = new URLSearchParams(window.location.search);
+  if (
+    params.get("ajukan") === "1" &&
+    document.getElementById("requestModal")
+  ) {
+    const promo = (params.get("promo") || "").trim().toUpperCase();
+    params.delete("ajukan");
+    params.delete("promo");
+    const next = params.toString();
+    const cleanUrl =
+      window.location.pathname + (next ? "?" + next : "") + window.location.hash;
+    window.history.replaceState({}, "", cleanUrl);
+    openRequestModal(promo);
+  }
 }
 
 function renderVehicleCards() {
@@ -538,13 +680,16 @@ function showVehicleDetail(polisi) {
 
 /* AJUKAN SERVICE */
 
-function openRequestModal() {
+async function openRequestModal(preferredPromoCode = "") {
   const customer = getCurrentCustomer();
   const select = document.getElementById("requestVehicle");
 
   if (!customer || !select) {
     return;
   }
+
+  const promos = await fetchActivePromos();
+  populateRequestPromoOptions(promos, preferredPromoCode || null);
 
   const groups = customerVehiclesByPlate(getCustomerVehicles());
 
@@ -573,6 +718,7 @@ function openRequestModal() {
     error.hidden = true;
   }
 
+  ensureKeluhanRows("requestKeluhanList");
   toggleRequestVehicleFields();
   openModal("requestModal");
 }
@@ -594,8 +740,10 @@ function toggleRequestVehicleFields() {
   toggle("newMerkGroup", isNew);
 }
 
-function submitServiceRequest(event) {
+async function submitServiceRequest(event) {
   event.preventDefault();
+
+  if (submitServiceRequest._busy) return;
 
   const error = document.getElementById("requestError");
   const customer = getCurrentCustomer();
@@ -614,7 +762,7 @@ function submitServiceRequest(event) {
   const selectedVehicle =
     document.getElementById("requestVehicle")?.value || "__new__";
   const isNewVehicle = selectedVehicle === "__new__";
-  const keluhan = document.getElementById("requestKeluhan").value.trim();
+  const keluhan = getKeluhanRows("requestKeluhanList");
   const tanggal =
     document.getElementById("requestTanggal").value ||
     getTodayLocalDate();
@@ -622,6 +770,24 @@ function submitServiceRequest(event) {
   if (!keluhan) {
     showError("Tuliskan keluhan kendaraan Anda.");
     return;
+  }
+
+  const promos = getCheckedClaimPromos("requestPromoList");
+
+  for (const promo of promos) {
+    if (!activeRequestPromos.some((item) => item.kode === promo.kode)) {
+      showError(
+        "Promo tersebut sudah tidak tersedia. Pilih promo lain atau tanpa diskon.",
+      );
+      return;
+    }
+
+    if (typeof isPromoActive === "function" && !isPromoActive(promo)) {
+      showError(
+        "Promo tersebut sudah berakhir. Pilih promo lain atau tanpa diskon.",
+      );
+      return;
+    }
   }
 
   const kendaraan = getKendaraan();
@@ -691,28 +857,65 @@ function submitServiceRequest(event) {
     requestedBy: "customer",
     approval: "Menunggu",
     approvalNote: "",
+    promoId: null,
+    promoKode: "",
+    promoNama: "",
+    promoTipe: "",
+    promoNilai: 0,
+    promoTarget: "",
+    promoSparepartIds: [],
+    promoSparepartId: null,
+    promoSparepartNama: "",
+    promoList: [],
   };
 
-  kendaraan.push(record);
-  saveKendaraan(kendaraan);
+  applyClaimPromo(record, promos);
 
-  closeModal("requestModal");
-  document.getElementById("requestForm").reset();
-  toggleRequestVehicleFields();
-
-  showPageNotice(
-    "Permintaan service terkirim. Bengkel akan segera menghubungi Anda.",
-    "success",
+  const submitButton = document.querySelector(
+    "#requestForm button[type='submit']",
   );
+  submitServiceRequest._busy = true;
+  if (submitButton) submitButton.disabled = true;
 
-  renderVehicleCards();
-  renderCustomerServiceTable();
-  renderCustomerHistoryTable();
+  try {
+    kendaraan.push(record);
+    const result = await saveKendaraan(kendaraan);
 
-  /* Kalau diajukan dari dashboard, segarkan ringkasan status &
-     daftar riwayat terbaru di halaman itu juga. */
-  if (document.getElementById("customerProgressCircle")) {
-    initCustomerDashboard();
+    if (result && result.ok === false) {
+      const idx = kendaraan.findIndex(
+        (item) => Number(item.id) === Number(record.id),
+      );
+      if (idx !== -1) kendaraan.splice(idx, 1);
+      if (error) {
+        error.textContent =
+          result.error || "Gagal mengirim permintaan. Coba lagi.";
+        error.hidden = false;
+      }
+      return;
+    }
+
+    closeModal("requestModal");
+    document.getElementById("requestForm").reset();
+    populateRequestPromoOptions(activeRequestPromos, "");
+    toggleRequestVehicleFields();
+
+    showPageNotice(
+      "Permintaan service terkirim. Bengkel akan segera menghubungi Anda.",
+      "success",
+    );
+
+    renderVehicleCards();
+    renderCustomerServiceTable();
+    renderCustomerHistoryTable();
+
+    /* Kalau diajukan dari dashboard, segarkan ringkasan status &
+       daftar riwayat terbaru di halaman itu juga. */
+    if (document.getElementById("customerProgressCircle")) {
+      initCustomerDashboard();
+    }
+  } finally {
+    submitServiceRequest._busy = false;
+    if (submitButton) submitButton.disabled = false;
   }
 }
 
@@ -1307,7 +1510,9 @@ function openCustomerReviewForm(id) {
 }
 
 /* Simpan ulasan (baru / pembaruan) untuk service yang sedang dibuka. */
-function saveCustomerReview() {
+async function saveCustomerReview() {
+  if (saveCustomerReview._busy) return;
+
   const item = getCustomerVehicles().find(
     (vehicle) => Number(vehicle.id) === Number(activeReviewServiceId),
   );
@@ -1348,29 +1553,46 @@ function saveCustomerReview() {
     createdAt: existing?.createdAt || new Date().toISOString(),
   };
 
+  const saveButton = document.getElementById("btnSaveReview");
+  saveCustomerReview._busy = true;
+  if (saveButton) saveButton.disabled = true;
+
   const lain = getReviews().filter(
     (review) => Number(review.serviceId) !== Number(item.id),
   );
 
-  saveReviews([...lain, entry]);
+  try {
+    const result = await saveReviews([...lain, entry]);
 
-  showPageNotice(
-    existing
-      ? "Ulasan Anda telah diperbarui. Terima kasih!"
-      : "Terima kasih atas ulasan Anda!",
-    "success",
-  );
+    if (result && result.ok === false) {
+      showPageNotice(
+        result.error || "Gagal menyimpan ulasan. Coba lagi.",
+        "error",
+      );
+      return;
+    }
 
-  addLog(
-    existing ? "Ubah" : "Tambah",
-    "Ulasan",
-    `Rating ${activeReviewRating} untuk service ${item.polisi}`,
-    getKode("kendaraan", item),
-  );
+    showPageNotice(
+      existing
+        ? "Ulasan Anda telah diperbarui. Terima kasih!"
+        : "Terima kasih atas ulasan Anda!",
+      "success",
+    );
 
-  /* Perbarui tampilan tabel & isi modal. */
-  renderCustomerHistoryTable(customerHistoryPage);
-  renderCustomerReviewSection(item);
+    addLog(
+      existing ? "Ubah" : "Tambah",
+      "Ulasan",
+      `Rating ${activeReviewRating} untuk service ${item.polisi}`,
+      getKode("kendaraan", item),
+    );
+
+    /* Perbarui tampilan tabel & isi modal. */
+    renderCustomerHistoryTable(customerHistoryPage);
+    renderCustomerReviewSection(item);
+  } finally {
+    saveCustomerReview._busy = false;
+    if (saveButton) saveButton.disabled = false;
+  }
 }
 
 /* =========================================
@@ -1840,44 +2062,20 @@ async function changePassword(event) {
     }
   }
 
-  /* Mode Supabase: password diatur lewat Supabase Auth. */
-
-  if (typeof Auth !== "undefined" && isSupabaseMode()) {
-    const result = await Auth.updatePassword(newPassword);
-
-    if (!result.ok) {
-      showError(result.error || "Gagal memperbarui password.");
-      return;
-    }
-
-    if (error) {
-      error.hidden = true;
-    }
-
-    event.target.reset();
-    showPageNotice("Password berhasil diperbarui.", "success");
+  /* Password diatur lewat Supabase Auth — satu-satunya jalur. */
+  if (typeof Auth === "undefined" || !isSupabaseMode()) {
+    showError(
+      "Aplikasi belum terhubung ke Supabase. Muat ulang halaman setelah konfigurasi diisi.",
+    );
     return;
   }
 
-  /* Mode lokal: password disimpan di localStorage. */
+  const result = await Auth.updatePassword(newPassword);
 
-  const accounts = getCustomerAccounts();
-  const index = accounts.findIndex(
-    (item) => Number(item.customerId) === Number(customer.id),
-  );
-
-  if (index === -1) {
-    showError("Akun login tidak ditemukan.");
+  if (!result.ok) {
+    showError(result.error || "Gagal memperbarui password.");
     return;
   }
-
-  if (accounts[index].password !== currentPassword) {
-    showError("Password saat ini salah.");
-    return;
-  }
-
-  accounts[index] = { ...accounts[index], password: newPassword };
-  saveCustomerAccounts(accounts);
 
   if (error) {
     error.hidden = true;
@@ -2073,3 +2271,31 @@ function initCustomerApp() {
     initCustomerSettings();
   }
 }
+
+/* Spam-click guard untuk handler form async. */
+(function () {
+  function wrap(name) {
+    const orig = window[name];
+    if (typeof orig !== "function") return;
+    const wrapped = async function (event) {
+      if (wrapped._busy) return;
+      wrapped._busy = true;
+      const submitter =
+        (event && event.submitter) ||
+        (event && event.target && typeof event.target.querySelector === "function"
+          ? event.target.querySelector("button[type='submit'], button:not([type])")
+          : null) ||
+        document.querySelector("button[type='submit']");
+      if (submitter) submitter.disabled = true;
+      try {
+        return await orig.apply(this, arguments);
+      } finally {
+        wrapped._busy = false;
+        if (submitter) submitter.disabled = false;
+      }
+    };
+    window[name] = wrapped;
+  }
+  wrap("saveProfile");
+  wrap("changePassword");
+})();

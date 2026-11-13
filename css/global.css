@@ -29,6 +29,12 @@
 
   --primary: #2563eb;
   --primary-dark: #1d4ed8;
+  /* Latar padat (tombol, badge aktif, ikon) yang di atasnya selalu
+     ada teks putih. Dipisah dari --primary supaya di mode gelap
+     --primary tetap cerah untuk teks/ikon, sementara latarnya cukup
+     gelap agar teks putih tetap lolos kontras WCAG AA (≥4.5:1). */
+  --primary-solid: #2563eb;
+  --primary-solid-hover: #1d4ed8;
   --primary-text: #1d4ed8;
   --primary-soft: #eff6ff;
   --primary-soft-strong: #edf5ff;
@@ -47,7 +53,7 @@
   --topbar-bg: rgba(255, 255, 255, 0.88);
 
   --text: #0f172a;
-  --secondary: #64748b;
+  --secondary: #5e6e85;
   --muted-strong: #526b91;
 
   --border: #e2e8f0;
@@ -98,6 +104,11 @@
 
   --chart-bar: linear-gradient(180deg, #1767e9, #104fc2);
   --chart-bar-active: linear-gradient(180deg, #16a34a, #15803d);
+
+  /* Gradient khusus teks/angka. Dipisah dari --primary-gradient
+     karena token itu jadi latar gelap di mode gelap sehingga tidak
+     bisa dipakai sebagai warna teks. */
+  --gradient-text: linear-gradient(160deg, #1767e9, #104fc2);
 }
 
 /* =========================================
@@ -109,6 +120,11 @@
 
   --primary: #3b82f6;
   --primary-dark: #93c5fd;
+  /* Mode gelap: --primary sengaja cerah (dipakai sebagai teks/ikon di
+     atas permukaan gelap), tetapi latar tombol memakai --primary-solid
+     yang lebih gelap supaya teks putih di atasnya tetap terbaca. */
+  --primary-solid: #2563eb;
+  --primary-solid-hover: #1d4ed8;
   --primary-text: #bfdbfe;
   --primary-soft: rgba(59, 130, 246, 0.16);
   --primary-soft-strong: rgba(59, 130, 246, 0.2);
@@ -176,6 +192,10 @@
 
   --chart-bar: linear-gradient(180deg, #3b82f6, #1d4ed8);
   --chart-bar-active: linear-gradient(180deg, #4ade80, #15803d);
+
+  /* Versi terang supaya angka statistik tetap terbaca di atas
+     permukaan gelap. */
+  --gradient-text: linear-gradient(160deg, #bfdbfe, #60a5fa);
 }
 
 /* =========================================
@@ -186,6 +206,11 @@ html,
 body {
   width: 100%;
   min-height: 100%;
+}
+
+/* Scrollbar mengikuti tema, bukan tetap terang di mode gelap. */
+html {
+  scrollbar-color: var(--border-strong) var(--background);
 }
 
 body {
@@ -212,12 +237,12 @@ body {
 }
 
 ::selection {
-  background: var(--primary);
+  background: var(--primary-solid);
   color: #fff;
 }
 
 a {
-  color: var(--primary);
+  color: var(--primary-text);
 }
 
 /* Fokus keyboard tetap terlihat di seluruh aplikasi */
@@ -282,10 +307,12 @@ a {
   flex: 1 1 auto;
 }
 
+/* Wordmark Pytabengkel — SAMAKAN dengan .lp-brand-text strong,
+   .login-brand-text strong, dan .brand (register): 21px/800/-0.02em */
 .brand h1 {
   font-size: 21px;
-  font-weight: 700;
-  letter-spacing: -0.5px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -317,6 +344,64 @@ a {
 }
 
 /* =========================================
+   CHIP NAMA DI TOPBAR — WARNA SESUAI ROLE
+   customer = netral, admin = biru, super admin = emas
+   ========================================= */
+.admin.user-chip-role-customer {
+  background: var(--surface);
+  color: var(--secondary);
+  border-color: var(--border);
+}
+.admin.user-chip-role-customer i {
+  color: var(--secondary);
+}
+
+.admin.user-chip-role-admin {
+  background: var(--badge-working-bg);
+  color: #1d4ed8;
+  border-color: rgba(59, 130, 246, 0.35);
+}
+.admin.user-chip-role-admin i {
+  color: #2563eb;
+}
+
+.admin.user-chip-role-super_admin {
+  background: rgba(245, 158, 11, 0.14);
+  color: #92400e;
+  border-color: rgba(245, 158, 11, 0.4);
+}
+.admin.user-chip-role-super_admin i {
+  color: #d97706;
+}
+
+[data-theme="dark"] .admin.user-chip-role-customer {
+  background: rgba(148, 163, 184, 0.14);
+  color: #cbd5e1;
+  border-color: rgba(148, 163, 184, 0.35);
+}
+[data-theme="dark"] .admin.user-chip-role-customer i {
+  color: #cbd5e1;
+}
+
+[data-theme="dark"] .admin.user-chip-role-admin {
+  background: rgba(59, 130, 246, 0.18);
+  color: #bfdbfe;
+  border-color: rgba(59, 130, 246, 0.4);
+}
+[data-theme="dark"] .admin.user-chip-role-admin i {
+  color: #93c5fd;
+}
+
+[data-theme="dark"] .admin.user-chip-role-super_admin {
+  background: rgba(245, 158, 11, 0.16);
+  color: #fcd34d;
+  border-color: rgba(245, 158, 11, 0.4);
+}
+[data-theme="dark"] .admin.user-chip-role-super_admin i {
+  color: #fbbf24;
+}
+
+/* =========================================
    TOMBOL IKON (THEME & LAINNYA)
    ========================================= */
 
@@ -337,8 +422,34 @@ a {
 }
 
 .icon-btn:hover {
-  border-color: var(--primary);
-  color: var(--primary);
+  border-color: var(--primary-text);
+  color: var(--primary-text);
+  background: var(--primary-soft);
+}
+
+/* Tautan kembali ke landing page di topbar portal customer. */
+.topbar-landing {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  height: 40px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  color: var(--secondary);
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: 0.2s;
+  flex-shrink: 0;
+}
+
+.topbar-landing:hover {
+  border-color: var(--primary-text);
+  color: var(--primary-text);
   background: var(--primary-soft);
 }
 
@@ -391,13 +502,7 @@ a {
 }
 
 .sidebar::before {
-  content: "Pytabengkel";
-  display: block;
-  padding: 14px 25px 22px;
-  color: #fff;
-  font-size: 18px;
-  line-height: 1.5;
-  font-weight: 750;
+  display: none;
 }
 
 .nav {
@@ -418,6 +523,12 @@ a {
   display: flex;
   align-items: center;
   gap: 10px;
+}
+
+/* Menu yang hanya untuk super admin disembunyikan sampai sesi
+   dipastikan (lihat applyRoleVisibility di global.js). */
+.nav-link[hidden] {
+  display: none;
 }
 
 .nav-icon {
@@ -516,7 +627,7 @@ a {
   position: absolute;
   top: 12px;
   right: 14px;
-  color: var(--primary);
+  color: var(--primary-text);
   font-size: 26px;
   opacity: 0.16;
   pointer-events: none;
@@ -524,7 +635,7 @@ a {
 
 .stat-card:hover {
   transform: translateY(-2px);
-  border-color: var(--primary);
+  border-color: var(--primary-text);
 }
 
 /* Kartu dengan nominal lebih kecil: angkanya diperkecil. */
@@ -629,7 +740,7 @@ a.stat-card:focus-visible {
 }
 
 .panel-header a {
-  color: var(--primary);
+  color: var(--primary-text);
   text-decoration: none;
   font-size: 13px;
   white-space: nowrap;
@@ -867,7 +978,7 @@ tbody tr:last-child td {
 /* Badge nomor antrean service (A-01, A-02, ...). */
 .badge.antrian {
   background: var(--primary-soft);
-  color: var(--primary);
+  color: var(--primary-text);
 }
 .badge.antrian.off {
   background: var(--surface-3);
@@ -900,7 +1011,7 @@ tbody tr:last-child td {
   min-width: 52px;
   font-size: 13px;
   font-weight: 700;
-  color: var(--primary);
+  color: var(--primary-text);
 }
 
 .antrian-info {
@@ -932,7 +1043,7 @@ tbody tr:last-child td {
   padding: 10px 14px;
   border-radius: 10px;
   background: var(--primary-soft);
-  color: var(--primary);
+  color: var(--primary-text);
   font-size: 13px;
   font-weight: 600;
 }
@@ -1030,7 +1141,7 @@ input[type="search"]::-webkit-search-cancel-button {
 }
 
 .search-box input:focus {
-  border-color: var(--primary);
+  border-color: var(--primary-text);
   box-shadow: 0 0 0 3px var(--focus-ring);
 }
 
@@ -2298,7 +2409,7 @@ input[type="search"]::-webkit-search-cancel-button {
   padding: 9px 12px;
   border-radius: 10px;
   background: transparent;
-  color: var(--primary);
+  color: var(--primary-text);
   font-size: 13px;
   font-weight: 700;
   text-decoration: none;
@@ -2372,7 +2483,7 @@ th.cell-id-col {
 
 .status-tab.active {
   background: var(--surface);
-  color: var(--primary);
+  color: var(--primary-text);
   box-shadow: 0 2px 8px rgba(15, 23, 42, 0.08);
 }
 
@@ -2390,7 +2501,7 @@ th.cell-id-col {
 }
 
 .status-tab.active .tab-count {
-  background: var(--primary);
+  background: var(--primary-solid);
   color: #fff;
 }
 
@@ -2434,14 +2545,14 @@ th.cell-id-col {
 }
 
 .btn-primary {
-  background: var(--primary);
+  background: var(--primary-solid);
   color: #fff;
   box-shadow: var(--shadow-primary);
   opacity: 1;
 }
 
 .btn-primary:hover {
-  background: var(--primary-dark);
+  background: var(--primary-solid-hover);
   color: #fff;
 }
 
@@ -2457,7 +2568,7 @@ th.cell-id-col {
 
 .btn-danger {
   background: var(--danger-bg);
-  color: var(--danger);
+  color: var(--danger-text);
 }
 
 .btn-danger:hover {
@@ -2471,8 +2582,8 @@ th.cell-id-col {
 }
 
 .btn-ghost:hover {
-  color: var(--primary);
-  border-color: var(--primary);
+  color: var(--primary-text);
+  border-color: var(--primary-text);
   background: var(--primary-soft);
 }
 
@@ -2509,8 +2620,8 @@ th.cell-id-col {
 }
 
 .action-btn:hover {
-  border-color: var(--primary);
-  color: var(--primary);
+  border-color: var(--primary-text);
+  color: var(--primary-text);
   background: var(--primary-soft);
 }
 
@@ -2582,14 +2693,14 @@ a.action-btn {
 }
 
 .page-btn:hover:not(:disabled) {
-  border-color: var(--primary);
-  color: var(--primary);
+  border-color: var(--primary-text);
+  color: var(--primary-text);
   background: var(--primary-soft);
 }
 
 .page-btn.active {
-  border-color: var(--primary);
-  background: var(--primary);
+  border-color: var(--primary-solid);
+  background: var(--primary-solid);
   color: #fff;
 }
 
@@ -2722,7 +2833,7 @@ body.modal-open {
 }
 
 .form-control:focus {
-  border-color: var(--primary);
+  border-color: var(--primary-text);
   box-shadow: 0 0 0 3px var(--focus-ring);
 }
 
@@ -2803,6 +2914,68 @@ textarea.form-control {
   font-size: 12px;
   color: var(--secondary);
   line-height: 1.5;
+}
+
+/* Tombol status service: status sekarang + tombol maju satu langkah. */
+.status-step-control {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.status-step-control .badge {
+  font-weight: 600;
+}
+
+.status-step-control [hidden] {
+  display: none;
+}
+
+/* Nilai tetap pada form (mis. status awal service "Menunggu"). */
+.form-static-value {
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--border-input);
+  border-radius: 10px;
+  background: var(--surface-2);
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+/* Daftar centang promo di form service: satu service boleh memakai
+   lebih dari satu diskon. */
+.promo-check-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 168px;
+  overflow-y: auto;
+  padding: 6px 8px;
+  border: 1px solid var(--border-input);
+  border-radius: 10px;
+  background: var(--surface-input);
+}
+
+.promo-check-list .form-hint {
+  margin: 0;
+  padding: 4px 2px;
+}
+
+.promo-check-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 5px 4px;
+  border-radius: 6px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.promo-check-item input {
+  margin-top: 2px;
+  flex: 0 0 auto;
 }
 
 /* =========================================
@@ -2918,14 +3091,14 @@ textarea.form-control {
 }
 
 .status-step.current {
-  border-color: var(--primary);
+  border-color: var(--primary-text);
   background: var(--primary-soft);
   box-shadow: 0 0 0 3px var(--focus-ring);
 }
 
 .status-step.current .step-dot {
-  background: var(--primary);
-  border-color: var(--primary);
+  background: var(--primary-solid);
+  border-color: var(--primary-solid);
   color: #fff;
 }
 
@@ -3009,6 +3182,16 @@ textarea.form-control {
 
 .invoice-row.total span:last-child {
   color: var(--primary-text);
+}
+
+/* Keterangan diskon per baris item tagihan */
+.invoice-note {
+  display: block;
+  margin-top: 2px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--success, #1a7f37);
+  white-space: normal;
 }
 
 /* Tabel rincian item tagihan */
@@ -3161,12 +3344,18 @@ textarea.form-control {
 }
 
 .struk-row > span:first-child {
-  flex: 0 0 auto;
+  /* Label diskon bisa panjang ("Diskon Sparepart Oli Mesin, Filter
+     Oli"), jadi teks dibungkus dan nominal tetap di kanan. */
+  flex: 1 1 auto;
+  min-width: 0;
+  padding-right: 6px;
+  word-break: break-word;
 }
 
 .struk-row > span:last-child {
+  flex: 0 0 auto;
   text-align: right;
-  word-break: break-word;
+  white-space: nowrap;
 }
 
 .struk-item {
@@ -3464,7 +3653,7 @@ textarea.form-control {
 
 .burger:hover {
   background: var(--primary-soft);
-  color: var(--primary);
+  color: var(--primary-text);
 }
 
 .sidebar-overlay {
@@ -3494,8 +3683,7 @@ textarea.form-control {
     width: 190px;
   }
   .sidebar::before {
-    font-size: 15px;
-    padding: 14px 20px 18px;
+    display: none;
   }
   .nav {
     padding: 8px 10px;
@@ -3535,6 +3723,15 @@ textarea.form-control {
     height: 36px;
     border-radius: 10px;
     font-size: 14px;
+  }
+  .topbar-landing {
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    border-radius: 10px;
+  }
+  .topbar-landing span {
+    display: none;
   }
   .layout {
     min-height: calc(100vh - 62px);
@@ -4285,3 +4482,62 @@ textarea.form-control {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+/* Tanda Super Admin di topbar (emas — selaras dengan warna role) */
+.user-chip-super-badge {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 6px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  line-height: 1.4;
+  letter-spacing: 0.01em;
+  color: #92400e;
+  background: rgba(245, 158, 11, 0.16);
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  white-space: nowrap;
+}
+
+.user-chip-super-badge[hidden] {
+  display: none !important;
+}
+
+[data-theme="dark"] .user-chip-super-badge {
+  color: #fcd34d;
+  background: rgba(245, 158, 11, 0.2);
+  border-color: rgba(245, 158, 11, 0.38);
+}
+
+/* =========================================
+   TANPA GARIS BAWAH
+   Semua link dan teks tampil tanpa underline, termasuk saat hover,
+   fokus, dan sudah dikunjungi — di seluruh halaman.
+   ========================================= */
+a,
+a:visited,
+a:hover,
+a:focus,
+a:focus-visible,
+a:active,
+abbr[title] {
+  text-decoration: none !important;
+}
+
+/* Polish: transisi & fokus yang konsisten untuk kontrol interaktif */
+button,
+a.btn,
+.nav-link,
+.icon-btn,
+.action-btn {
+  transition: color 0.15s ease, background-color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
+}
+
+.topbar-landing:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+/* Tampilkan keluhan multi-baris dengan rapi */
+td, .detail-value, .stepper-desc { white-space: pre-line; }

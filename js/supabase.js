@@ -1,11 +1,10 @@
 /* =====================================================================
    SUPABASE CLIENT + LAYER AUTH
    ---------------------------------------------------------------------
-   Semua halaman memakai file ini. Ada 2 mode:
-
-   1. MODE SUPABASE  -> url + anonKey sudah diisi di js/config.js
-   2. MODE LOKAL     -> config masih kosong, aplikasi memakai
-                       localStorage + login demo seperti semula.
+   Semua halaman memakai file ini. Hanya ADA SATU mode: Supabase.
+   Mode lokal (localStorage + akun demo) sudah dihapus — semua data
+   dan login diurus Supabase. Kalau credential belum terisi, halaman
+   menampilkan pesan konfigurasi (lihat showMissingConfigNotice).
 
    Halaman cukup memanggil Auth.signIn() / Auth.signOut() tanpa
    perlu tahu mode yang sedang dipakai.
@@ -13,9 +12,9 @@
 
 var SUPABASE_SETTINGS = window.SUPABASE_CONFIG || {};
 
-/* Mode lokal hanya boleh aktif di development.
-   Di production, aplikasi WAJIB terhubung ke Supabase. */
-var LOCAL_MODE_ALLOWED = SUPABASE_SETTINGS.localModeAllowed !== false;
+/* Pesan untuk semua jalur saat credential belum terisi. */
+var SUPABASE_UNAVAILABLE =
+  "Aplikasi belum terhubung ke Supabase. Isi konfigurasi lalu muat ulang halaman.";
 
 var IS_SUPABASE_READY = Boolean(
   SUPABASE_SETTINGS.url && SUPABASE_SETTINGS.anonKey,
@@ -35,10 +34,26 @@ if (IS_SUPABASE_READY && window.supabase?.createClient) {
       },
     },
   );
+
+  /* Pantau peristiwa auth (khususnya PASSWORD_RECOVERY dari tautan
+     reset password) sejak client dibuat, supaya halaman login bisa
+     menampilkan form atur password baru. */
+  try {
+    supabaseClient.auth.onAuthStateChange((event, session) => {
+      if (event === "PASSWORD_RECOVERY") {
+        window.__passwordRecovery = true;
+        if (typeof window.onPasswordRecovery === "function") {
+          window.onPasswordRecovery(session);
+        }
+      }
+    });
+  } catch (error) {
+    /* Tidak fatal — halaman login tetap bisa jalan. */
+  }
 }
 
-/* Halaman production tanpa credential -> tampilkan pesan jelas,
-   bukan diam-diam memakai localStorage. */
+/* Halaman tanpa credential -> tampilkan pesan jelas,
+   bukan diam-diam memakai data lokal. */
 function showMissingConfigNotice() {
   if (document.getElementById("configError")) {
     return;
@@ -50,20 +65,21 @@ function showMissingConfigNotice() {
   notice.innerHTML = `
     <h1>Konfigurasi Supabase belum diisi</h1>
     <p>
-      Aplikasi ini berjalan di mode production, jadi <strong>wajib</strong>
-      terhubung ke database Supabase.
+      Aplikasi ini <strong>wajib</strong> terhubung ke database Supabase —
+      tidak ada mode lokal lagi.
     </p>
     <p class="config-error-hint">
-      Isi <code>js/config.prod.js</code> dengan <code>url</code> dan
-      <code>anonKey</code> dari Project Settings &rarr; API, lalu muat ulang
-      halaman ini.
+      Isi environment variable <code>SUPABASE_URL</code> +
+      <code>SUPABASE_ANON_KEY</code> (Vercel Environment Variables, atau
+      <code>.env</code> + <code>node scripts/build-config.js</code> untuk
+      lokal) lalu muat ulang halaman ini.
     </p>
   `;
 
   document.body.appendChild(notice);
 }
 
-if (!IS_SUPABASE_READY && !LOCAL_MODE_ALLOWED) {
+if (!IS_SUPABASE_READY) {
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", showMissingConfigNotice);
   } else {
@@ -98,37 +114,42 @@ function isSupabaseMode() {
 }
 
 /* ---------------------------------------------------------------------
-   HELPER LOCAL (fallback)
+   ROLE
+   Hierarki: super_admin > admin > customer.
+   Hanya super_admin yang boleh mengubah role pengguna lain (dijaga
+   juga di database lewat is_super_admin() + admin_set_user_role()).
+   --------------------------------------------------------------------- */
+
+function normalizeRole(value) {
+  if (value === "super_admin" || value === "admin") {
+    return value;
+  }
+
+  return "customer";
+}
+
+function isAdminRole(role) {
+  return role === "admin" || role === "super_admin";
+}
+
+function isSuperAdminRole(role) {
+  return role === "super_admin";
+}
+
+function getRoleLabel(role) {
+  if (role === "super_admin") return "Super Admin";
+  if (role === "admin") return "Administrator";
+  return "Customer";
+}
+
+/* ---------------------------------------------------------------------
+   HELPER SESSION
    ---------------------------------------------------------------------
-   Akun lokal memakai tabel yang sama dengan sisi admin
-   (workshop_customer_accounts) supaya perubahan dari admin langsung
-   berlaku untuk login customer. */
+   Kunci session (dibagikan oleh semua halaman). */
 
-var LOCAL_ACCOUNTS_KEY = "workshop_customer_accounts";
-
-/* Kunci session (dibagikan oleh semua halaman) */
 var LOCAL_SESSION_KEY = "workshopSession";
 var CUSTOMER_SESSION_KEY = "workshopCustomerSession";
 var ADMIN_SESSION_KEY = "workshopLoggedIn";
-
-function getLocalAccounts() {
-  if (typeof getCustomerAccounts === "function") {
-    return getCustomerAccounts();
-  }
-
-  try {
-    const raw = localStorage.getItem(LOCAL_ACCOUNTS_KEY);
-    const accounts = raw ? JSON.parse(raw) : null;
-
-    if (Array.isArray(accounts)) {
-      return accounts;
-    }
-  } catch (error) {
-    console.error("Akun lokal rusak:", error);
-  }
-
-  return [];
-}
 
 /* ---------------------------------------------------------------------
    AUTH SERVICE
@@ -137,8 +158,8 @@ function getLocalAccounts() {
 var Auth = {
   /* Login pakai email + password. */
   async signIn(email, password) {
-    if (!isSupabaseMode()) {
-      return this.signInLocal(email, password);
+    if (!supabaseClient) {
+      return { ok: false, error: SUPABASE_UNAVAILABLE };
     }
 
     const { data, error } = await supabaseClient.auth.signInWithPassword({
@@ -168,8 +189,8 @@ var Auth = {
 
   /* Daftar akun baru (customer). */
   async signUp(payload) {
-    if (!isSupabaseMode()) {
-      return this.signUpLocal(payload);
+    if (!supabaseClient) {
+      return { ok: false, error: SUPABASE_UNAVAILABLE };
     }
 
     const email = String(payload.email || "").trim();
@@ -209,11 +230,8 @@ var Auth = {
 
   /* Kirim link login (magic link) ke email customer. */
   async sendLoginLink(email, redirectTo) {
-    if (!isSupabaseMode()) {
-      return {
-        ok: false,
-        error: "Fitur ini hanya tersedia pada mode Supabase.",
-      };
+    if (!supabaseClient) {
+      return { ok: false, error: SUPABASE_UNAVAILABLE };
     }
 
     const { error } = await supabaseClient.auth.signInWithOtp({
@@ -233,11 +251,8 @@ var Auth = {
 
   /* Kirim email reset password. */
   async resetPassword(email, redirectTo) {
-    if (!isSupabaseMode()) {
-      return {
-        ok: false,
-        error: "Fitur ini hanya tersedia pada mode Supabase.",
-      };
+    if (!supabaseClient) {
+      return { ok: false, error: SUPABASE_UNAVAILABLE };
     }
 
     const { error } = await supabaseClient.auth.resetPasswordForEmail(
@@ -254,11 +269,8 @@ var Auth = {
 
   /* Ganti password user yang sedang login. */
   async updatePassword(password) {
-    if (!isSupabaseMode()) {
-      return {
-        ok: false,
-        error: "Fitur ini hanya tersedia pada mode Supabase.",
-      };
+    if (!supabaseClient) {
+      return { ok: false, error: SUPABASE_UNAVAILABLE };
     }
 
     const { error } = await supabaseClient.auth.updateUser({ password });
@@ -274,11 +286,7 @@ var Auth = {
      bukan tabel profiles — bisa berbeda sementara kalau perubahan email
      sedang menunggu konfirmasi). */
   currentUserEmail() {
-    if (isSupabaseMode()) {
-      return authState.user?.email || authState.profile?.email || "";
-    }
-
-    return authState.profile?.email || "";
+    return authState.user?.email || authState.profile?.email || "";
   },
 
   /* Verifikasi password lama TANPA mengubah apa pun.
@@ -290,17 +298,8 @@ var Auth = {
       return { ok: false, error: "Sesi login berakhir. Silakan masuk kembali." };
     }
 
-    if (!isSupabaseMode()) {
-      await dbInit();
-
-      const target = email.trim().toLowerCase();
-      const account = getLocalAccounts().find(
-        (item) => String(item.email || "").toLowerCase() === target,
-      );
-
-      return account && account.password === password
-        ? { ok: true }
-        : { ok: false, error: "Password saat ini salah." };
+    if (!supabaseClient) {
+      return { ok: false, error: SUPABASE_UNAVAILABLE };
     }
 
     try {
@@ -354,8 +353,8 @@ var Auth = {
      `applied = false` -> Supabase mengirim tautan konfirmasi; email login
                           baru berlaku setelah tautan itu dibuka. */
   async updateEmail(email) {
-    if (!isSupabaseMode()) {
-      return { ok: true, applied: true };
+    if (!supabaseClient) {
+      return { ok: false, error: SUPABASE_UNAVAILABLE };
     }
 
     const next = String(email || "").trim();
@@ -389,31 +388,19 @@ var Auth = {
 
   /* Atur password baru untuk akun lokal (mode demo). */
   async setLocalPassword(email, password) {
-    await dbInit();
-
-    const target = String(email || "")
-      .trim()
-      .toLowerCase();
-    const accounts = getLocalAccounts();
-    const index = accounts.findIndex(
-      (item) => String(item.email || "").toLowerCase() === target,
-    );
-
-    if (index === -1) {
-      return { ok: false, error: "Email tidak terdaftar pada akun customer." };
-    }
-
-    accounts[index] = { ...accounts[index], password };
-
-    saveCustomerAccounts(accounts);
-
-    return { ok: true };
+    /* Mode lokal sudah dihapus — reset password hanya lewat tautan email
+       (Auth.resetPassword). */
+    return { ok: false, error: SUPABASE_UNAVAILABLE };
   },
 
   /* Ambil session + profil (dipakai guard setiap halaman). */
   async restoreSession() {
-    if (!isSupabaseMode()) {
-      return this.restoreLocalSession();
+    if (!supabaseClient) {
+      /* Tanpa koneksi tidak ada sesi — guard halaman akan mengembalikan
+         pengguna ke login (pesan konfigurasi sudah tampil di overlay). */
+      authState.user = null;
+      authState.profile = null;
+      return null;
     }
 
     const { data, error } = await supabaseClient.auth.getSession();
@@ -441,8 +428,7 @@ var Auth = {
     sessionStorage.removeItem("workshopUserName");
     sessionStorage.removeItem("workshopCustomerSession");
     sessionStorage.removeItem("workshopCustomerName");
-    /* Sesi lokal tunggal juga harus dihapus, kalau tidak
-       restoreLocalSession() akan menganggap pengguna masih masuk. */
+    /* Sesi lokal lama juga harus dihapus (warisan mode lokal). */
     sessionStorage.removeItem(LOCAL_SESSION_KEY);
 
     authState.user = null;
@@ -450,42 +436,20 @@ var Auth = {
   },
 
   /* Hapus akun yang sedang login.
-     - Mode lokal   : hapus dari daftar akun customer di localStorage.
-     - Mode Supabase: panggil RPC delete_my_account() (security definer),
-                      lalu bersihkan sesi. Data customer/service TIDAK
-                      dihapus — hanya akun login-nya. */
+     Panggil RPC delete_my_account() (security definer), lalu bersihkan
+     sesi. Data customer/service TIDAK dihapus — hanya akun login-nya. */
   async deleteAccount() {
     const profile = getCurrentProfile();
 
-    if (profile?.role === "admin") {
+    if (isAdminRole(profile?.role)) {
       return {
         ok: false,
-        error: "Akun administrator tidak dapat dihapus dari halaman customer.",
+        error: "Akun staf tidak dapat dihapus dari halaman customer.",
       };
     }
 
-    if (!isSupabaseMode()) {
-      const email = String(profile?.email || "")
-        .trim()
-        .toLowerCase();
-      const accounts = getCustomerAccounts();
-      const target = accounts.find(
-        (account) =>
-          (account.role || "customer") !== "admin" &&
-          (String(account.email || "").trim().toLowerCase() === email ||
-            (profile?.id && String(account.id) === String(profile.id))),
-      );
-
-      if (!target) {
-        return { ok: false, error: "Akun login tidak ditemukan." };
-      }
-
-      saveCustomerAccounts(
-        accounts.filter((account) => account !== target),
-      );
-
-      await this.signOut();
-      return { ok: true };
+    if (!supabaseClient) {
+      return { ok: false, error: SUPABASE_UNAVAILABLE };
     }
 
     const { error } = await supabaseClient.rpc("delete_my_account");
@@ -598,238 +562,4 @@ var Auth = {
     return created;
   },
 
-  /* ---------------- MODE LOKAL (fallback) ---------------- */
-
-  async signInLocal(email, password) {
-    if (!LOCAL_MODE_ALLOWED) {
-      return {
-        ok: false,
-        error: "Mode lokal dinonaktifkan di production. Gunakan akun Supabase.",
-      };
-    }
-
-    await dbInit();
-
-    const target = String(email || "")
-      .trim()
-      .toLowerCase();
-    const account = getLocalAccounts().find(
-      (item) => String(item.email).toLowerCase() === target,
-    );
-
-    if (!account || account.password !== password) {
-      return { ok: false, error: "Email atau password salah." };
-    }
-
-    const role = account.role === "admin" ? "admin" : "customer";
-
-    /* Akun customer harus terhubung ke baris di tabel customers.
-       Urutan resolusi: id tersimpan -> email -> buat baru (lazy-create),
-       supaya akun demo/lama yang customerId-nya null tidak buntu
-       di portal customer. */
-    let customer = account.customerId
-      ? getCustomerById(account.customerId)
-      : null;
-
-    if (!customer && role === "customer") {
-      customer =
-        getCustomers().find(
-          (item) =>
-            String(item.email || "").toLowerCase() === target,
-        ) || null;
-    }
-
-    if (!customer && role === "customer") {
-      const customers = getCustomers();
-      /* nextNumericId ada di global.js (tidak dimuat halaman index) —
-         pakai fallback sederhana kalau helper itu belum tersedia. */
-      const newId =
-        typeof nextNumericId === "function"
-          ? nextNumericId(customers)
-          : Math.max(0, ...customers.map((item) => Number(item.id) || 0)) + 1;
-      customer = {
-        id: newId,
-        kode: nextKode("customers", customers),
-        nama: account.nama || "Customer",
-        telepon: "",
-        email: account.email,
-        alamat: "",
-        catatan: "",
-        registeredAt: new Date().toISOString(),
-        registeredVia: "local",
-      };
-      customers.push(customer);
-      saveCustomers(customers);
-    }
-
-    /* Tautkan akun -> customer supaya login berikutnya langsung cocok. */
-    if (role === "customer" && customer && Number(account.customerId) !== Number(customer.id)) {
-      account.customerId = Number(customer.id);
-      saveCustomerAccounts(getLocalAccounts());
-    }
-
-    if (role === "customer" && !customer) {
-      return {
-        ok: false,
-        error:
-          "Data customer untuk akun ini belum ada dan gagal dibuat otomatis. Hubungi admin bengkel.",
-      };
-    }
-
-    authState.user = { email: account.email };
-    authState.profile = {
-      id: `local-${role}`,
-      email: account.email,
-      nama: customer?.nama || account.nama || "Customer",
-      role,
-      customer_id: customer ? Number(customer.id) : null,
-    };
-
-    /* Simpan SESI TUNGGAL. Jangan pernah ada sesi admin dan customer
-       bersamaan, kalau tidak guard akan saling menolak (login loop). */
-    const session = {
-      role,
-      customerId: authState.profile.customer_id,
-      email: account.email,
-      nama: authState.profile.nama,
-      loginAt: new Date().toISOString(),
-    };
-
-    sessionStorage.setItem(LOCAL_SESSION_KEY, JSON.stringify(session));
-
-    if (role === "admin") {
-      sessionStorage.setItem("workshopLoggedIn", "true");
-      sessionStorage.setItem("workshopUserName", session.nama);
-      sessionStorage.removeItem(CUSTOMER_SESSION_KEY);
-      sessionStorage.removeItem("workshopCustomerName");
-    } else {
-      sessionStorage.setItem(CUSTOMER_SESSION_KEY, JSON.stringify(session));
-      sessionStorage.setItem("workshopCustomerName", session.nama);
-      sessionStorage.removeItem("workshopLoggedIn");
-      sessionStorage.removeItem("workshopUserName");
-    }
-
-    return { ok: true, profile: authState.profile };
-  },
-
-  async signUpLocal(payload) {
-    await dbInit();
-
-    const email = String(payload.email || "").trim();
-    const accounts = getLocalAccounts();
-
-    if (
-      accounts.some(
-        (item) => String(item.email).toLowerCase() === email.toLowerCase(),
-      )
-    ) {
-      return { ok: false, error: "Email sudah terdaftar. Silakan masuk." };
-    }
-
-    const customers = getCustomers();
-    const existing = customers.find(
-      (customer) =>
-        String(customer.email || "").toLowerCase() === email.toLowerCase(),
-    );
-
-    let customer = existing;
-
-    if (customer) {
-      customer.nama = payload.nama || customer.nama;
-      customer.telepon = payload.telepon || customer.telepon;
-      customer.alamat = payload.alamat || customer.alamat;
-    } else {
-      customer = {
-        id: nextNumericId(customers),
-        nama: payload.nama,
-        telepon: payload.telepon,
-        email,
-        alamat: payload.alamat || "",
-        catatan: "",
-        registeredAt: new Date().toISOString(),
-        registeredVia: "customer",
-      };
-      customers.push(customer);
-    }
-
-    saveCustomers(customers);
-
-    accounts.push({
-      id: nextNumericId(accounts),
-      customerId: customer.id,
-      nama: customer.nama,
-      email,
-      password: payload.password,
-      role: "customer",
-      createdAt: new Date().toISOString(),
-    });
-
-    saveCustomerAccounts(accounts);
-
-    return this.signInLocal(email, payload.password);
-  },
-
-  async restoreLocalSession() {
-    const raw = sessionStorage.getItem(LOCAL_SESSION_KEY);
-
-    if (raw) {
-      try {
-        const session = JSON.parse(raw);
-        const role = session.role === "admin" ? "admin" : "customer";
-
-        authState.user = null;
-        authState.profile = {
-          id: `local-${role}`,
-          email: session.email,
-          nama: session.nama,
-          role,
-          customer_id: session.customerId ?? null,
-        };
-
-        return authState.profile;
-      } catch (error) {
-        console.error("Sesi lokal rusak:", error);
-      }
-    }
-
-    /* Fallback untuk sesi lama (sebelum ada LOCAL_SESSION_KEY). */
-    const isAdmin = sessionStorage.getItem(ADMIN_SESSION_KEY) === "true";
-    const customerRaw = sessionStorage.getItem(CUSTOMER_SESSION_KEY);
-
-    if (!isAdmin && !customerRaw) {
-      return null;
-    }
-
-    let legacy = {};
-
-    if (customerRaw) {
-      try {
-        legacy = JSON.parse(customerRaw) || {};
-      } catch (error) {
-        legacy = {};
-      }
-    }
-
-    authState.user = null;
-    authState.profile = isAdmin
-      ? {
-          id: "local-admin",
-          email: "admin@workshop.com",
-          nama: sessionStorage.getItem("workshopUserName") || "Administrator",
-          role: "admin",
-          customer_id: null,
-        }
-      : {
-          id: "local-customer",
-          email: legacy.email || "customer@workshop.com",
-          nama:
-            legacy.nama ||
-            sessionStorage.getItem("workshopCustomerName") ||
-            "Customer",
-          role: "customer",
-          customer_id: legacy.customerId ? Number(legacy.customerId) : null,
-        };
-
-    return authState.profile;
-  },
 };

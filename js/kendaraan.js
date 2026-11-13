@@ -9,9 +9,17 @@ function resetKendaraanForm() {
 
   form.reset();
 
+  setServiceStatusStep("vehicleStatusStep", "Menunggu");
+
   clearFormError("vehicleForm");
 
   populateVehicleFormRelations();
+
+  const keluhanList = document.getElementById("vehicleKeluhanList");
+  if (keluhanList) {
+    keluhanList.innerHTML = "";
+    addKeluhanRow("vehicleKeluhanList", "");
+  }
 
   const id = document.getElementById("vehicleId");
 
@@ -109,9 +117,7 @@ function editKendaraan(id, button = null) {
 
   const merk = document.getElementById("vehicleMerk");
 
-  const keluhan = document.getElementById("vehicleKeluhan");
-
-  const status = document.getElementById("vehicleStatus");
+  const keluhanList = document.getElementById("vehicleKeluhanList");
 
   const tanggal = document.getElementById("vehicleTanggal");
 
@@ -153,13 +159,9 @@ function editKendaraan(id, button = null) {
     merk.value = item.merk;
   }
 
-  if (keluhan) {
-    keluhan.value = item.keluhan;
-  }
+  setKeluhanRows("vehicleKeluhanList", item.keluhan);
 
-  if (status) {
-    status.value = item.status;
-  }
+  setServiceStatusStep("vehicleStatusStep", item.status);
 
   const title = document.getElementById("vehicleModalTitle");
 
@@ -174,6 +176,10 @@ function editKendaraan(id, button = null) {
 
 function saveKendaraanForm(event) {
   event.preventDefault();
+
+  if (saveKendaraanForm._busy) return;
+  saveKendaraanForm._busy = true;
+  setTimeout(() => { saveKendaraanForm._busy = false; }, 0);
   clearFormError("vehicleForm");
   clearPageNotice();
   const value = (id) => document.getElementById(id).value.trim();
@@ -274,6 +280,15 @@ function saveKendaraanForm(event) {
     return;
   }
 
+  const transitionError = validateServiceStatusTransition(
+    existingVehicle?.status || "Menunggu",
+    status,
+  );
+  if (transitionError) {
+    showFormError("vehicleForm", transitionError);
+    return;
+  }
+
   /* Validasi kelengkapan dijalankan SETIAP simpan, bukan hanya saat
      status berubah (pola sama dengan saveServiceForm & edit dashboard)
      — supaya biaya jasa service Selesai/Quality Check tidak bisa
@@ -295,7 +310,7 @@ function saveKendaraanForm(event) {
     pelangganId: customer.id,
     jenis: document.getElementById("vehicleJenis").value,
     merk,
-    keluhan: value("vehicleKeluhan"),
+    keluhan: getKeluhanRows("vehicleKeluhanList"),
     status,
     /* Form ini tidak punya field pembayaran: pertahankan nilai lama
        (sudah dijaga guard di atas); service baru selalu "Belum Lunas". */
@@ -667,6 +682,10 @@ function initKendaraanPage() {
   if (form) {
     form.addEventListener("submit", saveKendaraanForm);
   }
+
+  document
+    .getElementById("btnTambahVehicleKeluhan")
+    ?.addEventListener("click", () => addKeluhanRow("vehicleKeluhanList", ""));
 
   if (search) {
     search.addEventListener("input", function () {

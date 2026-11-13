@@ -4,10 +4,11 @@
     <meta charset="UTF-8" />
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; font-src 'self' https://cdnjs.cloudflare.com; img-src 'self' data: https://*.supabase.co; connect-src 'self' https://*.supabase.co wss://*.supabase.co; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+      content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; font-src 'self' https://cdnjs.cloudflare.com; img-src 'self' data: https://*.supabase.co; connect-src 'self' https://*.supabase.co wss://*.supabase.co http://localhost:3000; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
     />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Daftar Customer | Pytabengkel</title>
+    <link rel="stylesheet" href="../../css/fonts.css" />
     <link rel="stylesheet" href="../../css/login.css" />
     <link
       rel="stylesheet"
@@ -29,9 +30,6 @@
     <main class="login-container">
       <section class="login-info">
         <div class="brand">
-          <div class="brand-icon">
-            <i class="fa-solid fa-screwdriver-wrench" aria-hidden="true"></i>
-          </div>
           <span>Pytabengkel</span>
         </div>
         <div class="info-content">

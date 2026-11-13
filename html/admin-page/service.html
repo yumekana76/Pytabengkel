@@ -4,10 +4,11 @@
     <meta charset="UTF-8" />
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; font-src 'self' https://cdnjs.cloudflare.com; img-src 'self' data: https://*.supabase.co; connect-src 'self' https://*.supabase.co wss://*.supabase.co; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+      content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; font-src 'self' https://cdnjs.cloudflare.com; img-src 'self' data: https://*.supabase.co; connect-src 'self' https://*.supabase.co wss://*.supabase.co http://localhost:3000; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
     />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Pytabengkel - Service</title>
+    <link rel="stylesheet" href="../../css/fonts.css" />
     <link rel="stylesheet" href="../../css/global.css" />
     <link
       rel="stylesheet"
@@ -43,6 +44,15 @@
         <h1>Pytabengkel</h1>
       </div>
       <div class="topbar-actions">
+        <a
+          class="topbar-landing"
+          href="../landing.html"
+          aria-label="Kembali ke Landing Page"
+          title="Kembali ke Landing Page"
+        >
+          <i class="fa-solid fa-arrow-left" aria-hidden="true"></i>
+          <span>Landing Page</span>
+        </a>
         <button
           type="button"
           class="icon-btn theme-toggle"
@@ -108,6 +118,13 @@
           <a href="sparepart.html" class="nav-link"
             ><i class="fa-solid fa-gears nav-icon" aria-hidden="true"></i>
             Sparepart
+          </a>
+          <a href="diskon.html" class="nav-link"
+          ><i class="fa-solid fa-tags nav-icon" aria-hidden="true"></i>
+          Diskon
+          </a>
+          <a href="users.html" class="nav-link" data-super-admin-only hidden>
+            <i class="fa-solid fa-crown nav-icon" aria-hidden="true"></i><span>Kelola Pengguna</span>
           </a>
           <a href="pengaturan.html" class="nav-link"
             ><i class="fa-solid fa-gear nav-icon" aria-hidden="true"></i>
@@ -239,17 +256,24 @@
                 <label for="serviceMekanik">Mekanik</label
                 ><select id="serviceMekanik" class="form-control" required></select>
               </div>
-              <div class="form-group">
-                <label for="serviceStatus">Status</label
-                ><select id="serviceStatus" class="form-control">
-                  <option value="Menunggu">Menunggu</option>
-                  <option value="Dikerjakan">Dikerjakan</option>
-                  <option value="Quality Check">Quality Check</option>
-                  <option value="Selesai">Selesai</option>
-                </select>
-                <p class="form-hint">
-                  Quality Check / Selesai memerlukan mekanik, biaya jasa, dan
-                  minimal satu sparepart.
+              <div class="form-group" id="serviceStatusStep">
+                <label>Status Service</label>
+                <input type="hidden" id="serviceStatus" data-status-input value="Menunggu" />
+                <div class="status-step-control">
+                  <span class="badge waiting" data-status-badge>Menunggu</span>
+                  <button
+                    type="button"
+                    class="action-btn"
+                    data-status-next
+                    data-next-status="Dikerjakan"
+                  >
+                    → Dikerjakan
+                  </button>
+                </div>
+                <p class="form-hint" data-status-hint>
+                  Status maju satu langkah setiap kali tombol diklik. Quality
+                  Check / Selesai memerlukan mekanik, biaya jasa, dan minimal
+                  satu sparepart.
                 </p>
               </div>
               <div class="form-group form-full">
@@ -266,6 +290,9 @@
                   placeholder="0"
                   required
                 />
+                <span class="form-hint">
+                  Ketik angka ribuan, otomatis ditambah 000 (mis. 80 → 80.000).
+                </span>
               </div>
               <div class="form-group">
                 <label for="servicePembayaran">Status Pembayaran</label
@@ -277,6 +304,13 @@
               <div class="form-group">
                 <label for="serviceTotalPreview">Total Tagihan</label
                 ><output id="serviceTotalPreview" class="total-preview">Rp0</output>
+              </div>
+              <div class="form-group form-full">
+                <label id="servicePromoLabel">Diskon / Promo</label>
+                <div id="servicePromoList" class="promo-check-list" role="group" aria-labelledby="servicePromoLabel"></div>
+                <span class="form-hint" id="servicePromoHint">
+                  Centang satu atau lebih promo yang ingin diklaim. Diskon akan dipotong otomatis dari total tagihan.
+                </span>
               </div>
               <div class="form-group form-full">
                 <div class="form-label-action">

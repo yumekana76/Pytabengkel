@@ -8,7 +8,7 @@
 /* Kunci session didefinisikan di js/supabase.js (dibagikan semua halaman). */
 
 /**
- * Sesi customer yang sedang login (dari profil Supabase / mode lokal).
+ * Sesi customer yang sedang login (dari profil Supabase).
  * @returns {object|null}
  */
 function getCustomerSession() {
@@ -23,30 +23,9 @@ function getCustomerSession() {
     };
   }
 
-  /* Mode lokal: sesi disimpan di sessionStorage.
-     WAJIB cek role-nya, supaya sesi admin tidak dianggap sesi customer. */
-  try {
-    const raw = sessionStorage.getItem(CUSTOMER_SESSION_KEY);
-
-    if (!raw) {
-      return null;
-    }
-
-    const session = JSON.parse(raw);
-
-    if (!session || !session.customerId) {
-      return null;
-    }
-
-    if (session.role && session.role !== "customer") {
-      return null;
-    }
-
-    return session;
-  } catch (error) {
-    console.error("Sesi customer rusak:", error);
-    return null;
-  }
+  /* Mode lokal sudah dihapus — tanpa profil tertaut ke data customer,
+     tidak ada sesi customer yang sah. */
+  return null;
 }
 
 function isCustomerLoggedIn() {

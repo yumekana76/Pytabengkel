@@ -19,10 +19,20 @@ workshop-backup.json
 node_modules/
 dist/
 .vercel/
+.venv/
 
 # Sistem operasi dan editor
 .DS_Store
 Thumbs.db
 *.log
 
-.aider*
+#AI
+.freebuff
+
+.vercel
+.env*
+
+
+node_modules/
+.env
+auth_info/

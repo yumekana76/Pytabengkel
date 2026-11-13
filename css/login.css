@@ -1,5 +1,5 @@
 /* =========================================
-   HALAMAN LOGIN & DAFTAR (ADMIN & CUSTOMER)
+   HALAMAN LOGIN & DAFTAR (SUPER ADMIN, ADMIN & CUSTOMER)
    ========================================= */
 
 * {
@@ -22,6 +22,9 @@
 
   --primary: #2563eb;
   --primary-dark: #1d4ed8;
+  --primary-solid: #2563eb;
+  --primary-solid-hover: #1d4ed8;
+  --primary-text: #1d4ed8;
   --primary-soft: #eff6ff;
 
   --background: #f4f6f8;
@@ -60,6 +63,10 @@
 
   --primary: #3b82f6;
   --primary-dark: #93c5fd;
+  /* Latar tombol tetap gelap supaya teks putih terbaca (lihat global.css) */
+  --primary-solid: #2563eb;
+  --primary-solid-hover: #1d4ed8;
+  --primary-text: #bfdbfe;
   --primary-soft: rgba(59, 130, 246, 0.16);
 
   --background: #0b1220;
@@ -115,7 +122,7 @@ body {
   justify-content: center;
   background: var(--background);
   color: var(--text);
-  padding: 20px;
+  padding: 0;
   overflow-x: hidden;
   transition:
     background-color 0.25s ease,
@@ -131,7 +138,7 @@ body {
 
 .login-form-container {
   position: relative;
-  padding: var(--space-3xl);
+  padding: 72px var(--space-3xl) var(--space-3xl);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -145,6 +152,10 @@ body {
   align-items: center;
   gap: 8px;
   z-index: 20;
+}
+
+.login-top-actions a.theme-toggle {
+  text-decoration: none;
 }
 
 .theme-toggle {
@@ -163,22 +174,9 @@ body {
   transition: 0.2s;
 }
 
-/* Tombol "lihat ulasan": HANYA tampil di mode HP (≤800px), saat panel
-   login-info (termasuk testimoni) disembunyikan. Di desktop ulasan
-   cukup dibaca langsung dari panel login-info — tombol tidak dipakai. */
-.reviews-toggle {
-  display: none;
-}
-
-@media (max-width: 800px) {
-  .reviews-toggle {
-    display: inline-flex;
-  }
-}
-
 .theme-toggle:hover {
-  border-color: var(--primary);
-  color: var(--primary);
+  border-color: var(--primary-text);
+  color: var(--primary-text);
   background: var(--primary-soft);
 }
 
@@ -205,59 +203,6 @@ body {
   box-shadow: var(--shadow);
 }
 
-/* =========================================
-   TINGGI KARTU TETAP (khusus halaman login index.html)
-   Ukuran kartu selalu 650px: pergantian role (admin/customer)
-   maupun kemunculan section ulasan TIDAK mengubah tinggi/margin
-   kartu. Kolom yang isinya lebih tinggi meng-scroll di dalam
-   (panel kiri via .info-scroll, panel kanan saat reset-box
-   terbuka). Halaman daftar (register) tidak memakai .login-page
-   sehingga tetap melar mengikuti isinya.
-   ========================================= */
-
-.login-page {
-  height: 650px;
-  min-height: 650px;
-}
-
-.login-page .login-info {
-  justify-content: flex-start;
-  gap: var(--space-xl);
-  overflow: hidden;
-}
-
-/* Panel kiri: brand di atas, copyright di bawah, sisanya scroll */
-.login-page .info-scroll {
-  flex: 1 1 0;
-  min-height: 0;
-  overflow-y: auto;
-  scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.25) transparent;
-}
-
-.login-page .info-scroll::-webkit-scrollbar {
-  width: 6px;
-}
-
-.login-page .info-scroll::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.25);
-  border-radius: 999px;
-}
-
-/* Panel kanan: konten terpusat saat pendek, scroll saat lebih
-   tinggi dari kartu (reset-box terbuka, dsb.). margin:auto pada
-   wrap mencegah konten terpotong di atas seperti pada
-   align-items:center. */
-.login-page .login-form-container {
-  align-items: flex-start;
-  overflow-y: auto;
-  scrollbar-width: thin;
-}
-
-.login-page .login-form-wrap {
-  margin: auto;
-}
-
 /* LEFT */
 
 .login-info {
@@ -270,23 +215,15 @@ body {
   color: #fff;
 }
 
+/* Wordmark Pytabengkel (panel register) — SAMAKAN dengan
+   .brand h1 (topbar), .lp-brand-text strong, .login-brand-text strong */
 .brand {
   display: flex;
   align-items: center;
   gap: 12px;
-  font-size: 22px;
-  font-weight: 700;
-}
-
-.brand-icon {
-  width: 42px;
-  height: 42px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 10px;
-  background: var(--primary);
-  font-size: 20px;
+  font-size: 21px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
 }
 
 .info-content {
@@ -338,7 +275,7 @@ body {
 /* RIGHT */
 
 .login-form-container {
-  padding: var(--space-3xl);
+  padding: 72px var(--space-3xl) var(--space-3xl);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -404,7 +341,7 @@ body {
 }
 
 .input-wrapper input:focus {
-  border-color: var(--primary);
+  border-color: var(--primary-text);
   box-shadow: 0 0 0 3px var(--focus-ring);
 }
 
@@ -431,7 +368,7 @@ body {
 }
 
 .password-toggle:hover {
-  color: var(--primary);
+  color: var(--primary-text);
 }
 
 .form-options {
@@ -452,11 +389,11 @@ body {
 .remember input {
   width: 15px;
   height: 15px;
-  accent-color: var(--primary);
+  accent-color: var(--primary-text);
 }
 
 .forgot-password {
-  color: var(--primary);
+  color: var(--primary-text);
   text-decoration: none;
   font-weight: 600;
 }
@@ -467,34 +404,37 @@ body {
 
 .login-button {
   width: 100%;
-  height: 48px;
-  border: none;
+  min-height: 46px;
+  border: 1px solid transparent;
   border-radius: 10px;
-  background: var(--primary);
+  padding: 10px 16px;
+  background: var(--primary-solid);
   color: #fff;
-  font-size: 15px;
-  font-weight: 600;
+  font-size: 14px;
+  font-weight: 700;
   cursor: pointer;
   transition: 0.2s;
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 10px;
   font-family: inherit;
+  box-shadow: var(--shadow-primary, none);
 }
 
 .login-button:hover {
-  background: var(--primary-dark);
+  background: var(--primary-solid-hover);
   color: #fff;
 }
 
 .login-button:disabled {
-  opacity: 0.7;
+  opacity: 0.6;
   cursor: not-allowed;
 }
 
-.brand-icon i {
-  font-size: 20px;
+.login-button:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
 }
 
 .feature-icon i {
@@ -565,84 +505,6 @@ body {
 }
 
 /* =========================================
-   AKUN DEMO (hanya mode lokal)
-   ========================================= */
-
-.demo-login {
-  margin-top: var(--space-xl);
-  padding: 14px 16px;
-  border: 1px dashed var(--border);
-  border-radius: 12px;
-  background: var(--surface-2);
-}
-
-.demo-login[hidden] {
-  display: none;
-}
-
-.demo-head {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 8px;
-  font-size: 12px;
-  color: var(--secondary);
-  margin-bottom: 10px;
-}
-
-.demo-head i {
-  color: var(--primary);
-}
-
-.demo-head strong {
-  color: var(--text);
-  font-size: 13px;
-}
-
-.demo-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  padding: 4px 0;
-  font-size: 12px;
-  color: var(--secondary);
-}
-
-.demo-row code {
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  color: var(--primary);
-  font-size: 12px;
-  overflow-wrap: anywhere;
-  text-align: right;
-}
-
-.demo-fill {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  width: 100%;
-  margin-top: 10px;
-  padding: 8px 12px;
-  border: 1px dashed var(--border);
-  border-radius: 8px;
-  background: transparent;
-  color: var(--secondary);
-  font-size: 11px;
-  font-weight: 700;
-  font-family: inherit;
-  cursor: pointer;
-  transition: 0.2s;
-}
-
-.demo-fill:hover {
-  border-color: var(--primary);
-  color: var(--primary);
-  background: var(--primary-soft);
-}
-
-/* =========================================
    FORM ATUR ULANG PASSWORD
    Tampilan sama dengan halaman pendaftaran.
    ========================================= */
@@ -684,7 +546,7 @@ body {
 
 .role-switch {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(3, 1fr);
   gap: 6px;
   padding: 5px;
   margin-bottom: var(--space-2xl);
@@ -697,13 +559,13 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  padding: 11px 10px;
+  gap: 7px;
+  padding: 10px 8px;
   border: none;
   border-radius: 10px;
   background: transparent;
   color: var(--secondary);
-  font-size: 13px;
+  font-size: 12.5px;
   font-weight: 700;
   font-family: inherit;
   cursor: pointer;
@@ -722,7 +584,7 @@ body {
 
 .role-tab.active {
   background: var(--surface);
-  color: var(--primary);
+  color: var(--primary-text);
   box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
 }
 
@@ -750,7 +612,7 @@ body {
 }
 
 .auth-links a {
-  color: var(--primary);
+  color: var(--primary-text);
   text-decoration: none;
   font-weight: 600;
 }
@@ -767,7 +629,7 @@ body {
   padding: 6px var(--space-md);
   border-radius: 999px;
   background: var(--primary-soft);
-  color: var(--primary);
+  color: var(--primary-text);
   font-size: 12px;
   font-weight: 700;
 }
@@ -779,12 +641,7 @@ body {
     min-height: 0;
   }
 
-  /* Halaman login mobile: kembali melar mengikuti form, karena
-     panel kiri (satu-satunya yang di-scroll) disembunyikan. */
-  .login-page {
-    height: auto;
-    min-height: 0;
-  }
+  /* Panel kiri disembunyikan di layar kecil; form melar mengikuti isi. */
   .login-info {
     display: none;
   }
@@ -803,7 +660,7 @@ body {
 
 @media (max-width: 460px) {
   body {
-    padding: 12px;
+    padding: 0;
   }
   .login-container {
     margin: auto;
@@ -828,8 +685,9 @@ body {
     gap: 12px;
   }
   .role-tab {
-    font-size: 12px;
-    padding: 10px 6px;
+    font-size: 11px;
+    padding: 10px 4px;
+    gap: 5px;
   }
   .role-tab i {
     display: none;
@@ -868,317 +726,219 @@ body {
   border: 0;
 }
 
-/* =====================================================================
-   TESTIMONI PUBLIK
-   Panel kiri selalu bertema gelap, jadi warnanya tidak mengikuti
-   terang/gelap. Gaya .stars diduplikasi dari global.css karena
-   halaman ini tidak memuat global.css.
-   ===================================================================== */
+/* =========================================
+   LOGIN STANDALONE (index: form centered)
+   ========================================= */
 
-.testimoni-section {
-  display: grid;
-  gap: 12px;
-  margin-top: 26px;
-}
-
-/* Atribut hidden harus tetap menang atas display:grid di atas. */
-.testimoni-section[hidden] {
-  display: none;
-}
-
-.testimoni-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  flex-wrap: wrap;
-}
-
-.testimoni-head h3 {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 15px;
-  margin: 0;
-  color: #fff;
-}
-
-.testimoni-head h3 .fa-star {
-  color: #f59e0b;
-}
-
-.testimoni-summary {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.testimoni-rata {
-  font-size: 22px;
-  font-weight: 800;
-  color: #fbbf24;
-  line-height: 1;
-}
-
-.testimoni-jumlah {
-  color: #9ca3af;
-  font-size: 12px;
-}
-
-.testimoni-list {
-  display: grid;
-  /* Baris tetap berukuran alami kalau kotak punya sisa ruang,
-     supaya kartu tidak ikut meregang saat cuma ada 1 ulasan. */
-  align-content: start;
-  gap: 10px;
-  /* Maksimum setara ~2 ulasan: kalau lebih, gulir di dalam kotak;
-     kalau lebih sedikit (mis. 1 ulasan), kotak mengecil mengikuti
-     isi sehingga tidak ada ruang kosong yang memanjang. */
-  max-height: 200px;
-  overflow-y: auto;
-  padding-right: 4px;
-  scrollbar-width: thin;
-  scrollbar-color: #4b5563 transparent;
-}
-
-.testimoni-list::-webkit-scrollbar {
-  width: 6px;
-}
-
-.testimoni-list::-webkit-scrollbar-thumb {
-  background: #4b5563;
-  border-radius: 999px;
-}
-
-/* Pesan kosong (mis. filter bintang tanpa hasil) ditampilkan rata
-   tengah, bukan menempel di kiri. */
-.testimoni-list > p {
-  text-align: center;
-}
-
-.testimoni-card {
-  display: grid;
-  gap: 6px;
-  padding: 12px 14px;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 12px;
-}
-
-.testimoni-card-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-}
-
-.testimoni-nama {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-weight: 700;
-  font-size: 13px;
-  color: #fff;
-}
-
-.testimoni-nama .fa-circle-user {
-  color: #93c5fd;
-}
-
-.testimoni-tgl {
-  color: #9ca3af;
-  font-size: 11px;
-}
-
-.testimoni-card-rating {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.testimoni-rating-label {
-  color: #fcd34d;
-  font-size: 12px;
-}
-
-.testimoni-teks {
-  margin: 0;
-  color: #d1d5db;
-  font-size: 13px;
-  line-height: 1.6;
-}
-
-/* Bintang (duplikat dari global.css) */
-.stars {
-  display: inline-flex;
-  gap: 2px;
-  font-size: 14px;
-  line-height: 1;
-  white-space: nowrap;
-}
-
-.stars .star-on {
-  color: #f59e0b;
-}
-
-.stars .star-off {
-  color: #64748b;
-}
-
-.stars-small {
-  font-size: 12px;
-}
-
-/* Modal semua ulasan (HP) */
-.testimoni-modal-overlay[hidden] { display: none !important; }
-.testimoni-modal-overlay {
-  position: fixed;
-  inset: 0;
-  background: var(--surface-overlay);
+.login-standalone,
+main.login-standalone {
+  width: 100%;
+  max-width: 460px;
+  min-height: 100vh;
+  min-height: 100dvh;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: max(20px, env(safe-area-inset-top)) 20px
-    max(20px, env(safe-area-inset-bottom));
-  z-index: 1000;
-  overscroll-behavior: contain;
-  touch-action: none;
+  margin: 0 auto;
+  padding: 0;
+  background: transparent !important;
+  border: 0 !important;
+  border-width: 0 !important;
+  outline: none !important;
+  box-shadow: none !important;
 }
-/* Cegah halaman di belakang ikut tergulir atau diinteraksikan saat modal terbuka. */
-html.testimoni-modal-open,
-body.testimoni-modal-open {
-  overflow: hidden !important;
-  touch-action: none;
-  height: 100%;
-}
-body.testimoni-modal-open .login-container {
-  pointer-events: none;
-  user-select: none;
-}
-.testimoni-modal-close:focus-visible,
-.testimoni-modal .filter-btn:focus-visible {
-  outline: 2px solid var(--primary);
-  outline-offset: 2px;
-}
-.testimoni-modal {
-  width: 100%;
-  max-width: 520px;
-  max-height: 85vh;
-  overflow-y: auto;
-  background: var(--surface);
-  border-radius: 16px;
-  padding: 20px;
-  touch-action: pan-y;
-  overscroll-behavior: contain;
-  outline: none;
-}
-.testimoni-modal-list { display: flex; flex-direction: column; gap: 12px; }
 
-/* Kepala modal: judul di kiri, tombol silang di kanan */
-.testimoni-modal-head {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
+.login-standalone .login-form-wrap {
+  position: relative;
+  width: 100%;
+  max-width: 460px;
+  padding: 36px 32px 32px;
+  background: var(--surface);
+  border: 1px solid var(--border-soft);
+  border-radius: 24px;
+  box-shadow: 0 20px 48px rgba(15, 23, 42, 0.08);
+}
+
+[data-theme="dark"] .login-standalone .login-form-wrap {
+  box-shadow: 0 20px 48px rgba(0, 0, 0, 0.45);
+}
+
+/* Brand header di form login */
+.login-brand-header {
+  display: inline-flex;
+  align-items: center;
   gap: 12px;
-  margin-bottom: 14px;
+  text-decoration: none;
+  color: var(--text);
+  margin-bottom: 24px;
+  transition: opacity 0.2s ease, transform 0.2s ease;
 }
-.testimoni-modal-head h2 {
-  margin: 0 0 4px;
-  font-size: 18px;
-  color: var(--heading);
+
+.login-brand-header:hover {
+  opacity: 0.9;
+  transform: translateY(-1px);
 }
-.testimoni-modal-head p {
-  margin: 0;
-  font-size: 13px;
+
+.login-brand-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.15;
+}
+
+/* Wordmark Pytabengkel — SAMAKAN dengan .brand h1 (topbar),
+   .lp-brand-text strong, dan .brand (register): 21px/800/-0.02em */
+.login-brand-text strong {
+  font-size: 21px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--text);
+}
+
+.login-brand-text small {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+@media (max-width: 800px) {
+  .login-standalone .login-form-container {
+    max-width: 100%;
+  }
+}
+
+@media (max-width: 520px) {
+  .login-standalone {
+    min-height: 100vh;
+    min-height: 100dvh;
+    align-items: center;
+    padding: 0;
+  }
+
+  .login-standalone .login-form-wrap {
+    padding: 28px 20px 22px;
+    border-radius: 20px;
+  }
+
+  .login-brand-header {
+    margin-bottom: 18px;
+  }
+
+  .login-brand-text strong {
+    font-size: 16px;
+  }
+}
+
+/* =========================================
+   INDIKATOR MODE LOGIN ADMIN / SUPER ADMIN
+   ========================================= */
+
+.admin-login-notice[hidden] {
+  display: none !important;
+}
+
+.admin-login-notice {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 14px 0 0;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  background: rgba(245, 158, 11, 0.12);
+  color: #92400e;
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+
+.admin-login-notice i {
+  font-size: 0.95rem;
+}
+
+.admin-login-notice.is-super {
+  border-color: rgba(99, 102, 241, 0.35);
+  background: rgba(99, 102, 241, 0.12);
+  color: #3730a3;
+}
+
+[data-theme="dark"] .admin-login-notice {
+  color: #fcd34d;
+}
+
+[data-theme="dark"] .admin-login-notice.is-super {
+  color: #c7d2fe;
+}
+
+/* =========================================
+   TOMBOL GENERIK (.btn, .btn-ghost, …)
+   Halaman login & register TIDAK memuat global.css,
+   padahal beberapa tombol memakai kelas tombol yang
+   sama (mis. #btnLoginLink "Kirim link login").
+   Tanpa blok ini tombolnya tampil sebagai tombol
+   bawaan browser — warnanya tidak ikut tema.
+   ========================================= */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 9px 16px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--text);
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 650;
+  line-height: 1.2;
+  cursor: pointer;
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    color 0.2s ease;
+}
+
+.btn-primary {
+  background: var(--primary-solid);
+  color: #fff;
+}
+
+.btn-primary:hover {
+  background: var(--primary-solid-hover);
+  color: #fff;
+}
+
+.btn-secondary {
+  background: var(--surface-2);
+  border-color: var(--border);
+  color: var(--text);
+}
+
+.btn-secondary:hover {
+  background: var(--border);
+}
+
+.btn-ghost {
+  background: transparent;
+  border-color: var(--border);
   color: var(--secondary);
 }
 
-/* Kartu ulasan di modal memakai permukaan terang/gelap (ikut tema),
-   bukan gaya panel kiri yang selalu gelap — kalau tidak, nama
-   pelanggan (putih) hilang di latar putih. */
-.testimoni-modal .testimoni-card {
-  background: var(--surface-2);
-  border-color: var(--border);
-}
-.testimoni-modal .testimoni-nama {
-  color: var(--text);
-}
-.testimoni-modal .testimoni-nama .fa-circle-user {
-  color: var(--primary);
-}
-.testimoni-modal .testimoni-teks {
-  color: var(--text);
-}
-.testimoni-modal .testimoni-rating-label {
-  color: var(--warning-text);
-}
-
-
-/* Filter bintang modal ulasan */
-.testimoni-modal-filter { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
-.testimoni-modal-filter .filter-btn {
-  padding: 6px 12px;
-  border: 1px solid var(--border);
-  background: var(--surface-2);
-  color: var(--text);
-  border-radius: 999px;
-  cursor: pointer;
-  font-size: 13px;
-  transition: .15s;
-}
-.testimoni-modal-filter .filter-btn:hover {
-  border-color: var(--primary);
-  color: var(--primary);
-}
-.testimoni-modal-filter .filter-btn.active {
-  border-color: var(--primary);
+.btn-ghost:hover {
   background: var(--primary-soft);
-  color: var(--primary);
+  border-color: var(--primary-text);
+  color: var(--primary-text);
 }
 
-/* Filter bintang panel login-info (desktop) — panel kiri selalu gelap */
-.testimoni-panel-filter {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-.testimoni-panel-filter .filter-btn {
-  padding: 4px 10px;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  background: rgba(255, 255, 255, 0.06);
-  color: #d1d5db;
-  border-radius: 999px;
-  cursor: pointer;
-  font-size: 11px;
-  font-family: inherit;
-  transition: 0.15s;
-}
-.testimoni-panel-filter .filter-btn:hover {
-  border-color: #93c5fd;
-  color: #fff;
-}
-.testimoni-panel-filter .filter-btn.active {
-  border-color: #3b82f6;
-  background: rgba(59, 130, 246, 0.25);
-  color: #fff;
+.btn-danger {
+  background: var(--danger-bg);
+  color: var(--danger-text);
 }
 
-/* Tombol silang modal ulasan */
-.testimoni-modal-close {
-  width: 36px;
-  height: 36px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  background: var(--surface-2);
-  color: var(--text);
-  cursor: pointer;
-  transition: .15s;
-}
-.testimoni-modal-close:hover {
-  border-color: var(--primary);
-  color: var(--primary);
-  background: var(--primary-soft);
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }

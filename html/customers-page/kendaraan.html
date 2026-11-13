@@ -4,10 +4,11 @@
     <meta charset="UTF-8" />
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; font-src 'self' https://cdnjs.cloudflare.com; img-src 'self' data: https://*.supabase.co; connect-src 'self' https://*.supabase.co wss://*.supabase.co; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+      content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; font-src 'self' https://cdnjs.cloudflare.com; img-src 'self' data: https://*.supabase.co; connect-src 'self' https://*.supabase.co wss://*.supabase.co http://localhost:3000; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
     />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Kendaraan Saya | Pytabengkel</title>
+    <link rel="stylesheet" href="../../css/fonts.css" />
     <link rel="stylesheet" href="../../css/global.css" />
     <link
       rel="stylesheet"
@@ -43,6 +44,15 @@
         <h1>Pytabengkel</h1>
       </div>
       <div class="topbar-actions">
+        <a
+          class="topbar-landing"
+          href="../landing.html"
+          aria-label="Kembali ke Landing Page"
+          title="Kembali ke Landing Page"
+        >
+          <i class="fa-solid fa-arrow-left" aria-hidden="true"></i>
+          <span>Landing Page</span>
+        </a>
         <button
           type="button"
           class="icon-btn theme-toggle"
@@ -238,14 +248,18 @@
                 />
               </div>
               <div class="form-group form-full">
-                <label for="requestKeluhan">Keluhan</label>
-                <input
-                  type="text"
-                  id="requestKeluhan"
-                  class="form-control"
-                  placeholder="Contoh: Ganti oli dan cek rem"
-                  required
-                />
+                <div class="form-label-action">
+                  <label>Keluhan</label>
+                  <button type="button" class="action-btn" id="btnTambahRequestKeluhan">+ Tambah Keluhan</button>
+                </div>
+                <div id="requestKeluhanList" class="service-part-list"></div>
+              </div>
+              <div class="form-group form-full">
+                <label id="requestPromoLabel">Diskon / Promo</label>
+                <div id="requestPromoList" class="promo-check-list" role="group" aria-labelledby="requestPromoLabel"></div>
+                <span class="form-hint" id="requestPromoHint">
+                  Centang satu atau lebih promo yang ingin diklaim. Diskon akan dipotong otomatis dari total tagihan.
+                </span>
               </div>
               <div class="form-group">
                 <label for="requestTanggal">Tanggal Service</label>
