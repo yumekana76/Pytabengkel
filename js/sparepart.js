@@ -199,6 +199,7 @@ function initSparepartPage() {
   document
     .getElementById("sparepartForm")
     .addEventListener("submit", saveSparepartForm);
+  attachHargaRibuanOtomatis("sparepartHarga");
   document
     .getElementById("searchSparepart")
     .addEventListener(

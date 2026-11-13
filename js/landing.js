@@ -73,6 +73,7 @@
     setText("lpInfoEmail", info.email);
     setText("lpInfoHari", info.hari_buka);
     setText("lpInfoJam", info.jam_buka);
+    setText("lpStatJam", info.jam_buka);
 
     var phone = document.getElementById("lpInfoKontak");
     if (phone && info.kontak) {
@@ -275,6 +276,9 @@
     reviewState.total = 0;
     reviewState.active = 0;
 
+    setText("lpStatRating", "-");
+    setText("lpStatUlasan", "0");
+
     renderReviewFilter();
     renderReviewSummary();
     renderReviewList();
@@ -291,7 +295,14 @@
     reviewState.total = Number(rows[0].total) || rows.length;
     reviewState.active = 0;
 
-    renderHeroRating(averageOf(rows), reviewState.total);
+    var average = averageOf(rows);
+    setText(
+      "lpStatRating",
+      average ? average.toFixed(1).replace(".", ",") : "-",
+    );
+    setText("lpStatUlasan", String(reviewState.total));
+
+    renderHeroRating(average, reviewState.total);
     renderReviewFilter();
     renderReviewSummary();
     renderReviewList();
@@ -363,9 +374,13 @@
   function renderPromos(rows) {
     var grid = document.querySelector(".lp-promo-grid");
     var countEl = document.getElementById("lpPromoCount");
+    var statEl = document.getElementById("lpStatPromo");
+    var n = Array.isArray(rows) ? rows.length : 0;
     if (countEl) {
-      var n = Array.isArray(rows) ? rows.length : 0;
       countEl.textContent = n ? n + " promo berlaku" : "Promo tersedia";
+    }
+    if (statEl) {
+      statEl.textContent = String(n);
     }
     if (!grid) return;
     grid.textContent = "";
@@ -379,9 +394,17 @@
     rows.forEach(function (promo) {
       var code = String(promo.kode || "").trim();
       var loggedHref = "customers-page/kendaraan.html?ajukan=1" + (code ? "&promo=" + encodeURIComponent(code) : "");
+      /* Admin/super: langsung buka form Input Data service di dashboard.
+         Customer: form ajukan service. Keduanya tetap membawa kode promo
+         supaya diskonnya langsung tercentang. */
+      var adminHref = "admin-page/dashboard.html" + (code ? "?klaim=" + encodeURIComponent(code) : "");
       /* Saat belum login, bawa tujuan klaim lewat ?next= supaya promo
-         tetap terpilih setelah customer berhasil masuk. */
-      var href = "index.html?role=customer&next=" + encodeURIComponent(loggedHref);
+         tetap terpilih setelah berhasil masuk. next diarahkan ke form
+         customer; login admin/super memiliki tujuan sendiri. */
+      var href =
+        "index.html?role=customer&next=" +
+        encodeURIComponent(loggedHref) +
+        (code ? "&klaim=" + encodeURIComponent(code) : "");
       var card = document.createElement("article");
       card.className = "stat-card lp-promo-card";
       card.innerHTML =
@@ -403,6 +426,7 @@
       var link = card.querySelector("a");
       link.setAttribute("href", href);
       link.setAttribute("data-loggedin-href", loggedHref);
+      link.setAttribute("data-admin-href", adminHref);
       grid.appendChild(card);
     });
     applyAuthLinks(grid);
@@ -435,7 +459,7 @@
       /* Customer -> dashboard portal customer; admin & super -> dashboard
          admin, jadi tidak perlu login lagi saat membuka halaman login. */
       var targetHref = isStaff
-        ? "admin-page/dashboard.html"
+        ? link.getAttribute("data-admin-href") || "admin-page/dashboard.html"
         : loggedInHref || "customers-page/dashboard.html";
       link.setAttribute("href", targetHref);
       link.title = getRoleLabel(profile.role);
@@ -554,11 +578,58 @@
 
   /* ---------- INIT ---------- */
 
+  /* Animasi muncul saat di-scroll (progressive enhancement):
+     kelas .lp-reveal hanya ditambahkan kalau IntersectionObserver
+     tersedia, jadi tanpa JS/IO halaman tetap tampil normal. */
+  function initReveal() {
+    try {
+      if (!("IntersectionObserver" in window)) return;
+      if (
+        window.matchMedia &&
+        window.matchMedia("(prefers-reduced-motion: reduce)").matches
+      ) {
+        return;
+      }
+
+      var targets = document.querySelectorAll(
+        ".lp-hero, .lp-stats-strip, .lp-layout .panel, .lp-cta-banner",
+      );
+      if (!targets.length) return;
+
+      var observer = new IntersectionObserver(
+        function (entries) {
+          entries.forEach(function (entry) {
+            if (entry.isIntersecting) {
+              entry.target.classList.add("lp-reveal-in");
+              observer.unobserve(entry.target);
+            }
+          });
+        },
+        { threshold: 0.06, rootMargin: "0px 0px -30px 0px" },
+      );
+
+      Array.prototype.forEach.call(targets, function (el, index) {
+        el.classList.add("lp-reveal");
+        el.style.setProperty("--lp-reveal-delay", (index % 4) * 70 + "ms");
+        observer.observe(el);
+      });
+    } catch (error) {
+      /* Animasi hanya hiasan — kegagalan tidak boleh mengganggu
+         konten; bila kelas sempat terpasang, paksa tampil. */
+      document
+        .querySelectorAll(".lp-reveal")
+        .forEach(function (el) {
+          el.classList.add("lp-reveal-in");
+        });
+    }
+  }
+
   var year = document.getElementById("lpYear");
   if (year) {
     year.textContent = String(new Date().getFullYear());
   }
 
+  initReveal();
   initLandingNav();
   initAuthLinks();
   initReviewFilter();

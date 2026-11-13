@@ -90,11 +90,17 @@ if (/service_role/i.test(anonKey)) {
   log("             JANGAN dipakai di frontend — key itu melewati seluruh RLS.");
 }
 
+const waServerUrl = (process.env.WA_SERVER_URL || "")
+  .trim()
+  .replace(/\/+$/, "");
+const waApiKey = (process.env.WA_API_KEY || "").trim();
+
 const banner = `/* =====================================================================
    KONFIGURASI PRODUCTION — HASIL GENERATE OTOMATIS
    ---------------------------------------------------------------------
    File ini DIBUAT oleh scripts/build-config.js dari environment variable
-   SUPABASE_URL + SUPABASE_ANON_KEY (Vercel Environment Variables / .env).
+   SUPABASE_URL + SUPABASE_ANON_KEY (Vercel Environment Variables / .env),
+   opsional juga WA_SERVER_URL + WA_API_KEY (notifikasi WhatsApp).
 
    - JANGAN edit manual (perubahan tertimpa saat build berikutnya).
    - JANGAN commit (sudah masuk .gitignore).
@@ -102,11 +108,27 @@ const banner = `/* =============================================================
    ===================================================================== */
 `;
 
+const lines = [
+  `  url: ${JSON.stringify(url)},`,
+  `  anonKey: ${JSON.stringify(anonKey)},`,
+];
+
+if (waServerUrl) {
+  lines.push(`  waServerUrl: ${JSON.stringify(waServerUrl)},`);
+}
+if (waApiKey) {
+  lines.push(`  waApiKey: ${JSON.stringify(waApiKey)},`);
+}
+
 const body = `window.SUPABASE_CONFIG_OVERRIDE = {
-  url: ${JSON.stringify(url)},
-  anonKey: ${JSON.stringify(anonKey)},
+${lines.join("\n")}
 };
 `;
 
 fs.writeFileSync(TARGET, banner + "\n" + body, "utf8");
 log(`js/config.prod.js ditulis -> ${url}`);
+if (waServerUrl) {
+  log(`Notifikasi WhatsApp aktif -> ${waServerUrl}`);
+} else {
+  log("WA_SERVER_URL kosong — notifikasi WhatsApp nonaktif.");
+}

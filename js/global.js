@@ -27,12 +27,447 @@ function getPromoDiscountForSubtotal(service, subtotal) {
   return Math.max(0, Math.min(dasar, Math.round(potongan)));
 }
 
+/* Sasaran diskon: 'total' (seluruh tagihan), 'jasa' (biaya jasa saja),
+   atau 'sparepart' (sparepart tertentu / semua sparepart). String lain
+   dianggap 'total' supaya data lama tetap berperilaku sama. */
+function normalizePromoTarget(value) {
+  const target = String(value || "");
+  return target === "jasa" || target === "sparepart" ? target : "total";
+}
+
+function getPromoTargetText(target, sparepartNama = "") {
+  const sasaran = normalizePromoTarget(target);
+  if (sasaran === "jasa") return "Biaya jasa";
+  if (sasaran === "sparepart") {
+    return sparepartNama ? `Sparepart ${sparepartNama}` : "Semua sparepart";
+  }
+  return "Seluruh tagihan";
+}
+
+/* Daftar id sparepart sasaran. Satu promo boleh menyasar beberapa
+   sparepart sekaligus; data lama yang hanya punya satu id tetap
+   terbaca. Menerima array, angka tunggal, atau teks "2,3". */
+function normalizeSparepartIds(value) {
+  const source = Array.isArray(value)
+    ? value
+    : String(value ?? "").split(",");
+  const ids = source
+    .map((item) => Number(item))
+    .filter((id) => Number.isFinite(id) && id > 0);
+  return [...new Set(ids)];
+}
+
+/* Nama sparepart gabungan, mis. "Oli Mesin, Filter Oli". */
+function getSparepartNamaByIds(ids) {
+  const list = typeof getSparepart === "function" ? getSparepart() : [];
+  return normalizeSparepartIds(ids)
+    .map(
+      (id) => list.find((item) => Number(item.id) === id)?.nama || "",
+    )
+    .filter(Boolean)
+    .join(", ");
+}
+
+/* Nama sasaran sparepart sebuah promo, dihitung ulang dari id bila
+   snapshot namanya kosong (promo lama / sparepart baru diubah). */
+function getPromoSparepartNama(promo) {
+  const nama = String(promo?.sparepartNama || promo?.promoSparepartNama || "").trim();
+  if (nama) return nama;
+  return getSparepartNamaByIds(
+    promo?.sparepartIds ??
+      promo?.promoSparepartIds ??
+      promo?.sparepartId ??
+      promo?.promoSparepartId,
+  );
+}
+
+/* Snapshot promo yang menempel pada service, dinormalkan dari objek
+   promo database maupun dari record service. */
+function normalizePromoSnapshot(promo) {
+  if (!promo) return null;
+  const sparepartIds = normalizeSparepartIds(
+    promo.sparepartIds ?? promo.sparepartId,
+  );
+  return {
+    id: promo.id != null ? Number(promo.id) : null,
+    kode: String(promo.kode || "").trim().toUpperCase(),
+    nama: String(promo.nama || "").trim(),
+    tipe: promo.tipe === "nominal" ? "nominal" : "persen",
+    nilai: Number(promo.nilai) || 0,
+    target: normalizePromoTarget(promo.target),
+    sparepartIds,
+    sparepartNama:
+      String(promo.sparepartNama || "").trim() ||
+      getSparepartNamaByIds(sparepartIds),
+  };
+}
+
+/* Satu service boleh memakai beberapa promo sekaligus. Data baru
+   menyimpannya di service.promoList; service lama yang hanya punya
+   satu promo di kolom promo_* dibaca sebagai daftar satu item. */
+function getServicePromos(service) {
+  if (!service) return [];
+
+  const list = Array.isArray(service.promoList) ? service.promoList : [];
+  const snapshots = list
+    .map(normalizePromoSnapshot)
+    .filter((promo) => promo && promo.nilai > 0);
+
+  if (snapshots.length) return snapshots;
+
+  const legacy = normalizePromoSnapshot({
+    id: service.promoId,
+    kode: service.promoKode,
+    nama: service.promoNama,
+    tipe: service.promoTipe,
+    nilai: service.promoNilai,
+    target: service.promoTarget,
+    sparepartIds: service.promoSparepartIds ?? service.promoSparepartId,
+    sparepartNama: service.promoSparepartNama,
+  });
+
+  return legacy && legacy.nilai > 0 ? [legacy] : [];
+}
+
+/* Hitung seluruh diskon service, promo demi promo. Dasar tiap promo
+   dihitung dari sisa bagian yang menjadi sasarannya, jadi promo kedua
+   tidak menagih ulang bagian yang sudah dipotong promo pertama.
+   Potongan sparepart dibagi proporsional ke baris-barisnya. */
+function hitungPromoService(service) {
+  const promos = getServicePromos(service);
+  const barisPart = (service?.spareparts || []).map((part, index) => {
+    const subtotal =
+      (Number(part.harga) || 0) * (Number(part.jumlah) || 0);
+    return {
+      index,
+      sparepartId: Number(part.sparepartId) || null,
+      subtotal,
+      sisa: subtotal,
+    };
+  });
+
+  let sisaJasa = Number(service?.biayaJasa) || 0;
+  let sisaTotal = sisaJasa + barisPart.reduce((total, part) => total + part.subtotal, 0);
+  const potonganBaris = barisPart.map(() => 0);
+  const rincian = [];
+
+  promos.forEach((promo) => {
+    const kena =
+      promo.target === "sparepart"
+        ? barisPart.filter(
+            (part) =>
+              !promo.sparepartIds.length ||
+              promo.sparepartIds.includes(part.sparepartId),
+          )
+        : [];
+
+    const dasar =
+      promo.target === "jasa"
+        ? sisaJasa
+        : promo.target === "sparepart"
+          ? kena.reduce((total, part) => total + part.sisa, 0)
+          : sisaTotal;
+
+    const diskon = Math.min(
+      sisaTotal,
+      getPromoDiscountForSubtotal(
+        { promoTipe: promo.tipe, promoNilai: promo.nilai },
+        dasar,
+      ),
+    );
+
+    if (diskon > 0 && promo.target === "sparepart" && kena.length) {
+      const totalSisa = kena.reduce((total, part) => total + part.sisa, 0);
+      let sisa = diskon;
+      kena.forEach((part, posisi) => {
+        const nilai =
+          posisi === kena.length - 1
+            ? sisa
+            : Math.round((diskon * part.sisa) / totalSisa);
+        const potong = Math.max(0, Math.min(part.sisa, nilai));
+        part.sisa -= potong;
+        potonganBaris[part.index] += potong;
+        sisa -= potong;
+      });
+    }
+
+    if (diskon > 0 && promo.target === "jasa") {
+      sisaJasa = Math.max(0, sisaJasa - diskon);
+    }
+
+    sisaTotal = Math.max(0, sisaTotal - diskon);
+    rincian.push({ promo, diskon });
+  });
+
+  const jumlah = (target) =>
+    rincian
+      .filter((row) => row.promo.target === target)
+      .reduce((total, row) => total + row.diskon, 0);
+
+  return {
+    promos,
+    rincian,
+    potonganBaris,
+    total: rincian.reduce((total, row) => total + row.diskon, 0),
+    jasa: jumlah("jasa"),
+    sparepart: jumlah("sparepart"),
+    seluruhTagihan: jumlah("total"),
+  };
+}
+
 function getServiceDiscount(service) {
-  return getPromoDiscountForSubtotal(service, getServiceSubtotal(service));
+  return hitungPromoService(service).total;
 }
 
 function getServiceTotal(service) {
   return Math.max(0, getServiceSubtotal(service) - getServiceDiscount(service));
+}
+
+/* Pembagian diskon per bagian tagihan, dipakai rincian invoice/struk
+   supaya harga jasa/sparepart yang dipotong terlihat langsung. */
+function getServiceDiscountBreakdown(service) {
+  const hasil = hitungPromoService(service);
+
+  return {
+    total: hasil.total,
+    jasa: hasil.jasa,
+    sparepart: hasil.sparepart,
+    seluruhTagihan: hasil.seluruhTagihan,
+  };
+}
+
+/* Potongan diskon untuk tiap baris sparepart (index mengikuti urutan
+   service.spareparts). Nominal dibagi proporsional terhadap harga baris. */
+function getServiceSparepartDiscounts(service) {
+  const potongan = new Map();
+  hitungPromoService(service).potonganBaris.forEach((nilai, index) => {
+    if (nilai > 0) potongan.set(index, nilai);
+  });
+  return potongan;
+}
+
+/* Daftar promo beserta nominal potongannya (hanya yang benar-benar
+   memotong tagihan), dipakai ringkasan invoice dan struk. */
+function getServicePromoDiscountRows(service) {
+  return hitungPromoService(service).rincian
+    .filter((row) => row.diskon > 0)
+    .map((row) => ({ ...row.promo, diskon: row.diskon }));
+}
+
+/* Label baris diskon, mis. "Diskon Biaya jasa (Promo Hemat)". */
+function formatPromoDiscountLabel(promo) {
+  const sasaran =
+    normalizePromoTarget(promo?.target) === "total"
+      ? ""
+      : ` ${getPromoTargetText(promo.target, getPromoSparepartNama(promo))}`;
+  const nama = promo?.nama || promo?.kode || "";
+  return `Diskon${sasaran}${nama ? ` (${nama})` : ""}`;
+}
+
+/* =========================================
+   KLAIM DISKON DI FORM ADMIN & SUPER
+   Cara kerjanya sama dengan form Ajukan Service
+   customer: pilih promo aktif → diskon dipotong
+   otomatis dari total → snapshot tipe & nilai
+   disimpan ke record service supaya tagihan lama
+   tidak ikut berubah saat promo diedit/dihapus.
+   ========================================= */
+
+function formatClaimPromoLabel(promo) {
+  const nilai =
+    promo.tipe === "nominal"
+      ? formatRupiah(promo.nilai)
+      : `${Number(promo.nilai) || 0}%`;
+  const sasaran =
+    normalizePromoTarget(promo.target) === "total"
+      ? ""
+      : ` · ${getPromoTargetText(promo.target, getPromoSparepartNama(promo))}`;
+  return `${promo.nama || "Promo"} — ${nilai}${sasaran}`;
+}
+
+function kodePromoList(value) {
+  return (Array.isArray(value) ? value : [value])
+    .map((item) => String(item || "").trim().toUpperCase())
+    .filter(Boolean);
+}
+
+/* Promo yang boleh dipilih: semua promo aktif, ditambah promo yang
+   sedang menempel pada service ini supaya pilihan lama tidak mendadak
+   hilang dari daftar ketika periodenya sudah lewat. */
+function getClaimablePromos(currentKode = "") {
+  const promos = typeof getPromos === "function" ? getPromos() : [];
+  const aktif = promos.filter((promo) =>
+    typeof isPromoActive === "function" ? isPromoActive(promo) : promo.aktif !== false,
+  );
+
+  kodePromoList(currentKode).forEach((kode) => {
+    const terpakai = promos.find(
+      (promo) => String(promo.kode || "").trim().toUpperCase() === kode,
+    );
+    if (terpakai && !aktif.some((promo) => Number(promo.id) === Number(terpakai.id))) {
+      aktif.push(terpakai);
+    }
+  });
+
+  return aktif;
+}
+
+/* Isi daftar centang "Diskon / Promo" + perbarui hint-nya. Satu service
+   boleh mencentang lebih dari satu promo. */
+function populateClaimPromoList(containerId, hintId, currentKode = "") {
+  const list = document.getElementById(containerId);
+  if (!list) return;
+
+  const promos = getClaimablePromos(currentKode);
+  const terpilih = new Set(kodePromoList(currentKode));
+
+  list.__claimPromos = promos;
+  list.innerHTML = promos.length
+    ? promos
+        .map((promo) => {
+          const kode = String(promo.kode || "").trim().toUpperCase();
+          const aktif =
+            typeof isPromoActive === "function" ? isPromoActive(promo) : true;
+          const label =
+            formatClaimPromoLabel(promo) + (aktif ? "" : " (tidak aktif)");
+          return `<label class="promo-check-item">
+            <input type="checkbox" value="${escapeHTML(kode)}"${
+              terpilih.has(kode) ? " checked" : ""
+            } />
+            <span>${escapeHTML(label)}</span>
+          </label>`;
+        })
+        .join("")
+    : '<p class="form-hint">Belum ada promo aktif saat ini.</p>';
+
+  updateClaimPromoListHint(containerId, hintId);
+}
+
+/* Promo yang dicentang pada daftar (bisa kosong / lebih dari satu). */
+function getCheckedClaimPromos(containerId) {
+  const list = document.getElementById(containerId);
+  if (!list) return [];
+
+  const promos = Array.isArray(list.__claimPromos) ? list.__claimPromos : [];
+  return [...list.querySelectorAll('input[type="checkbox"]:checked')]
+    .map((input) =>
+      promos.find(
+        (promo) =>
+          String(promo.kode || "").trim().toUpperCase() ===
+          String(input.value || "").trim().toUpperCase(),
+      ),
+    )
+    .filter(Boolean);
+}
+
+function updateClaimPromoListHint(containerId, hintId) {
+  const list = document.getElementById(containerId);
+  const hint = document.getElementById(hintId);
+  if (!list || !hint) return;
+
+  const promos = getCheckedClaimPromos(containerId);
+  const tersedia = Array.isArray(list.__claimPromos) ? list.__claimPromos : [];
+
+  if (promos.length) {
+    const rincian = promos.map((promo) => {
+      const nilai =
+        promo.tipe === "nominal"
+          ? formatRupiah(promo.nilai)
+          : `${Number(promo.nilai) || 0}%`;
+      const sasaran = getPromoTargetText(
+        promo.target,
+        getPromoSparepartNama(promo),
+      );
+      return `${promo.nama || "Promo"} (${nilai} dari ${sasaran.toLowerCase()})`;
+    });
+    hint.textContent = `Klaim ${rincian.join(" + ")}. Diskon dihitung otomatis dan dipotong dari total tagihan.`;
+    return;
+  }
+
+  hint.textContent = tersedia.length
+    ? "Centang satu atau lebih promo yang ingin diklaim. Diskon akan dipotong otomatis dari total tagihan."
+    : "Belum ada promo aktif saat ini. Service tetap bisa diproses tanpa diskon.";
+}
+
+/* Baca centang promo + validasi. Promo yang sedang menempel pada
+   service boleh tetap dipakai walaupun periodenya sudah lewat. */
+function readClaimPromos(containerId, currentKode = "") {
+  const list = document.getElementById(containerId);
+  if (!list) return { promos: [] };
+
+  const dipakai = kodePromoList(currentKode);
+  const semua = typeof getPromos === "function" ? getPromos() : [];
+  const hasil = [];
+
+  for (const kode of kodePromoList(
+    [...list.querySelectorAll('input[type="checkbox"]:checked')].map(
+      (input) => input.value,
+    ),
+  )) {
+    const promo = semua.find(
+      (item) => String(item.kode || "").trim().toUpperCase() === kode,
+    );
+
+    if (!promo) {
+      return {
+        promos: [],
+        error: "Promo tersebut sudah tidak tersedia. Pilih promo lain atau tanpa diskon.",
+      };
+    }
+
+    if (
+      !dipakai.includes(kode) &&
+      typeof isPromoActive === "function" &&
+      !isPromoActive(promo)
+    ) {
+      return {
+        promos: [],
+        error: "Promo tersebut sudah berakhir. Pilih promo lain atau tanpa diskon.",
+      };
+    }
+
+    hasil.push(promo);
+  }
+
+  return { promos: hasil };
+}
+
+/* Pratinjau potongan diskon di form: tiap promo dihitung sesuai
+   sasarannya (total / biaya jasa / sparepart tertentu). */
+function getClaimPromoDiscount(promo, biayaJasa, spareparts) {
+  const list = (Array.isArray(promo) ? promo : [promo]).filter(Boolean);
+  if (!list.length) return 0;
+
+  const draft = applyClaimPromo(
+    { biayaJasa: Number(biayaJasa) || 0, spareparts: spareparts || [] },
+    list,
+  );
+  return getServiceDiscount(draft);
+}
+
+/* Simpan snapshot promo ke record service (bisa satu atau beberapa
+   promo). Kolom promo_* tunggal tetap diisi promo pertama supaya data
+   lama dan tampilan lain yang belum multi-promo tetap terbaca. */
+function applyClaimPromo(service, promoOrList) {
+  const list = (Array.isArray(promoOrList) ? promoOrList : [promoOrList])
+    .filter(Boolean)
+    .map(normalizePromoSnapshot)
+    .filter((promo) => promo && promo.nilai > 0);
+
+  service.promoList = list;
+  const first = list[0] || null;
+
+  service.promoId = first ? first.id : null;
+  service.promoKode = first ? first.kode : "";
+  service.promoNama = first ? first.nama : "";
+  service.promoTipe = first ? first.tipe : "";
+  service.promoNilai = first ? first.nilai : 0;
+  service.promoTarget = first ? first.target : "";
+  service.promoSparepartIds = first ? first.sparepartIds : [];
+  service.promoSparepartId =
+    first && first.sparepartIds.length === 1 ? first.sparepartIds[0] : null;
+  service.promoSparepartNama = first ? first.sparepartNama : "";
+  return service;
 }
 
 function getCustomerVehicleCount(customerId) {
@@ -54,6 +489,39 @@ function formatRupiah(value) {
     maximumFractionDigits: 0,
   }).format(Number(value) || 0);
 }
+
+/* Kolom harga manual: cukup ketik angka ribuan (mis. 80), lalu saat
+   kolom ditinggalkan otomatis ditambah tiga nol menjadi 80.000.
+   Nilai 1000 ke atas dianggap sudah lengkap, jadi tidak ditambah. */
+function applyHargaRibuanOtomatis(input) {
+  if (!input) return;
+  const nilai = Number(input.value);
+  if (!Number.isFinite(nilai) || nilai <= 0 || nilai >= 1000) return;
+  input.value = String(Math.round(nilai) * 1000);
+  input.dispatchEvent(new Event("input", { bubbles: true }));
+}
+
+function attachHargaRibuanOtomatis(target) {
+  const input =
+    typeof target === "string" ? document.getElementById(target) : target;
+  if (!input || input.dataset.autoRibu === "1") return;
+  input.dataset.autoRibu = "1";
+  input.addEventListener("change", () => applyHargaRibuanOtomatis(input));
+}
+
+/* Jaga-jaga saat form disubmit tanpa meninggalkan kolom harga
+   (mis. menekan Enter): rapikan dulu semua kolom sebelum dibaca. */
+document.addEventListener(
+  "submit",
+  (event) => {
+    const form = event.target;
+    if (!form || typeof form.querySelectorAll !== "function") return;
+    form
+      .querySelectorAll("input[data-auto-ribu='1']")
+      .forEach((input) => applyHargaRibuanOtomatis(input));
+  },
+  true,
+);
 
 /* Tanggal lokal (YYYY-MM-DD) — jangan pakai toISOString() karena itu
    UTC dan bisa menghasilkan tanggal kemarin pada dini hari WIB. */
@@ -129,6 +597,29 @@ function getServiceMissingRequirements(service) {
   }
 
   return missing;
+}
+
+/* Langkah status service berurutan:
+   Menunggu → Dikerjakan → Quality Check → Selesai.
+   Status tidak boleh melompati satu langkah (mis. Menunggu langsung
+   Selesai) supaya setiap tahap pengerjaan benar-benar tercatat. */
+function getServiceStatusStepIndex(status) {
+  return SERVICE_STATUS_STEPS.indexOf(status);
+}
+
+function validateServiceStatusTransition(previousStatus, nextStatus) {
+  const from = getServiceStatusStepIndex(previousStatus);
+  const to = getServiceStatusStepIndex(nextStatus);
+
+  /* Status tidak dikenal (data lama) atau tidak maju: biarkan aturan lain
+     yang menilai. */
+  if (from === -1 || to === -1 || to <= from) return "";
+  if (to === from + 1) return "";
+
+  return (
+    `Status ${nextStatus} belum bisa dipilih langsung dari ${previousStatus}. ` +
+    `Ubah dulu ke ${SERVICE_STATUS_STEPS[from + 1]}.`
+  );
 }
 
 function validateServiceStatus(status, service) {
@@ -326,6 +817,56 @@ var SERVICE_STATUS_STEPS = [
   "Selesai",
 ];
 
+/* Status service diubah lewat tombol, bukan dropdown, supaya
+   perpindahannya selalu urut satu langkah:
+   Menunggu → Dikerjakan → Quality Check → Selesai. */
+function setServiceStatusStep(containerId, status) {
+  const wrap = document.getElementById(containerId);
+  if (!wrap) return;
+  const input = wrap.querySelector("[data-status-input]");
+  const badge = wrap.querySelector("[data-status-badge]");
+  const button = wrap.querySelector("[data-status-next]");
+  const hint = wrap.querySelector("[data-status-hint]");
+  const current = SERVICE_STATUS_STEPS.includes(status) ? status : "Menunggu";
+  const index = SERVICE_STATUS_STEPS.indexOf(current);
+  const next = SERVICE_STATUS_STEPS[index + 1] || "";
+
+  if (input) input.value = current;
+  if (badge) {
+    badge.textContent = current;
+    badge.className = `badge ${getStatusClass(current)}`;
+  }
+  if (button) {
+    button.hidden = !next;
+    button.textContent = next ? `→ ${next}` : "";
+    button.dataset.nextStatus = next;
+    button.title = next
+      ? `Pindahkan status ke ${next}`
+      : "Status service sudah Selesai";
+    if (button.dataset.bound !== "1") {
+      button.dataset.bound = "1";
+      button.addEventListener("click", () =>
+        advanceServiceStatusStep(containerId),
+      );
+    }
+  }
+  if (hint) {
+    hint.textContent = next
+      ? `Status maju satu langkah: klik tombol untuk pindah ke ${next}.`
+      : "Status service sudah Selesai.";
+  }
+}
+
+function advanceServiceStatusStep(containerId) {
+  const wrap = document.getElementById(containerId);
+  const button = wrap ? wrap.querySelector("[data-status-next]") : null;
+  const next = button ? button.dataset.nextStatus : "";
+  if (!next) return;
+  setServiceStatusStep(containerId, next);
+  const input = wrap.querySelector("[data-status-input]");
+  if (input) input.dispatchEvent(new Event("change", { bubbles: true }));
+}
+
 /* Stepper progress service (sudah / sedang / belum). */
 function buildServiceSteps(status) {
   const currentIndex = SERVICE_STATUS_STEPS.indexOf(status);
@@ -358,14 +899,22 @@ function getServiceItems(service) {
   const biayaJasa = Number(service.biayaJasa) || 0;
 
   if (biayaJasa > 0) {
-    items.push({ nama: "Biaya Jasa", harga: biayaJasa, jumlah: 1 });
+    items.push({
+      nama: "Biaya Jasa",
+      harga: biayaJasa,
+      jumlah: 1,
+      jenis: "jasa",
+    });
   }
 
-  (service.spareparts || []).forEach((part) => {
+  (service.spareparts || []).forEach((part, index) => {
     items.push({
       nama: part.nama || "Sparepart",
       harga: Number(part.harga) || 0,
       jumlah: Number(part.jumlah) || 0,
+      jenis: "sparepart",
+      sparepartId: part.sparepartId ?? null,
+      sparepartIndex: index,
     });
   });
 
@@ -440,32 +989,38 @@ function buildAntrianBadge(id) {
   return `<span class="badge antrian${nomor ? "" : " off"}">${formatNomorAntrian(nomor)}</span>`;
 }
 
+/* Antrean yang menunggu dikerjakan (akan berubah Menunggu →
+   Dikerjakan). Service yang sudah dikerjakan/QC tidak lagi tampil di
+   panel antrean, tetapi tetap dihitung pada nomor antrean. */
+function getAntrianMenungguList() {
+  return getAntrianList().filter((item) => item.status === "Menunggu");
+}
+
 /* Panel urutan antrean di dashboard admin. */
 function renderAntrian() {
   const list = document.getElementById("antrianList");
   if (!list) return;
 
-  const antre = getAntrianList();
-  setText("antrianCount", `${antre.length} service`);
+  const antre = getAntrianMenungguList();
+  setText("antrianCount", `${antre.length} service menunggu`);
 
   const button = document.getElementById("btnPanggilBerikutnya");
   if (button) {
-    button.disabled = !antre.some((item) => item.status === "Menunggu");
+    button.disabled = !antre.length;
   }
 
   if (!antre.length) {
     list.innerHTML =
-      '<li class="antrian-empty">Tidak ada service dalam antrean.</li>';
+      '<li class="antrian-empty">Tidak ada service yang menunggu dikerjakan.</li>';
     return;
   }
 
   list.innerHTML = antre
-    .map((item, index) => {
-      const nomor = index + 1;
+    .map((item) => {
       const nomorMap = getNomorAntrian(item.id);
       return `
         <li class="antrian-item">
-          <span class="antrian-nomor">${formatNomorAntrian(nomorMap || nomor)}</span>
+          <span class="antrian-nomor">${formatNomorAntrian(nomorMap)}</span>
           <span class="antrian-info">
             <strong>${escapeHTML(item.polisi || "-")}</strong>
             <span>${escapeHTML(item.pelanggan || "-")}</span>
@@ -481,9 +1036,7 @@ function renderAntrian() {
 
 /* Aksi admin: service "Menunggu" pertama menjadi "Dikerjakan". */
 function panggilBerikutnya(button) {
-  const berikut = getAntrianList().find(
-    (item) => item.status === "Menunggu",
-  );
+  const berikut = getAntrianMenungguList()[0];
 
   if (!berikut) {
     showPageNotice("Tidak ada service yang menunggu untuk dipanggil.");
@@ -794,6 +1347,9 @@ function getServiceRingkasan(service) {
   const diskon = getServiceDiscount(service);
   const total = getServiceTotal(service);
   const lunas = (service.pembayaran || "Belum Lunas") === "Lunas";
+  const pecahan = getServiceDiscountBreakdown(service);
+  const promoList = getServicePromos(service);
+  const diskonList = getServicePromoDiscountRows(service);
 
   return {
     biayaJasa,
@@ -801,7 +1357,12 @@ function getServiceRingkasan(service) {
     jumlahSparepart: items.filter((item) => item.nama !== "Biaya Jasa").length,
     subtotal,
     diskon,
-    promoNama: service.promoNama || service.promoKode || "",
+    diskonJasa: pecahan.jasa,
+    diskonSparepart: pecahan.sparepart,
+    diskonSeluruhTagihan: pecahan.seluruhTagihan,
+    promoList,
+    diskonList,
+    promoNama: promoList.map((promo) => promo.nama || promo.kode).filter(Boolean).join(", "),
     total,
     lunas,
     sisa: lunas ? 0 : total,
@@ -889,14 +1450,17 @@ function buildServiceDetailGrid(service, options = {}) {
     ),
   );
 
-  if (Number(service.promoNilai) > 0) {
-    const diskon = getServiceDiscount(service);
-    parts.push(
-      item(
-        "Diskon",
-        `-${formatRupiah(diskon)}${service.promoNama ? ` — ${escapeHTML(service.promoNama)}` : ""}`,
-      ),
-    );
+  const promoDiskon = getServicePromoDiscountRows(service);
+  if (promoDiskon.length) {
+    const rincianDiskon = promoDiskon
+      .map(
+        (promo) =>
+          `-${formatRupiah(promo.diskon)}${escapeHTML(
+            formatPromoDiscountLabel(promo).replace(/^Diskon/, ""),
+          )}`,
+      )
+      .join("; ");
+    parts.push(item("Diskon", rincianDiskon));
   }
 
   /* Item tambahan (mis. rincian transaksi di halaman Keuangan). */
@@ -919,21 +1483,45 @@ function buildServiceInvoice(service) {
   const pembayaran = service.pembayaran || "Belum Lunas";
   const items = getServiceItems(service);
   const ringkasan = getServiceRingkasan(service);
+  const potonganSparepart = getServiceSparepartDiscounts(service);
 
   const rows = items.length
     ? items
-        .map(
-          (item) => `
+        .map((item) => {
+          const subtotalItem = item.harga * item.jumlah;
+          const potong =
+            item.jenis === "sparepart"
+              ? potonganSparepart.get(item.sparepartIndex) || 0
+              : item.jenis === "jasa"
+                ? Math.min(subtotalItem, ringkasan.diskonJasa)
+                : 0;
+          const subtotalSetelah = Math.max(0, subtotalItem - potong);
+          const catatan = potong
+            ? `<div class="invoice-note">diskon -${formatRupiah(potong)}</div>`
+            : "";
+          return `
             <tr>
-              <td>${escapeHTML(item.nama)}</td>
+              <td>${escapeHTML(item.nama)}${catatan}</td>
               <td class="num">${formatRupiah(item.harga)}</td>
               <td class="num">${escapeHTML(item.jumlah)}</td>
-              <td class="num">${formatRupiah(item.harga * item.jumlah)}</td>
+              <td class="num">${formatRupiah(subtotalSetelah)}</td>
             </tr>
-          `,
-        )
+          `;
+        })
         .join("")
     : '<tr><td colspan="4" class="empty">Tidak ada item tagihan.</td></tr>';
+
+  /* Baris diskon selalu tampil di ringkasan supaya perhitungan
+     subtotal → diskon → total terlihat, termasuk promo yang hanya
+     menyasar jasa atau sparepart tertentu. Satu baris per promo. */
+  const barisDiskon = ringkasan.diskonList
+    .map(
+      (promo) => `<div class="invoice-row">
+              <span>${escapeHTML(formatPromoDiscountLabel(promo))}</span>
+              <span>-${formatRupiah(promo.diskon)}</span>
+            </div>`,
+    )
+    .join("");
 
   return `
     <div class="invoice-head">
@@ -969,14 +1557,7 @@ function buildServiceInvoice(service) {
         <span>Subtotal Sparepart (${ringkasan.jumlahSparepart} item)</span>
         <span>${formatRupiah(ringkasan.subtotalSparepart)}</span>
       </div>
-      ${
-        ringkasan.diskon
-          ? `<div class="invoice-row">
-              <span>Diskon${ringkasan.promoNama ? ` (${escapeHTML(ringkasan.promoNama)})` : ""}</span>
-              <span>-${formatRupiah(ringkasan.diskon)}</span>
-            </div>`
-          : ""
-      }
+      ${barisDiskon}
       <div class="invoice-row total">
         <span>Total Tagihan</span>
         <span>${formatRupiah(ringkasan.total)}</span>
@@ -1079,22 +1660,31 @@ function buildPrintInvoice(service) {
   const pembayaran = service.pembayaran || "Belum Lunas";
   const total = ringkasan.total;
   const kode = getKode("kendaraan", service);
+  const potonganSparepart = getServiceSparepartDiscounts(service);
 
   const rows = items.length
     ? items
-        .map(
-          (item) => `
+        .map((item) => {
+          const subtotalItem = item.harga * item.jumlah;
+          const potong =
+            item.jenis === "sparepart"
+              ? potonganSparepart.get(item.sparepartIndex) || 0
+              : item.jenis === "jasa"
+                ? Math.min(subtotalItem, ringkasan.diskonJasa)
+                : 0;
+          return `
             <div class="struk-item">
               <span class="struk-item-nama">${escapeHTML(item.nama)}</span>
               <span class="struk-item-sub">
                 ${escapeHTML(item.jumlah)} x ${formatRupiah(item.harga)}
+                ${potong ? `<br>diskon -${formatRupiah(potong)}` : ""}
               </span>
               <span class="struk-item-total">${formatRupiah(
-                item.harga * item.jumlah,
+                Math.max(0, subtotalItem - potong),
               )}</span>
             </div>
-          `,
-        )
+          `;
+        })
         .join("")
     : '<div class="struk-item"><span>Tidak ada item tagihan.</span></div>';
 
@@ -1138,12 +1728,16 @@ function buildPrintInvoice(service) {
       <div class="struk-separator"></div>
 
       ${
-        ringkasan.diskon
+        ringkasan.diskon > 0
           ? baris("Subtotal", formatRupiah(ringkasan.subtotal)) +
-            baris(
-              `Diskon${ringkasan.promoNama ? ` ${ringkasan.promoNama}` : ""}`,
-              `-${formatRupiah(ringkasan.diskon)}`,
-            )
+            ringkasan.diskonList
+              .map((promo) =>
+                baris(
+                  formatPromoDiscountLabel(promo),
+                  `-${formatRupiah(promo.diskon)}`,
+                ),
+              )
+              .join("")
           : ""
       }
       ${baris("Total Tagihan", `<strong>${formatRupiah(total)}</strong>`)}

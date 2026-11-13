@@ -77,6 +77,18 @@ const SUPABASE_DEFAULTS = {
 
   /* Batas waktu (ms) untuk satu permintaan ke Supabase. */
   requestTimeout: 15000,
+
+  /* Service notifikasi WhatsApp (folder whatsapp-service/, Baileys).
+     Kosongkan = notifikasi WA nonaktif.
+     - waServerUrl: URL server WA, mis. http://localhost:3000
+       (di production harus URL publik https).
+     - waApiKey: nilai API_KEY yang sama dengan whatsapp-service/.env.
+       CATATAN: nilai ini ikut terkirim ke browser — cukup untuk proyek
+       demo; untuk produksi pertimbangkan penandatanganan request di
+       server. Sumbernya: environment variable WA_SERVER_URL +
+       WA_API_KEY (lihat scripts/build-config.js). */
+  waServerUrl: "",
+  waApiKey: "",
 };
 
 /* Environment: "dev" | "prod" (bisa di-override lewat query ?env=) */

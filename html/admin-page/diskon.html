@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; font-src 'self' https://cdnjs.cloudflare.com; img-src 'self' data: https://*.supabase.co; connect-src 'self' https://*.supabase.co wss://*.supabase.co; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+      content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; font-src 'self' https://cdnjs.cloudflare.com; img-src 'self' data: https://*.supabase.co; connect-src 'self' https://*.supabase.co wss://*.supabase.co http://localhost:3000; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
     />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Pytabengkel - Diskon</title>
@@ -207,6 +207,44 @@
           </div>
           <div class="table-footer"><span id="diskonInfo" aria-live="polite"></span></div>
         </section>
+
+        <section class="panel vehicle-panel">
+          <div class="panel-header panel-header-inline">
+            <div>
+              <h3>Klaim Diskon</h3>
+              <p>Pilih promo untuk melihat service yang mengklaim diskon tersebut.</p>
+            </div>
+            <div class="vehicle-toolbar">
+              <select
+                id="diskonKlaimSelect"
+                class="form-control filter-select diskon-klaim-select"
+                aria-label="Pilih diskon untuk melihat klaim"
+              ></select>
+            </div>
+          </div>
+          <div class="table-container">
+            <table>
+              <caption class="sr-only">Riwayat klaim diskon</caption>
+              <thead>
+                <tr>
+                  <th scope="col">No</th>
+                  <th scope="col">Tanggal</th>
+                  <th scope="col">No. Polisi</th>
+                  <th scope="col">Pelanggan</th>
+                  <th scope="col">Keluhan</th>
+                  <th scope="col">Status</th>
+                  <th scope="col">Diskon</th>
+                  <th scope="col">Total</th>
+                  <th scope="col">Pembayaran</th>
+                </tr>
+              </thead>
+              <tbody id="diskonKlaimTable"></tbody>
+            </table>
+          </div>
+          <div class="table-footer">
+            <span id="diskonKlaimInfo" aria-live="polite"></span>
+          </div>
+        </section>
       </main>
     </div>
 
@@ -237,6 +275,24 @@
                   <option value="persen">Persen (%)</option>
                   <option value="nominal">Nominal (Rp)</option>
                 </select>
+              </div>
+              <div class="form-group">
+                <label for="diskonTarget">Berlaku Untuk</label>
+                <select id="diskonTarget" class="form-control">
+                  <option value="total">Seluruh tagihan</option>
+                  <option value="jasa">Biaya jasa</option>
+                  <option value="sparepart">Sparepart</option>
+                </select>
+              </div>
+              <div class="form-group form-full" id="diskonSparepartGroup" hidden>
+                <label id="diskonSparepartLabel">Sparepart</label>
+                <div
+                  class="diskon-sparepart-list"
+                  id="diskonSparepartList"
+                  role="group"
+                  aria-labelledby="diskonSparepartLabel"
+                ></div>
+                <small class="form-hint">Centang satu atau beberapa sparepart. Tanpa centang, diskon berlaku untuk semua sparepart.</small>
               </div>
               <div class="form-group form-full">
                 <label for="diskonDeskripsi">Deskripsi</label>

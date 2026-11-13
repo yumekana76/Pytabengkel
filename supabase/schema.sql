@@ -171,6 +171,31 @@ alter table if exists public.services
   add column if not exists promo_tipe text not null default '',
   add column if not exists promo_nilai numeric(12, 2) not null default 0;
 
+-- Sasaran diskon yang diklaim pada service:
+--   'total'     -> seluruh tagihan (biaya jasa + sparepart)
+--   'jasa'      -> hanya biaya jasa
+--   'sparepart' -> hanya sparepart (semua, atau sparepart tertentu bila
+--                  promo_sparepart_ids diisi; isinya bisa lebih dari satu)
+-- String kosong = perilaku lama (seluruh tagihan).
+alter table if exists public.services
+  add column if not exists promo_target text not null default '',
+  add column if not exists promo_sparepart_id bigint,
+  add column if not exists promo_sparepart_ids bigint[] not null default '{}',
+  add column if not exists promo_sparepart_nama text not null default '';
+
+-- Satu service boleh memakai lebih dari satu promo. Daftar snapshot
+-- promo (kode, nama, tipe, nilai, sasaran) disimpan sebagai JSON di
+-- kolom ini; kolom promo_* tunggal di atas tetap diisi promo pertama
+-- supaya data dan kode lama tetap kompatibel.
+alter table if exists public.services
+  add column if not exists promo_list jsonb not null default '[]'::jsonb;
+
+-- Salin sasaran sparepart lama (satu id) ke kolom daftar.
+update public.services
+  set promo_sparepart_ids = array[promo_sparepart_id]
+  where promo_sparepart_id is not null
+    and (promo_sparepart_ids is null or promo_sparepart_ids = '{}');
+
 create index if not exists services_promo_id_idx
   on public.services (promo_id);
 
@@ -1155,6 +1180,22 @@ create table if not exists public.promos (
   created_at timestamptz not null default now()
 );
 
+-- Sasaran diskon: 'total' (seluruh tagihan), 'jasa' (biaya jasa saja),
+-- atau 'sparepart' (sparepart tertentu bila sparepart_ids diisi, atau
+-- semua sparepart bila kosong). Satu promo boleh menyasar beberapa
+-- sparepart sekaligus.
+alter table public.promos
+  add column if not exists target text not null default 'total',
+  add column if not exists sparepart_id bigint,
+  add column if not exists sparepart_ids bigint[] not null default '{}',
+  add column if not exists sparepart_nama text not null default '';
+
+-- Salin sasaran sparepart lama (satu id) ke kolom daftar.
+update public.promos
+  set sparepart_ids = array[sparepart_id]
+  where sparepart_id is not null
+    and (sparepart_ids is null or sparepart_ids = '{}');
+
 alter table public.promos enable row level security;
 
 drop policy if exists "promos_select" on public.promos;
@@ -1176,21 +1217,26 @@ create policy "promos_delete" on public.promos for delete
 drop function if exists public.public_promos();
 create or replace function public.public_promos()
 returns table (
-  id        bigint,
-  kode      text,
-  nama      text,
-  deskripsi text,
-  tipe      text,
-  nilai     numeric,
-  mulai     date,
-  sampai    date
+  id             bigint,
+  kode           text,
+  nama           text,
+  deskripsi      text,
+  tipe           text,
+  nilai          numeric,
+  mulai          date,
+  sampai         date,
+  target         text,
+  sparepart_id   bigint,
+  sparepart_ids  bigint[],
+  sparepart_nama text
 )
 language sql
 stable
 security definer
 set search_path = public
 as $$
-  select id, kode, nama, deskripsi, tipe, nilai, mulai, sampai
+  select id, kode, nama, deskripsi, tipe, nilai, mulai, sampai,
+         target, sparepart_id, sparepart_ids, sparepart_nama
   from public.promos
   where aktif = true
     and (mulai is null or mulai <= current_date)
@@ -1199,3 +1245,7 @@ as $$
 $$;
 
 grant execute on function public.public_promos() to anon, authenticated;
+
+-- Segarkan cache skema PostgREST supaya kolom & RPC baru langsung
+-- dikenali API tanpa menunggu reload otomatis.
+notify pgrst, 'reload schema';

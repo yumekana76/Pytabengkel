@@ -40,13 +40,31 @@ let currentRole = "customer";
    mengklaim promo tetap mendarat di form ajukan service dengan promo
    terpilih. Hanya izinkan path internal halaman customer. */
 function getPostLoginTarget(role = currentRole) {
-  const next = new URLSearchParams(window.location.search).get("next") || "";
+  const params = new URLSearchParams(window.location.search);
+  const next = params.get("next") || "";
+  const klaim = (params.get("klaim") || "").trim().toUpperCase();
 
   if (
     role === "customer" &&
     /^customers-page\/[a-z0-9-]+\.html(?:\?[^#]*)?$/i.test(next)
   ) {
     return next;
+  }
+
+  /* Admin/super yang masuk dari tombol Klaim landing: kembali ke form
+     Input Data dengan kode promo yang sama. */
+  if (
+    (role === "admin" || role === "super_admin") &&
+    /^admin-page\/dashboard\.html(?:\?[^#]*)?$/i.test(next)
+  ) {
+    return next;
+  }
+
+  if (
+    (role === "admin" || role === "super_admin") &&
+    /^[A-Z0-9._-]+$/.test(klaim)
+  ) {
+    return `admin-page/dashboard.html?klaim=${encodeURIComponent(klaim)}`;
   }
 
   return REDIRECTS[role];

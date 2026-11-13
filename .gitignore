@@ -31,3 +31,8 @@ Thumbs.db
 
 .vercel
 .env*
+
+
+node_modules/
+.env
+auth_info/

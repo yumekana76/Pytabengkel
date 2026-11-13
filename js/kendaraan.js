@@ -9,6 +9,8 @@ function resetKendaraanForm() {
 
   form.reset();
 
+  setServiceStatusStep("vehicleStatusStep", "Menunggu");
+
   clearFormError("vehicleForm");
 
   populateVehicleFormRelations();
@@ -117,8 +119,6 @@ function editKendaraan(id, button = null) {
 
   const keluhanList = document.getElementById("vehicleKeluhanList");
 
-  const status = document.getElementById("vehicleStatus");
-
   const tanggal = document.getElementById("vehicleTanggal");
 
   if (vehicleId) {
@@ -161,9 +161,7 @@ function editKendaraan(id, button = null) {
 
   setKeluhanRows("vehicleKeluhanList", item.keluhan);
 
-  if (status) {
-    status.value = item.status;
-  }
+  setServiceStatusStep("vehicleStatusStep", item.status);
 
   const title = document.getElementById("vehicleModalTitle");
 
@@ -279,6 +277,15 @@ function saveKendaraanForm(event) {
       "vehicleForm",
       "Service yang sudah Lunas harus tetap berstatus Selesai.",
     );
+    return;
+  }
+
+  const transitionError = validateServiceStatusTransition(
+    existingVehicle?.status || "Menunggu",
+    status,
+  );
+  if (transitionError) {
+    showFormError("vehicleForm", transitionError);
     return;
   }
 

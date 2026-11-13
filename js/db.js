@@ -37,6 +37,13 @@ var DB = {
   },
   queue: Promise.resolve(),
   writeErrors: 0,
+
+  /* Snapshot status/approval/pembayaran terakhir yang SUDAH tersimpan
+     (diisi saat load data & setiap save sukses). Deteksi event WA
+     memakai baseline ini — bukan array "sebelum" — karena banyak
+     pemanggil UI memutasi array cache in-place SEBELUM saveKendaraan
+     dipanggil (array "sebelum" dan "sesudah" jadi identik). */
+  serviceState: new Map(),
 };
 
 /* ---------------------------------------------------------------------
@@ -47,6 +54,11 @@ function dbLog(...args) {
   console.warn("[db]", ...args);
 }
 
+/* Penanda versi kode: tercetak SEKALI saat file ini dimuat.
+   Kalau baris ini tidak muncul di console setelah reload, berarti
+   browser masih memakai db.js lama (cache) — pakai Ctrl+Shift+R. */
+dbLog("db.js versi notifikasi WA aktif (2026-11-12)");
+
 function notifyDbError(message) {
   console.error("[db]", message);
 
@@ -56,6 +68,75 @@ function notifyDbError(message) {
       "error",
     );
   }
+}
+
+/* PostgREST menolak SELURUH baris kalau payload memuat kolom yang belum
+   dikenal — mis. kode baru sudah memakai kolom tambahan tetapi
+   supabase/schema.sql belum dijalankan ulang (atau cache schema
+   PostgREST belum reload). Supaya perubahan tetap tersimpan, kolom yang
+   tidak dikenal dibuang lalu upsert diulang. */
+function missingDbColumn(error) {
+  const message = String(error?.message || "");
+  const match =
+    message.match(/Could not find the '([^']+)' column/i) ||
+    message.match(/column "([^"]+)" of relation/i) ||
+    message.match(/column "([^"]+)" does not exist/i);
+  return match ? match[1] : "";
+}
+
+var missingColumnNotified = false;
+
+async function upsertRows(table, rows, onConflict = "id") {
+  let payload = rows;
+  let result = null;
+
+  for (let attempt = 0; attempt < 6; attempt += 1) {
+    result = await supabaseClient.from(table).upsert(payload, { onConflict });
+    if (!result.error) return result;
+
+    const column = missingDbColumn(result.error);
+    if (
+      !column ||
+      !payload.some((row) => Object.prototype.hasOwnProperty.call(row, column))
+    ) {
+      return result;
+    }
+
+    dbLog(
+      `kolom ${column} belum ada di tabel ${table} — menyimpan tanpa kolom itu.`,
+    );
+
+    if (!missingColumnNotified) {
+      missingColumnNotified = true;
+      if (typeof showPageNotice === "function") {
+        showPageNotice(
+          "Data tersimpan, tetapi kolom baru belum ada di database. " +
+            "Jalankan ulang supabase/schema.sql agar sasaran & daftar diskon " +
+            "(termasuk multi-promo) ikut tersimpan.",
+          "error",
+        );
+      }
+    }
+
+    /* Kolom nama sasaran ikut dibuang supaya promo yang tidak bisa
+       menyimpan daftar id tidak tampak menyasar sparepart tertentu
+       padahal berlaku untuk semua. */
+    const siblings =
+      column === "sparepart_ids"
+        ? ["sparepart_nama"]
+        : column === "promo_sparepart_ids"
+          ? ["promo_sparepart_nama"]
+          : [];
+
+    payload = payload.map((row) => {
+      const next = { ...row };
+      delete next[column];
+      siblings.forEach((key) => delete next[key]);
+      return next;
+    });
+  }
+
+  return result;
 }
 
 /* Menjalankan operasi tulis satu per satu (menghindari race condition). */
@@ -89,6 +170,159 @@ function dbFlush() {
   const awal = DB.writeErrors;
 
   return dbQueue(async () => {}).then(() => DB.writeErrors === awal);
+}
+
+/* ---------------------------------------------------------------------
+   NOTIFIKASI WHATSAPP — INFO KENDARAAN
+   ---------------------------------------------------------------------
+   Setelah perubahan service tersimpan ke Supabase, browser mengirim
+   event-nya ke service WhatsApp (folder whatsapp-service/, Baileys)
+   sebagai FALLBACK pelengkap Supabase Database Webhook — kalau webhook
+   aktif, keduanya tidak menduplikasi pesan karena ada anti-duplikat
+   di server (window per nomor + kode + event).
+
+   Semua bersifat fire-and-forget: kegagalan menghubungi server WA
+   TIDAK boleh menggagalkan penyimpanan data.
+
+   Sumber konfigurasi: window.SUPABASE_CONFIG.waServerUrl + waApiKey
+   (env WA_SERVER_URL / WA_API_KEY, lihat scripts/build-config.js).
+   --------------------------------------------------------------------- */
+
+function waNotifyConfig() {
+  const cfg = window.SUPABASE_CONFIG || {};
+  const url = String(cfg.waServerUrl || "").trim().replace(/\/+$/, "");
+  const key = String(cfg.waApiKey || "").trim();
+  return { url, key };
+}
+
+function waNotifyTeleponDariCache(customerId) {
+  const id = Number(customerId);
+  if (!id) return "";
+
+  const customer = (DB.cache.customers || []).find(
+    (item) => Number(item.id) === id,
+  );
+
+  return customer?.telepon || "";
+}
+
+/* Simpan baseline deteksi event dari data yang SUDAH dianggap benar
+   (hasil load awal / hasil save sukses). Isi: status, approval,
+   pembayaran — satu-satunya field yang memicu notifikasi. */
+function commitServiceState(items) {
+  const next = new Map();
+  (items || []).forEach((item) => {
+    next.set(Number(item.id), {
+      status: item.status,
+      approval: item.approval,
+      pembayaran: item.pembayaran,
+    });
+  });
+  DB.serviceState = next;
+}
+
+/* Bandingkan data service dengan BASELINE tersimpan lalu kumpulkan
+   event yang perlu diumumkan ke pelanggan.
+
+   Baseline per id: DB.serviceState (hasil load / save terakhir) — jika
+   id belum ada di sana, jatuh ke item pada array `previous`. Penting:
+   banyak pemanggil UI memutasi array cache in-place sebelum memanggil
+   saveKendaraan, jadi `previous` bisa jadi identik dengan `current`;
+   serviceState tidak ikut termutasi karena tersimpan terpisah. */
+function collectWaNotifications(previous, current) {
+  const prevById = new Map(
+    (previous || []).map((item) => [Number(item.id), item]),
+  );
+  const baseline = DB.serviceState || new Map();
+  const notifications = [];
+
+  (current || []).forEach((item) => {
+    const id = Number(item.id);
+    const prev = baseline.has(id) ? baseline.get(id) : prevById.get(id);
+    const events = [];
+
+    if (!prev) {
+      events.push("ajuan");
+    } else {
+      if (prev.approval !== item.approval) {
+        if (item.approval === "Disetujui") events.push("disetujui");
+        else if (item.approval === "Ditolak") events.push("ditolak");
+      }
+
+      if (prev.status !== item.status) {
+        if (item.status === "Dikerjakan") events.push("dikerjakan");
+        else if (item.status === "Selesai") events.push("selesai");
+      }
+
+      if (prev.pembayaran !== item.pembayaran && item.pembayaran === "Lunas") {
+        events.push("lunas");
+      }
+    }
+
+    if (events.length) {
+      notifications.push({ item, events });
+    }
+  });
+
+  return notifications;
+}
+
+/* Kirim notifikasi (fire-and-forget, tanpa mengubah hasil penyimpanan).
+   Log di console [db] memudahkan verifikasi:
+     - "Notifikasi WA terkirim"      -> server menerima & pesan keluar
+     - "Notifikasi WA ditolak server"=> ada masalah (lihat alasan)
+     - "Notifikasi WA nonaktif"      -> waServerUrl belum dikonfigurasi  */
+function waNotifyServiceEvents(notifications) {
+  const { url, key } = waNotifyConfig();
+
+  if (!notifications || !notifications.length) {
+    return;
+  }
+
+  if (!url) {
+    dbLog(
+      "Notifikasi WA nonaktif (waServerUrl kosong) — jalankan " +
+        "`node scripts/build-config.js` lalu muat ulang halaman. Event: " +
+        notifications.map((n) => n.events.join(",")).join("; "),
+    );
+    return;
+  }
+
+  notifications.forEach(({ item, events }) => {
+    fetch(`${url}/api/notify`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(key ? { "x-api-key": key } : {}),
+      },
+      body: JSON.stringify({
+        service: serviceToDb(item),
+        telepon: waNotifyTeleponDariCache(item.pelangganId),
+        events,
+      }),
+      keepalive: true,
+    })
+      .then(async (res) => {
+        if (res.ok) {
+          dbLog(
+            "Notifikasi WA terkirim:",
+            (item.kode || item.id) + " → " + events.join(", "),
+          );
+          return;
+        }
+
+        let alasan = "";
+        try {
+          alasan = (await res.json())?.error || "";
+        } catch {
+          /* body bukan JSON — abaikan. */
+        }
+        dbLog("Notifikasi WA ditolak server:", res.status, alasan);
+      })
+      .catch((error) => {
+        dbLog("Notifikasi WA gagal dikirim:", error?.message || error);
+      });
+  });
 }
 
 /* ---------------------------------------------------------------------
@@ -201,7 +435,88 @@ function sparepartFromDb(row) {
   };
 }
 
+/* Daftar id sparepart sasaran promo/service. Menerima objek aplikasi
+   (promoSparepartIds) maupun baris Supabase (promo_sparepart_ids);
+   data lama yang hanya punya satu sparepart tetap terbaca. */
+function promoSparepartIds(row) {
+  const list =
+    row?.sparepart_ids ??
+    row?.promo_sparepart_ids ??
+    row?.sparepartIds ??
+    row?.promoSparepartIds;
+  const single =
+    row?.sparepart_id ??
+    row?.promo_sparepart_id ??
+    row?.sparepartId ??
+    row?.promoSparepartId;
+  /* Daftar kosong berarti "semua sparepart", jadi jangan jatuh ke
+     kolom tunggal lama yang mungkin masih menyimpan id sebelumnya. */
+  return normalizeSparepartIds(Array.isArray(list) ? list : single);
+}
+
+/* Snapshot promo pada service: daftar multi-promo dari kolom
+   promo_list, atau fallback satu promo dari kolom promo_* lama. */
+function servicePromoSnapshots(row) {
+  let raw = row?.promo_list ?? row?.promoList ?? row?.promos;
+  if (typeof raw === "string") {
+    try {
+      raw = JSON.parse(raw);
+    } catch (error) {
+      raw = [];
+    }
+  }
+
+  const daftar = (Array.isArray(raw) ? raw : [])
+    .map((promo) => {
+      if (!promo) return null;
+      return {
+        id: promo.id != null ? Number(promo.id) : null,
+        kode: String(promo.kode || "").trim().toUpperCase(),
+        nama: String(promo.nama || "").trim(),
+        tipe: promo.tipe === "nominal" ? "nominal" : "persen",
+        nilai: Number(promo.nilai) || 0,
+        target:
+          promo.target === "jasa" || promo.target === "sparepart"
+            ? promo.target
+            : "total",
+        sparepartIds: promoSparepartIds(promo),
+        sparepartNama: String(promo.sparepartNama || "").trim(),
+      };
+    })
+    .filter((promo) => promo && promo.nilai > 0);
+
+  if (daftar.length) return daftar;
+
+  const kode = String(row?.promo_kode ?? row?.promoKode ?? "")
+    .trim()
+    .toUpperCase();
+  const nilai = Number(row?.promo_nilai ?? row?.promoNilai) || 0;
+  if (!kode || nilai <= 0) return [];
+
+  const target = row?.promo_target ?? row?.promoTarget ?? "";
+  return [
+    {
+      id: Number(row?.promo_id ?? row?.promoId) || null,
+      kode,
+      nama: String(row?.promo_nama ?? row?.promoNama ?? "").trim(),
+      tipe:
+        (row?.promo_tipe ?? row?.promoTipe) === "nominal"
+          ? "nominal"
+          : "persen",
+      nilai,
+      target: target === "jasa" || target === "sparepart" ? target : "total",
+      sparepartIds: promoSparepartIds(row),
+      sparepartNama: String(
+        row?.promo_sparepart_nama ?? row?.promoSparepartNama ?? "",
+      ).trim(),
+    },
+  ];
+}
+
 function serviceToDb(row) {
+  const sparepartIds = promoSparepartIds(row);
+  const promoList = servicePromoSnapshots(row);
+  const promo = promoList[0] || null;
   return {
     id: Number(row.id),
     kode: row.kode || "",
@@ -221,15 +536,23 @@ function serviceToDb(row) {
     requested_by: row.requestedBy || "admin",
     approval: row.approval || "Disetujui",
     approval_note: row.approvalNote || "",
-    promo_id: row.promoId ? Number(row.promoId) : null,
-    promo_kode: row.promoKode || "",
-    promo_nama: row.promoNama || "",
-    promo_tipe: row.promoTipe || "",
-    promo_nilai: Number(row.promoNilai) || 0,
+    promo_id: promo ? promo.id : null,
+    promo_kode: promo ? promo.kode : "",
+    promo_nama: promo ? promo.nama : "",
+    promo_tipe: promo ? promo.tipe : "",
+    promo_nilai: promo ? promo.nilai : 0,
+    promo_target: promo ? promo.target : "",
+    promo_sparepart_id: sparepartIds.length === 1 ? sparepartIds[0] : null,
+    promo_sparepart_ids: sparepartIds,
+    promo_sparepart_nama: promo ? promo.sparepartNama : "",
+    promo_list: promoList,
   };
 }
 
 function serviceFromDb(row) {
+  const sparepartIds = promoSparepartIds(row);
+  const promoList = servicePromoSnapshots(row);
+  const promo = promoList[0] || null;
   return {
     id: Number(row.id),
     kode: row.kode || "",
@@ -256,11 +579,16 @@ function serviceFromDb(row) {
         ? "Menunggu"
         : "Disetujui"),
     approvalNote: row.approval_note || "",
-    promoId: row.promo_id ? Number(row.promo_id) : null,
-    promoKode: row.promo_kode || "",
-    promoNama: row.promo_nama || "",
-    promoTipe: row.promo_tipe || "",
-    promoNilai: Number(row.promo_nilai) || 0,
+    promoId: promo ? promo.id : null,
+    promoKode: promo ? promo.kode : "",
+    promoNama: promo ? promo.nama : "",
+    promoTipe: promo ? promo.tipe : "",
+    promoNilai: promo ? promo.nilai : 0,
+    promoTarget: promo ? promo.target : "",
+    promoSparepartIds: sparepartIds,
+    promoSparepartId: sparepartIds.length === 1 ? sparepartIds[0] : null,
+    promoSparepartNama: promo ? promo.sparepartNama : "",
+    promoList,
   };
 }
 
@@ -288,6 +616,7 @@ function reviewFromDb(row) {
 }
 
 function promoToDb(row) {
+  const sparepartIds = promoSparepartIds(row);
   return {
     id: Number(row.id),
     kode: row.kode || "",
@@ -298,10 +627,15 @@ function promoToDb(row) {
     mulai: row.mulai || null,
     sampai: row.sampai || null,
     aktif: row.aktif !== false,
+    target: row.target === "jasa" || row.target === "sparepart" ? row.target : "total",
+    sparepart_id: sparepartIds.length === 1 ? sparepartIds[0] : null,
+    sparepart_ids: sparepartIds,
+    sparepart_nama: row.sparepartNama || "",
   };
 }
 
 function promoFromDb(row) {
+  const sparepartIds = promoSparepartIds(row);
   return {
     id: Number(row.id),
     kode: row.kode || "",
@@ -312,6 +646,10 @@ function promoFromDb(row) {
     mulai: row.mulai || "",
     sampai: row.sampai || "",
     aktif: row.aktif !== false,
+    target: row.target === "jasa" || row.target === "sparepart" ? row.target : "total",
+    sparepartIds,
+    sparepartId: sparepartIds.length === 1 ? sparepartIds[0] : null,
+    sparepartNama: row.sparepart_nama || "",
   };
 }
 
@@ -473,6 +811,7 @@ async function dbInitOnce() {
 
     DB.cache.customers = ensureKode(rawCustomers, "customers");
     DB.cache.services = ensureKode(rawServices, "kendaraan");
+    commitServiceState(DB.cache.services);
     DB.cache.mechanics = ensureKode(rawMechanics, "mekanik");
     DB.cache.spareparts = ensureKode(rawSpareparts, "sparepart");
     DB.cache.reviews = ensureKode(await reviewsReady, "reviews");
@@ -774,6 +1113,26 @@ function saveKendaraan(data) {
 
   DB.known.services = current;
 
+  /* Event notifikasi WA dihitung dari data SEBELUM tertimpa.
+     Log selalu dicetak (walau 0 event) supaya mudah dipastikan dari
+     console bahwa saveKendaraan jalan dan kode versi terbaru termuat:
+       "[db] saveKendaraan: N event WA" -> kode BARU, event terdeteksi
+       "[db] saveKendaraan: 0 event WA" -> kode BARU, perubahan bukan
+                                           status/approval/pembayaran
+       tidak ada log sama sekali        -> kode LAMA (cache) / tidak
+                                           lewat saveKendaraan */
+  const waNotifications = collectWaNotifications(previous, data);
+  dbLog(
+    `saveKendaraan: ${data.length} baris, ${waNotifications.length} event WA` +
+      (waNotifications.length
+        ? " (" +
+          waNotifications
+            .map((n) => `${n.item.kode || n.id}:${n.events.join("+")}`)
+            .join(", ") +
+          ")"
+        : ""),
+  );
+
   return dbQueue(async () => {
     const payload = data.map(serviceToDb);
 
@@ -794,9 +1153,7 @@ function saveKendaraan(data) {
       const own = payload.filter((row) => row.customer_id === ownId);
 
       if (own.length) {
-        const { error } = await supabaseClient
-          .from("services")
-          .upsert(own, { onConflict: "id" });
+        const { error } = await upsertRows("services", own);
 
         if (error) {
           notifyDbError(error.message);
@@ -806,13 +1163,13 @@ function saveKendaraan(data) {
         }
       }
 
+      waNotifyServiceEvents(waNotifications);
+      commitServiceState(data);
       return { ok: true };
     }
 
     if (payload.length) {
-      const { error } = await supabaseClient
-        .from("services")
-        .upsert(payload, { onConflict: "id" });
+      const { error } = await upsertRows("services", payload);
 
       if (error) {
         notifyDbError(error.message);
@@ -834,6 +1191,8 @@ function saveKendaraan(data) {
       }
     }
 
+    waNotifyServiceEvents(waNotifications);
+    commitServiceState(data);
     return { ok: true };
   });
 }
@@ -1048,9 +1407,7 @@ function savePromos(promos) {
     var payload = promos.map(promoToDb);
 
     if (payload.length) {
-      var result = await supabaseClient
-        .from("promos")
-        .upsert(payload, { onConflict: "id" });
+      var result = await upsertRows("promos", payload);
 
       if (result.error) {
         notifyDbError(result.error.message);

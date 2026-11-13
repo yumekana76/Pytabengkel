@@ -25,13 +25,20 @@ function editService(id, button = null) {
     mekanikSelect.appendChild(option);
   }
   mekanikSelect.value = service.mekanikId || "";
-  document.getElementById("serviceStatus").value = service.status;
+  setServiceStatusStep("serviceStatusStep", service.status);
   document.getElementById("servicePembayaran").value =
     service.pembayaran || "Belum Lunas";
   document.getElementById("serviceTanggal").value =
     service.tanggalService || "";
   document.getElementById("serviceBiayaJasa").value =
     Number(service.biayaJasa) || "";
+  /* Klaim diskon: daftar centang diisi dari promo yang sedang menempel
+     pada service ini supaya pilihan lama tidak hilang saat form dibuka. */
+  populateClaimPromoList(
+    "servicePromoList",
+    "servicePromoHint",
+    getServicePromos(service).map((promo) => promo.kode),
+  );
   (service.spareparts || []).forEach((item) =>
     addServiceSparepartRow(item.sparepartId, item.jumlah),
   );
@@ -51,6 +58,10 @@ function editService(id, button = null) {
         ? "Cetak struk invoice"
         : "Struk bisa dicetak setelah service selesai";
   }
+
+  /* Pratinjau total dihitung ulang: biaya jasa & promo baru saja diisi,
+     sedangkan baris sparepart kosong tidak memicu pembaruan sendiri. */
+  updateServiceTotalPreview();
 
   openModal("serviceModal");
 }
@@ -261,25 +272,35 @@ function updateServiceTotalPreview() {
   const biayaJasa =
     Number(document.getElementById("serviceBiayaJasa")?.value) || 0;
   const sparepart = getSparepart();
-  const totalSparepart = [
+  const spareparts = [
     ...document.querySelectorAll(".service-part-row"),
-  ].reduce((total, row) => {
+  ].map((row) => {
+    const sparepartId =
+      Number(row.querySelector("[data-service-part]")?.value) || null;
     const part = sparepart.find(
-      (item) =>
-        Number(item.id) ===
-        Number(row.querySelector("[data-service-part]")?.value),
+      (item) => Number(item.id) === Number(sparepartId),
     );
     const jumlah =
       Number(row.querySelector("[data-service-part-quantity]")?.value) || 0;
-    return total + (Number(part?.harga) || 0) * jumlah;
-  }, 0);
+    return {
+      sparepartId,
+      nama: part?.nama || "",
+      harga: Number(part?.harga) || 0,
+      jumlah,
+    };
+  });
+  const totalSparepart = spareparts.reduce(
+    (total, part) => total + part.harga * part.jumlah,
+    0,
+  );
   const subtotal = biayaJasa + totalSparepart;
   const service = getKendaraan().find(
     (item) => Number(item.id) === Number(activeServiceId),
   );
-  const diskon = service
-    ? getPromoDiscountForSubtotal(service, subtotal)
-    : 0;
+  /* Diskon dihitung dari pilihan dropdown (bukan snapshot tersimpan),
+     jadi pratinjau ikut berubah begitu promo dipilih/dilepas. */
+  const promos = getCheckedClaimPromos("servicePromoList");
+  const diskon = getClaimPromoDiscount(promos, biayaJasa, spareparts);
   setText("serviceTotalPreview", formatRupiah(subtotal - diskon));
 }
 
@@ -373,12 +394,15 @@ function resetServiceForm() {
   form.reset();
   clearFormError("serviceForm");
   populateServiceForm();
+  setServiceStatusStep("serviceStatusStep", "Menunggu");
   document.getElementById("serviceBiayaJasa").value = "";
   document.getElementById("servicePembayaran").value = "Belum Lunas";
   document.getElementById("serviceSparepartList").innerHTML = "";
   const tanggal = document.getElementById("serviceTanggal");
   if (tanggal && !tanggal.value)
     tanggal.value = getTodayLocalDate();
+  /* Service baru/batal edit = belum ada klaim diskon. */
+  populateClaimPromoList("servicePromoList", "servicePromoHint", "");
   updateServiceTotalPreview();
   document.getElementById("serviceVehicle").disabled = false;
   document.getElementById("serviceModalTitle").textContent = "Proses Service";
@@ -656,6 +680,16 @@ function saveServiceForm(event) {
     return;
   }
 
+  /* Klaim diskon — divalidasi sebelum ada perubahan stok apa pun. */
+  const promoResult = readClaimPromos(
+    "servicePromoList",
+    getServicePromos(kendaraan[index]).map((promo) => promo.kode),
+  );
+  if (promoResult.error) {
+    showFormError("serviceForm", promoResult.error);
+    return;
+  }
+
   let spareparts;
   try {
     spareparts = getServiceSparepartsFromForm();
@@ -666,6 +700,15 @@ function saveServiceForm(event) {
 
   const biayaJasa =
     Number(document.getElementById("serviceBiayaJasa").value) || 0;
+
+  const transitionError = validateServiceStatusTransition(
+    kendaraan[index].status || "Menunggu",
+    status,
+  );
+  if (transitionError) {
+    showFormError("serviceForm", transitionError);
+    return;
+  }
 
   /* Status Quality Check / Selesai hanya boleh dipakai kalau mekanik,
      biaya jasa, dan minimal satu sparepart sudah lengkap. */
@@ -723,13 +766,20 @@ function saveServiceForm(event) {
     biayaJasa,
     spareparts,
   };
+  applyClaimPromo(kendaraan[index], promoResult.promos);
   saveKendaraan(kendaraan);
   saveSparepart(stokTersedia);
 
   addLog(
     "Proses",
     "Service",
-    `${kendaraan[index].polisi} — status ${status}, pembayaran ${pembayaran}`,
+    `${kendaraan[index].polisi} — status ${status}, pembayaran ${pembayaran}${
+      getServicePromos(kendaraan[index]).length
+        ? `, promo ${getServicePromos(kendaraan[index])
+            .map((promo) => promo.kode)
+            .join(" + ")}`
+        : ""
+    }`,
     getKode("kendaraan", kendaraan[index]),
   );
 
@@ -754,6 +804,18 @@ function initServicePage() {
   document
     .getElementById("serviceForm")
     .addEventListener("submit", saveServiceForm);
+  /* Kendaraan yang dipilih membawa status service terakhirnya, jadi
+     tombol status mulai dari tahap yang benar (bukan selalu Menunggu). */
+  document.getElementById("serviceVehicle").addEventListener("change", () => {
+    const vehicleId = document.getElementById("serviceVehicle").value;
+    const vehicle = getKendaraan().find(
+      (item) => Number(item.id) === Number(vehicleId),
+    );
+    setServiceStatusStep(
+      "serviceStatusStep",
+      vehicle ? vehicle.status || "Menunggu" : "Menunggu",
+    );
+  });
   document
     .getElementById("btnTambahServiceSparepart")
     .addEventListener("click", () => addServiceSparepartRow());
@@ -763,6 +825,13 @@ function initServicePage() {
   document
     .getElementById("serviceBiayaJasa")
     .addEventListener("input", updateServiceTotalPreview);
+  attachHargaRibuanOtomatis("serviceBiayaJasa");
+  document
+    .getElementById("servicePromoList")
+    ?.addEventListener("change", () => {
+      updateClaimPromoListHint("servicePromoList", "servicePromoHint");
+      updateServiceTotalPreview();
+    });
   document
     .getElementById("searchService")
     .addEventListener(

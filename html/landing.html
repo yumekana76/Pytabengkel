@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; font-src 'self' https://cdnjs.cloudflare.com; img-src 'self' data: https://*.supabase.co; connect-src 'self' https://*.supabase.co wss://*.supabase.co; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+      content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; font-src 'self' https://cdnjs.cloudflare.com; img-src 'self' data: https://*.supabase.co; connect-src 'self' https://*.supabase.co wss://*.supabase.co http://localhost:3000; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
     />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta
@@ -30,7 +30,7 @@
       applyThemeBeforePaint();
     </script>
   </head>
-  <body>
+  <body class="lp-page">
     <header class="topbar lp-header">
       <div class="lp-header-row">
         <a href="#beranda" class="brand lp-brand-link">
@@ -105,6 +105,11 @@
     <div class="layout lp-layout">
       <main class="main">
         <section class="lp-hero" id="beranda">
+          <!-- Bentuk dekoratif gradien (murni CSS, aria-hidden) -->
+          <span class="lp-hero-blob lp-hero-blob-a" aria-hidden="true"></span>
+          <span class="lp-hero-blob lp-hero-blob-b" aria-hidden="true"></span>
+          <span class="lp-hero-blob lp-hero-blob-c" aria-hidden="true"></span>
+          <span class="lp-hero-ring" aria-hidden="true"></span>
           <div class="lp-hero-copy">
             <span class="lp-hero-eyebrow">
               <i class="fa-solid fa-tags" aria-hidden="true"></i>
@@ -139,6 +144,41 @@
                 <span id="lpHeroAlamat">Lokasi strategis</span>
               </span>
             </div>
+          </div>
+        </section>
+
+        <!-- STATS STRIP — angka diisi dari data publik (ulasan, promo, info bengkel) -->
+        <section class="lp-stats-strip" aria-label="Ringkasan Pytabengkel">
+          <div class="lp-stat-box">
+            <span class="lp-stat-icon" aria-hidden="true">
+              <i class="fa-solid fa-star"></i>
+            </span>
+            <strong class="lp-stat-num" id="lpStatRating">-</strong>
+            <span class="lp-stat-lbl">Rating rata-rata</span>
+          </div>
+          <span class="lp-stat-divider" aria-hidden="true"></span>
+          <div class="lp-stat-box">
+            <span class="lp-stat-icon" aria-hidden="true">
+              <i class="fa-solid fa-comment-dots"></i>
+            </span>
+            <strong class="lp-stat-num" id="lpStatUlasan">0</strong>
+            <span class="lp-stat-lbl">Ulasan pelanggan</span>
+          </div>
+          <span class="lp-stat-divider" aria-hidden="true"></span>
+          <div class="lp-stat-box">
+            <span class="lp-stat-icon" aria-hidden="true">
+              <i class="fa-solid fa-tags"></i>
+            </span>
+            <strong class="lp-stat-num" id="lpStatPromo">0</strong>
+            <span class="lp-stat-lbl">Promo aktif</span>
+          </div>
+          <span class="lp-stat-divider" aria-hidden="true"></span>
+          <div class="lp-stat-box">
+            <span class="lp-stat-icon" aria-hidden="true">
+              <i class="fa-solid fa-clock"></i>
+            </span>
+            <strong class="lp-stat-num lp-stat-num-sm" id="lpStatJam">-</strong>
+            <span class="lp-stat-lbl">Jam buka</span>
           </div>
         </section>
 
@@ -209,8 +249,9 @@
             </div>
             <p class="lp-promo-note">
               <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
-              Promo berlaku untuk kendaraan terdaftar, tidak dapat digabung
-              dengan promo lain, dan selama periode promo masih berlangsung.
+              Promo berlaku untuk kendaraan terdaftar dan selama periode promo
+              masih berlangsung. Satu service boleh memakai lebih dari satu
+              promo — centang beberapa promo di form service.
             </p>
           </div>
         </section>
@@ -416,7 +457,7 @@
                   <i class="fa-solid fa-chevron-down lp-faq-chevron" aria-hidden="true"></i>
                 </summary>
                 <div class="lp-faq-answer">
-                  <p>Pilih promo yang tersedia di bagian Promo &amp; Diskon lalu klik <strong>Klaim</strong>. Promo otomatis terpilih pada bagian <em>Diskon / Promo</em> di form ajukan servis, dan total tagihan langsung dipotong sesuai jenis diskon. Satu service hanya memakai satu promo.</p>
+                  <p>Pilih promo yang tersedia di bagian Promo &amp; Diskon lalu klik <strong>Klaim</strong>. Anda langsung dibawa ke form pengisian service dengan promo tersebut sudah tercentang, dan total tagihan otomatis dipotong. Satu service bisa memakai lebih dari satu promo: centang beberapa promo pada bagian <em>Diskon / Promo</em>, potongan tiap promo dihitung sesuai sasarannya.</p>
                 </div>
               </details>
 

@@ -2916,6 +2916,68 @@ textarea.form-control {
   line-height: 1.5;
 }
 
+/* Tombol status service: status sekarang + tombol maju satu langkah. */
+.status-step-control {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.status-step-control .badge {
+  font-weight: 600;
+}
+
+.status-step-control [hidden] {
+  display: none;
+}
+
+/* Nilai tetap pada form (mis. status awal service "Menunggu"). */
+.form-static-value {
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--border-input);
+  border-radius: 10px;
+  background: var(--surface-2);
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+/* Daftar centang promo di form service: satu service boleh memakai
+   lebih dari satu diskon. */
+.promo-check-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 168px;
+  overflow-y: auto;
+  padding: 6px 8px;
+  border: 1px solid var(--border-input);
+  border-radius: 10px;
+  background: var(--surface-input);
+}
+
+.promo-check-list .form-hint {
+  margin: 0;
+  padding: 4px 2px;
+}
+
+.promo-check-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 5px 4px;
+  border-radius: 6px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.promo-check-item input {
+  margin-top: 2px;
+  flex: 0 0 auto;
+}
+
 /* =========================================
    DETAIL
    ========================================= */
@@ -3122,6 +3184,16 @@ textarea.form-control {
   color: var(--primary-text);
 }
 
+/* Keterangan diskon per baris item tagihan */
+.invoice-note {
+  display: block;
+  margin-top: 2px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--success, #1a7f37);
+  white-space: normal;
+}
+
 /* Tabel rincian item tagihan */
 
 .invoice-table {
@@ -3272,12 +3344,18 @@ textarea.form-control {
 }
 
 .struk-row > span:first-child {
-  flex: 0 0 auto;
+  /* Label diskon bisa panjang ("Diskon Sparepart Oli Mesin, Filter
+     Oli"), jadi teks dibungkus dan nominal tetap di kanan. */
+  flex: 1 1 auto;
+  min-width: 0;
+  padding-right: 6px;
+  word-break: break-word;
 }
 
 .struk-row > span:last-child {
+  flex: 0 0 auto;
   text-align: right;
-  word-break: break-word;
+  white-space: nowrap;
 }
 
 .struk-item {

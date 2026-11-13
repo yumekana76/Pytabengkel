@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; font-src 'self' https://cdnjs.cloudflare.com; img-src 'self' data: https://*.supabase.co; connect-src 'self' https://*.supabase.co wss://*.supabase.co; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+      content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; font-src 'self' https://cdnjs.cloudflare.com; img-src 'self' data: https://*.supabase.co; connect-src 'self' https://*.supabase.co wss://*.supabase.co http://localhost:3000; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
     />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Pytabengkel - Kendaraan</title>
@@ -347,14 +347,28 @@
                 </div>
                 <div id="vehicleKeluhanList" class="service-part-list"></div>
               </div>
-              <div class="form-group">
-                <label for="vehicleStatus"> Status </label>
-                <select id="vehicleStatus" class="form-control">
-                  <option value="Menunggu">Menunggu</option>
-                  <option value="Dikerjakan">Dikerjakan</option>
-                  <option value="Quality Check">Quality Check</option>
-                  <option value="Selesai">Selesai</option>
-                </select>
+              <div class="form-group" id="vehicleStatusStep">
+                <label>Status Service</label>
+                <input
+                  type="hidden"
+                  id="vehicleStatus"
+                  data-status-input
+                  value="Menunggu"
+                />
+                <div class="status-step-control">
+                  <span class="badge waiting" data-status-badge>Menunggu</span>
+                  <button
+                    type="button"
+                    class="action-btn"
+                    data-status-next
+                    data-next-status="Dikerjakan"
+                  >
+                    → Dikerjakan
+                  </button>
+                </div>
+                <p class="form-hint" data-status-hint>
+                  Status maju satu langkah setiap kali tombol diklik.
+                </p>
               </div>
               <div class="form-group">
                 <label for="vehicleTanggal">Tanggal Service</label>

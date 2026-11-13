@@ -6,6 +6,50 @@ function formatNilaiDiskon(item) {
   return nilai + "%";
 }
 
+/* Daftar centang sparepart di form diskon (sasaran "sparepart").
+   Satu promo boleh menyasar beberapa sparepart sekaligus. */
+function renderDiskonSparepartOptions(selectedIds) {
+  var list = document.getElementById("diskonSparepartList");
+  if (!list) return;
+  var sparepart = typeof getSparepart === "function" ? getSparepart() : [];
+  var selected = typeof normalizeSparepartIds === "function"
+    ? normalizeSparepartIds(selectedIds)
+    : [];
+
+  list.innerHTML = sparepart.length
+    ? sparepart
+        .map(function (item) {
+          var id = Number(item.id);
+          return '<label class="diskon-sparepart-item">' +
+            '<input type="checkbox" value="' + id + '"' +
+            (selected.indexOf(id) !== -1 ? " checked" : "") +
+            " />" +
+            '<span>' + escapeHTML((item.nama || "Sparepart") + " — " + formatRupiah(item.harga)) + "</span>" +
+            "</label>";
+        })
+        .join("")
+    : '<p class="form-hint">Belum ada data sparepart.</p>';
+}
+
+/* Sparepart yang dicentang pada form diskon. */
+function getDiskonSparepartIds() {
+  var list = document.getElementById("diskonSparepartList");
+  if (!list) return [];
+  var ids = [].map.call(
+    list.querySelectorAll('input[type="checkbox"]:checked'),
+    function (input) { return Number(input.value); },
+  );
+  return typeof normalizeSparepartIds === "function"
+    ? normalizeSparepartIds(ids)
+    : ids.filter(function (id) { return Number.isFinite(id) && id > 0; });
+}
+
+function syncDiskonTargetFields() {
+  var target = document.getElementById("diskonTarget")?.value || "total";
+  var group = document.getElementById("diskonSparepartGroup");
+  if (group) group.hidden = target !== "sparepart";
+}
+
 function formatPeriodeDiskon(item) {
   var mulai = item.mulai || "-";
   var sampai = item.sampai || "-";
@@ -39,8 +83,13 @@ function getDiskonClaimServices(promo) {
   var kode = String(promo.kode || "").toUpperCase();
   return (typeof getKendaraan === "function" ? getKendaraan() : []).filter(function (service) {
     if (typeof isAjuanDitolak === "function" && isAjuanDitolak(service)) return false;
-    if (service.promoId && Number(service.promoId) === Number(promo.id)) return true;
-    return kode && String(service.promoKode || "").toUpperCase() === kode;
+    /* Service bisa memakai beberapa promo sekaligus, jadi cocokkan
+       seluruh snapshot promo — bukan hanya promo pertama. */
+    var daftar = typeof getServicePromos === "function" ? getServicePromos(service) : [];
+    return daftar.some(function (item) {
+      if (item.id && promo.id && Number(item.id) === Number(promo.id)) return true;
+      return kode && String(item.kode || "").toUpperCase() === kode;
+    });
   });
 }
 
@@ -101,7 +150,10 @@ function renderDiskonPage(search) {
           '<td><span class="cell-id">' + escapeHTML(typeof getKode === "function" ? getKode("promos", item) : (item.kode || item.id)) + '</span></td>' +
           '<td><strong>' + escapeHTML(item.nama || "-") + '</strong><div class="table-subtext">' + escapeHTML(item.deskripsi || "") + '</div></td>' +
           '<td>' + escapeHTML(item.kode || "-") + '</td>' +
-          '<td>' + escapeHTML(formatNilaiDiskon(item)) + '</td>' +
+          '<td>' + escapeHTML(formatNilaiDiskon(item)) +
+            '<div class="table-subtext">' +
+            escapeHTML(typeof getPromoTargetText === "function" ? getPromoTargetText(item.target, typeof getPromoSparepartNama === "function" ? getPromoSparepartNama(item) : (item.sparepartNama || "")) : "Seluruh tagihan") +
+            '</div></td>' +
           '<td>' + escapeHTML(formatPeriodeDiskon(item)) + '</td>' +
           '<td><span class="badge ' + st.cls + '">' + escapeHTML(st.label) + '</span></td>' +
           '<td>' + (klaim.length
@@ -158,6 +210,86 @@ function openDiskonClaim(id) {
   openModal("diskonClaimModal");
 }
 
+/* Dropdown promo + tabel klaim. Tampilannya mengikuti daftar service
+   yang dilihat customer, termasuk service yang diklaim lewat form
+   admin/super, karena klaim disimpan pada record service yang sama. */
+function renderDiskonKlaimSelect() {
+  var select = document.getElementById("diskonKlaimSelect");
+  if (!select) return;
+  var promos = (typeof getPromos === "function" ? getPromos() : []).slice()
+    .sort(function (a, b) { return Number(b.id) - Number(a.id); });
+  var previous = select.value;
+
+  select.innerHTML = promos.length
+    ? promos.map(function (promo) {
+        var klaim = getDiskonClaimServices(promo).length;
+        var sasaran = typeof getPromoTargetText === "function"
+          ? getPromoTargetText(promo.target, typeof getPromoSparepartNama === "function" ? getPromoSparepartNama(promo) : (promo.sparepartNama || ""))
+          : "Seluruh tagihan";
+        var label = (promo.nama || promo.kode || "Diskon") + " — " + (promo.kode || "-") +
+          " · " + sasaran + " · " + (klaim ? klaim + " klaim" : "belum diklaim");
+        return '<option value="' + Number(promo.id) + '">' + escapeHTML(label) + '</option>';
+      }).join("")
+    : '<option value="">Belum ada diskon</option>';
+  select.disabled = !promos.length;
+  if (promos.some(function (promo) { return String(promo.id) === String(previous); })) {
+    select.value = previous;
+  } else if (promos.length) {
+    select.value = String(promos[0].id);
+  }
+
+  renderDiskonKlaimTable();
+}
+
+function renderDiskonKlaimTable() {
+  var tbody = document.getElementById("diskonKlaimTable");
+  if (!tbody) return;
+
+  var promoId = document.getElementById("diskonKlaimSelect")?.value || "";
+  var promo = (typeof getPromos === "function" ? getPromos() : [])
+    .find(function (item) { return String(item.id) === String(promoId); });
+
+  if (!promo) {
+    tbody.innerHTML = '<tr><td colspan="9" style="text-align:center; padding:30px;">Belum ada diskon/promo.</td></tr>';
+    setText("diskonKlaimInfo", "Tidak ada data");
+    return;
+  }
+
+  var rows = getDiskonClaimServices(promo).slice().sort(function (a, b) {
+    var tanggal = String(b.tanggalService || "").localeCompare(String(a.tanggalService || ""));
+    return tanggal !== 0 ? tanggal : Number(b.id) - Number(a.id);
+  });
+
+  tbody.innerHTML = rows.length
+    ? rows.map(function (service, index) {
+        var rincian = typeof getServicePromoDiscountRows === "function" ? getServicePromoDiscountRows(service) : [];
+        var baris = rincian.find(function (item) {
+          if (item.id && promo.id && Number(item.id) === Number(promo.id)) return true;
+          return item.kode && String(item.kode).toUpperCase() === String(promo.kode).toUpperCase();
+        });
+        var diskon = baris ? baris.diskon : 0;
+        var total = typeof getServiceTotal === "function" ? getServiceTotal(service) : 0;
+        var lunas = service.pembayaran === "Lunas";
+        var statusCls = typeof getStatusClass === "function" ? getStatusClass(service.status) : "waiting";
+        return '<tr>' +
+          '<td>' + (index + 1) + '</td>' +
+          '<td>' + escapeHTML(service.tanggalService || "-") + '</td>' +
+          '<td><strong>' + escapeHTML(service.polisi || "-") + '</strong></td>' +
+          '<td>' + escapeHTML(service.pelanggan || "-") + '</td>' +
+          '<td>' + escapeHTML(service.keluhan || "-") + '</td>' +
+          '<td><span class="badge ' + statusCls + '">' + escapeHTML(service.status || "-") + '</span></td>' +
+          '<td>' + (diskon ? '-' + formatRupiah(diskon) : '-') + '</td>' +
+          '<td>' + formatRupiah(total) + '</td>' +
+          '<td><span class="badge ' + (lunas ? 'done' : 'waiting') + '">' + (lunas ? 'Lunas' : 'Belum Lunas') + '</span></td>' +
+          '</tr>';
+      }).join("")
+    : '<tr><td colspan="9" style="text-align:center; padding:30px;">Belum ada pelanggan yang mengklaim promo ini.</td></tr>';
+
+  setText("diskonKlaimInfo", rows.length
+    ? getDiskonClaimCustomers(rows) + " pelanggan · " + rows.length + " service"
+    : "Belum ada klaim");
+}
+
 function resetDiskonForm() {
   var form = document.getElementById("diskonForm");
   if (form) form.reset();
@@ -166,6 +298,10 @@ function resetDiskonForm() {
   if (idEl) idEl.value = "";
   var aktif = document.getElementById("diskonAktifInput");
   if (aktif) aktif.checked = true;
+  var target = document.getElementById("diskonTarget");
+  if (target) target.value = "total";
+  renderDiskonSparepartOptions([]);
+  syncDiskonTargetFields();
   setText("diskonModalTitle", "Tambah Diskon");
 }
 
@@ -179,6 +315,11 @@ function editDiskon(id) {
   document.getElementById("diskonDeskripsi").value = item.deskripsi || "";
   document.getElementById("diskonTipe").value = item.tipe || "persen";
   document.getElementById("diskonNilai").value = item.nilai != null ? item.nilai : "";
+  document.getElementById("diskonTarget").value = item.target === "jasa" || item.target === "sparepart"
+    ? item.target
+    : "total";
+  renderDiskonSparepartOptions(item.sparepartIds || item.sparepartId || []);
+  syncDiskonTargetFields();
   document.getElementById("diskonMulai").value = item.mulai ? String(item.mulai).slice(0, 10) : "";
   document.getElementById("diskonSampai").value = item.sampai ? String(item.sampai).slice(0, 10) : "";
   document.getElementById("diskonAktifInput").checked = item.aktif !== false;
@@ -203,6 +344,13 @@ function saveDiskonForm(event) {
   var mulai = document.getElementById("diskonMulai").value || "";
   var sampai = document.getElementById("diskonSampai").value || "";
   var aktif = document.getElementById("diskonAktifInput").checked;
+  var target = document.getElementById("diskonTarget")?.value === "jasa" || document.getElementById("diskonTarget")?.value === "sparepart"
+    ? document.getElementById("diskonTarget").value
+    : "total";
+  var sparepartIds = target === "sparepart" ? getDiskonSparepartIds() : [];
+  var sparepartNama = sparepartIds.length && typeof getSparepartNamaByIds === "function"
+    ? getSparepartNamaByIds(sparepartIds)
+    : "";
 
   if (!nama) {
     if (typeof showFormError === "function") showFormError("diskonForm", "Nama diskon wajib diisi.");
@@ -233,12 +381,12 @@ function saveDiskonForm(event) {
   if (id) {
     var index = promos.findIndex(function (item) { return Number(item.id) === Number(id); });
     if (index !== -1) {
-      promos[index] = Object.assign({}, promos[index], { nama: nama, kode: kode || promos[index].kode, deskripsi: deskripsi, tipe: tipe, nilai: nilai, mulai: mulai, sampai: sampai, aktif: aktif });
+      promos[index] = Object.assign({}, promos[index], { nama: nama, kode: kode || promos[index].kode, deskripsi: deskripsi, tipe: tipe, nilai: nilai, mulai: mulai, sampai: sampai, aktif: aktif, target: target, sparepartIds: sparepartIds, sparepartId: sparepartIds.length === 1 ? sparepartIds[0] : null, sparepartNama: sparepartNama });
     }
   } else {
     var nextId = promos.length ? Math.max.apply(null, promos.map(function (item) { return Number(item.id) || 0; })) + 1 : 1;
     if (!kode && typeof nextKode === "function") kode = nextKode("promos", promos).toUpperCase();
-    promos.push({ id: nextId, kode: kode || ("PRM-" + String(nextId).padStart(3, "0")), nama: nama, deskripsi: deskripsi, tipe: tipe, nilai: nilai, mulai: mulai, sampai: sampai, aktif: aktif });
+    promos.push({ id: nextId, kode: kode || ("PRM-" + String(nextId).padStart(3, "0")), nama: nama, deskripsi: deskripsi, tipe: tipe, nilai: nilai, mulai: mulai, sampai: sampai, aktif: aktif, target: target, sparepartIds: sparepartIds, sparepartId: sparepartIds.length === 1 ? sparepartIds[0] : null, sparepartNama: sparepartNama });
   }
 
   savePromos(promos);
@@ -250,6 +398,7 @@ function saveDiskonForm(event) {
   resetDiskonForm();
   renderDiskonPage(document.getElementById("searchDiskon")?.value);
   updateDiskonStats();
+  renderDiskonKlaimSelect();
   if (typeof showPageNotice === "function") showPageNotice("Data diskon tersimpan.", "success");
 }
 
@@ -264,6 +413,7 @@ function deleteDiskon(id, button) {
   if (typeof addLog === "function") addLog("Hapus", "Diskon", item.nama + " (" + item.kode + ")", typeof getKode === "function" ? getKode("promos", item) : item.kode);
   renderDiskonPage(document.getElementById("searchDiskon")?.value);
   updateDiskonStats();
+  renderDiskonKlaimSelect();
   if (typeof showPageNotice === "function") showPageNotice("Diskon " + item.nama + " dihapus.", "success");
 }
 
@@ -271,10 +421,16 @@ function initDiskonPage() {
   if (!document.getElementById("diskonPageTable")) return;
   renderDiskonPage();
   updateDiskonStats();
+  renderDiskonKlaimSelect();
+  renderDiskonSparepartOptions([]);
+  syncDiskonTargetFields();
+  document.getElementById("diskonKlaimSelect")?.addEventListener("change", renderDiskonKlaimTable);
   document.getElementById("btnTambahDiskon")?.addEventListener("click", function () {
     resetDiskonForm();
+    renderDiskonSparepartOptions([]);
     openModal("diskonModal");
   });
+  document.getElementById("diskonTarget")?.addEventListener("change", syncDiskonTargetFields);
   document.getElementById("diskonForm")?.addEventListener("submit", saveDiskonForm);
   document.getElementById("searchDiskon")?.addEventListener("input", function (e) { renderDiskonPage(e.target.value); });
   document.getElementById("filterDiskonStatus")?.addEventListener("change", function () { renderDiskonPage(document.getElementById("searchDiskon")?.value); });

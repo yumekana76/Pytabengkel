@@ -371,6 +371,17 @@ async function fetchActivePromos() {
       mulai: promo.mulai || "",
       sampai: promo.sampai || "",
       aktif: true,
+      target:
+        promo.target === "jasa" || promo.target === "sparepart"
+          ? promo.target
+          : "total",
+      sparepartIds: normalizeSparepartIds(
+        Array.isArray(promo.sparepart_ids) && promo.sparepart_ids.length
+          ? promo.sparepart_ids
+          : promo.sparepart_id,
+      ),
+      sparepartId: promo.sparepart_id ? Number(promo.sparepart_id) : null,
+      sparepartNama: promo.sparepart_nama || "",
     }))
     .filter((promo) => promo.kode);
 }
@@ -380,58 +391,66 @@ function formatRequestPromoLabel(promo) {
     promo.tipe === "nominal"
       ? formatRupiah(promo.nilai)
       : `${promo.nilai}%`;
-  return `${promo.nama} — ${nilai}`;
+  const sasaran =
+    typeof getPromoTargetText === "function" &&
+    normalizePromoTarget(promo.target) !== "total"
+      ? ` · ${getPromoTargetText(promo.target, getPromoSparepartNama(promo))}`
+      : "";
+  return `${promo.nama} — ${nilai}${sasaran}`;
 }
 
 function updateRequestPromoHint() {
-  const select = document.getElementById("requestPromo");
   const hint = document.getElementById("requestPromoHint");
 
-  if (!select || !hint) return;
+  if (!hint) return;
 
-  const promo = activeRequestPromos.find(
-    (item) => item.kode === String(select.value || "").toUpperCase(),
-  );
+  const promos = getCheckedClaimPromos("requestPromoList");
 
-  if (promo) {
-    const nilai =
-      promo.tipe === "nominal"
-        ? formatRupiah(promo.nilai)
-        : `${promo.nilai}%`;
-    hint.textContent = `Klaim ${promo.nama}: diskon ${nilai} dipotong otomatis dari total tagihan.`;
+  if (promos.length) {
+    const rincian = promos.map((promo) => {
+      const nilai =
+        promo.tipe === "nominal"
+          ? formatRupiah(promo.nilai)
+          : `${promo.nilai}%`;
+      const sasaran =
+        typeof getPromoTargetText === "function"
+          ? getPromoTargetText(promo.target, getPromoSparepartNama(promo))
+          : "total tagihan";
+      return `${promo.nama} (${nilai} dari ${sasaran.toLowerCase()})`;
+    });
+    hint.textContent = `Klaim ${rincian.join(" + ")}. Diskon dihitung otomatis dan dipotong dari total tagihan.`;
     return;
   }
 
   hint.textContent = activeRequestPromos.length
-    ? "Pilih promo yang ingin diklaim. Diskon akan dipotong otomatis dari total tagihan."
+    ? "Centang satu atau lebih promo yang ingin diklaim. Diskon akan dipotong otomatis dari total tagihan."
     : "Belum ada promo aktif saat ini. Service tetap bisa diajukan tanpa diskon.";
 }
 
 function populateRequestPromoOptions(promos, selectedCode) {
-  const select = document.getElementById("requestPromo");
+  const list = document.getElementById("requestPromoList");
 
-  if (!select) return;
+  if (!list) return;
 
   const previous =
-    selectedCode === null ? select.value || "" : String(selectedCode || "");
+    selectedCode === null
+      ? getCheckedClaimPromos("requestPromoList").map((promo) => promo.kode)
+      : kodePromoList(selectedCode);
 
   activeRequestPromos = promos;
-  select.innerHTML =
-    '<option value="">Tanpa diskon</option>' +
-    promos
-      .map(
-        (promo) =>
-          `<option value="${escapeHTML(promo.kode)}">${escapeHTML(
-            formatRequestPromoLabel(promo),
-          )}</option>`,
-      )
-      .join("");
-
-  select.value = promos.some(
-    (promo) => promo.kode === String(previous).toUpperCase(),
-  )
-    ? String(previous).toUpperCase()
-    : "";
+  list.__claimPromos = promos;
+  list.innerHTML = promos.length
+    ? promos
+        .map(
+          (promo) => `<label class="promo-check-item">
+            <input type="checkbox" value="${escapeHTML(promo.kode)}"${
+              previous.includes(promo.kode) ? " checked" : ""
+            } />
+            <span>${escapeHTML(formatRequestPromoLabel(promo))}</span>
+          </label>`,
+        )
+        .join("")
+    : '<p class="form-hint">Belum ada promo aktif saat ini.</p>';
 
   updateRequestPromoHint();
 }
@@ -449,7 +468,7 @@ function initRequestForm() {
     ?.addEventListener("change", toggleRequestVehicleFields);
 
   document
-    .getElementById("requestPromo")
+    .getElementById("requestPromoList")
     ?.addEventListener("change", updateRequestPromoHint);
 
   document
@@ -753,26 +772,22 @@ async function submitServiceRequest(event) {
     return;
   }
 
-  const promoKode = String(
-    document.getElementById("requestPromo")?.value || "",
-  )
-    .trim()
-    .toUpperCase();
+  const promos = getCheckedClaimPromos("requestPromoList");
 
-  const promo = promoKode
-    ? activeRequestPromos.find((item) => item.kode === promoKode)
-    : null;
+  for (const promo of promos) {
+    if (!activeRequestPromos.some((item) => item.kode === promo.kode)) {
+      showError(
+        "Promo tersebut sudah tidak tersedia. Pilih promo lain atau tanpa diskon.",
+      );
+      return;
+    }
 
-  if (promoKode && !promo) {
-    showError(
-      "Promo tersebut sudah tidak tersedia. Pilih promo lain atau tanpa diskon.",
-    );
-    return;
-  }
-
-  if (promo && typeof isPromoActive === "function" && !isPromoActive(promo)) {
-    showError("Promo tersebut sudah berakhir. Pilih promo lain atau tanpa diskon.");
-    return;
+    if (typeof isPromoActive === "function" && !isPromoActive(promo)) {
+      showError(
+        "Promo tersebut sudah berakhir. Pilih promo lain atau tanpa diskon.",
+      );
+      return;
+    }
   }
 
   const kendaraan = getKendaraan();
@@ -842,12 +857,19 @@ async function submitServiceRequest(event) {
     requestedBy: "customer",
     approval: "Menunggu",
     approvalNote: "",
-    promoId: promo ? Number(promo.id) : null,
-    promoKode: promo ? promo.kode : "",
-    promoNama: promo ? promo.nama : "",
-    promoTipe: promo ? promo.tipe : "",
-    promoNilai: promo ? Number(promo.nilai) || 0 : 0,
+    promoId: null,
+    promoKode: "",
+    promoNama: "",
+    promoTipe: "",
+    promoNilai: 0,
+    promoTarget: "",
+    promoSparepartIds: [],
+    promoSparepartId: null,
+    promoSparepartNama: "",
+    promoList: [],
   };
+
+  applyClaimPromo(record, promos);
 
   const submitButton = document.querySelector(
     "#requestForm button[type='submit']",

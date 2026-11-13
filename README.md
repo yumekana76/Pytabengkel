@@ -10,6 +10,8 @@ ke Supabase saja.
 > (Satu-satunya "build" ada di Vercel: `scripts/build-config.js` yang hanya
 > menulis `js/config.prod.js` dari environment variable — lihat
 > [Environment variables](#0-environment-variables-supabase--vercel).)
+> Satu-satunya bagian ber-`npm install` adalah **service opsional**
+> `whatsapp-service/` (notifikasi WhatsApp via Baileys, terpisah dari web).
 
 > **Satu mode: Supabase.** Credential datang dari **environment variable**
 > (`SUPABASE_URL` + `SUPABASE_ANON_KEY`) lalu di-embed ke
@@ -52,6 +54,10 @@ ke Supabase saja.
 │       └── pengaturan.html     #   Tema, info akun, logout
 ├── supabase/
 │   └── schema.sql              # ⭐ DDL: tabel, trigger, RLS, fungsi
+├── whatsapp-service/           # 💬 Notifikasi WA info kendaraan (Baileys, Node.js)
+│   ├── server.js               #   HTTP server + koneksi WhatsApp + endpoint
+│   ├── messages.js             #   Deteksi event + penyusun pesan
+│   └── README.md               #   Panduan lengkap service WA
 ├── .env.example                # Template environment variable (isi jadi `.env`)
 ├── scripts/
 │   ├── build-config.js         # ⭐ env var -> js/config.prod.js (build Vercel)
@@ -73,8 +79,10 @@ ke Supabase saja.
 │   └── vendor/supabase.min.js  # Library Supabase (self-hosted)
 ```
 
-> **Tidak ada `package.json`, `node_modules`, atau proses build.**
-> Folder ini bisa langsung di-upload ke hosting statis apa pun.
+> **Tidak ada `package.json`, `node_modules`, atau proses build** pada web-nya —
+> folder ini bisa langsung di-upload ke hosting statis apa pun.
+> Pengecualian: `whatsapp-service/` (service terpisah, butuh Node.js;
+> lihat [Notifikasi WhatsApp](#-notifikasi-whatsapp-info-kendaraan)).
 
 ### 🗺️ Alur Halaman
 
@@ -156,7 +164,7 @@ File tersebut membuat:
 | `ensure_my_profile()` | RPC: memperbaiki profil yang hilang (dipanggil tiap login) |
 | `is_admin()` / `is_super_admin()` / `my_customer_id()` / `can_review()` | Helper RLS & hierarki role |
 | `admin_set_user_role()` | RPC super admin untuk mengubah role akun (dijaga di database) |
-| `promos` | Diskon/promo: kode, tipe (`persen`/`nominal`), nilai, periode, status aktif |
+| `promos` | Diskon/promo: kode, tipe (`persen`/`nominal`), nilai, sasaran (`total`/`jasa`/`sparepart`, bisa beberapa sparepart), periode, status aktif |
 | `public_reviews()` | Fungsi baca ulasan publik untuk landing page (tanpa login) |
 | `public_promos()` | Fungsi baca promo aktif untuk landing & pilihan promo customer (tanpa login) |
 | `public_workshop_info()` | Fungsi baca info bengkel publik untuk landing page (tanpa login) |
@@ -189,15 +197,54 @@ Di **Supabase Dashboard → Authentication → Providers → Email**:
   sungguhan, biarkan ON dan customer diminta konfirmasi via email)
 - **Reset password**: ON (kalau mau tautan reset password berfungsi)
 
+> **Troubleshooting — pendaftaran membalas `500 Error sending
+> confirmation email`:** email konfirmasi gagal dikirim. Periksa
+> **Authentication → Logs** di dashboard, lalu salah satu:
+>
+> 1. **Konfirmasi matikan `Confirm email`** (paling cepat) — pendaftaran
+>    langsung aktif tanpa email.
+> 2. Kalau memakai SMTP khusus (mis. Resend): pastikan SMTP diisi benar
+>    (`smtp.resend.com`, user `resend`, password = API key) **dan domain
+>    pengirim sudah diverifikasi** di Resend — API key yang sah tetap
+>    ditolak selama domain belum diverifikasi (`validation_error:
+>    domain is not verified`).
+
 ### Langkah 5 — Buat akun admin / super admin
 
 1. Buka `html/index.html` → daftar lewat tombol **Kirim Link Login**,
    atau jalankan di SQL Editor:
 
 ```sql
-insert into auth.users (email, password, email_confirmed_at)
-values ('admin@workshop.com', 'admin123', now());
+-- Password HARUS di-hash (pgcrypto; ekstensi ini sudah dibuat schema.sql).
+-- Kolom token dikosongkan (''), BUKAN dibiarkan NULL: bila NULL, login
+-- melempar 500 "Database error querying schema" (bug supabase/auth #1940).
+insert into auth.users (
+  instance_id, id, aud, role, email, encrypted_password, email_confirmed_at,
+  confirmation_token, recovery_token, email_change, email_change_token_new,
+  raw_app_meta_data, raw_user_meta_data, created_at, updated_at
+)
+values (
+  '00000000-0000-0000-0000-000000000000', gen_random_uuid(),
+  'authenticated', 'authenticated', 'admin@workshop.com',
+  crypt('admin123', gen_salt('bf')), now(),
+  '', '', '', '',
+  '{"provider":"email","providers":["email"]}',
+  '{"nama": "Admin"}', now(), now()
+);
+
+-- Baris identitas diperlukan agar login password menemukan kredensial.
+insert into auth.identities (provider_id, user_id, identity_data, provider,
+                             last_sign_in_at, created_at, updated_at)
+select id::text, id,
+       jsonb_build_object('sub', id::text, 'email', email, 'email_verified', true),
+       'email', now(), now(), now()
+from auth.users
+where email = 'admin@workshop.com';
 ```
+
+   Trigger `on_auth_user_created` otomatis membuat baris `customers` +
+   `profiles` untuk akun di atas. Ganti email & password `admin123`
+   dengan kredensial yang Anda inginkan.
 
 2. Jadikan dia admin. Pendaftaran baru **selalu** berstatus `customer`
    (trigger `handle_new_user` tidak pernah memberi role staf), jadi
@@ -523,21 +570,39 @@ Karena project ini **statis tanpa build**, langsung upload/drag-drop saja:
 
 Admin membuat promo di halaman **Diskon** (persen atau nominal, periode,
 status aktif). Promo aktif tampil di landing page, dan tombol **Klaim**
-membawa customer ke form ajukan service dengan promo sudah terpilih —
-termasuk setelah login.
+langsung membuka form pengisian service dengan promo tersebut sudah
+tercentang — customer diarahkan ke form ajukan service (setelah login bila
+belum masuk), sedangkan admin/super langsung ke form Input Data service di
+dashboard.
 
 - Diskon adalah pilihan **terpisah** di form ajukan service, bukan bagian
-  dari keluhan.
-- Tipe & nilai promo disimpan sebagai *snapshot* pada service, jadi
-  mengubah atau menghapus promo tidak mengubah tagihan service lama.
-- Total tagihan dihitung otomatis: **subtotal − diskon**. Rincian diskon
-  tampil di detail service, modal invoice, dan struk.
+  dari keluhan. Satu service boleh memakai **lebih dari satu promo**
+  (centang beberapa promo); potongan tiap promo dihitung berurutan sesuai
+  sasarannya.
+- Setiap promo punya **sasaran**: seluruh tagihan, biaya jasa saja, atau
+  sparepart (semua sparepart / satu atau beberapa sparepart tertentu yang
+  dicentang di form). Diskon hanya memotong bagian yang menjadi sasaran —
+  mis. promo sparepart "Oli Mesin" + "Filter Oli" memotong harga kedua
+  part itu saja, bukan total tagihan.
+- Tipe, nilai, dan sasaran promo disimpan sebagai *snapshot* pada service,
+  jadi mengubah atau menghapus promo tidak mengubah tagihan service lama.
+- Total tagihan dihitung otomatis: **subtotal − seluruh diskon**. Harga
+  baris yang terkena diskon ikut ditampilkan sudah terpotong di detail
+  service, modal invoice, dan struk; invoice/struk juga menampilkan satu
+  baris diskon per promo.
 - Halaman Diskon menampilkan **Pelanggan Klaim** (jumlah customer unik)
   dan kolom **Diklaim** per promo; klik angkanya untuk melihat daftar
   pelanggan dan service yang memakai promo tersebut. Ajuan yang ditolak
   tidak dihitung.
-- Jalankan ulang `supabase/schema.sql` agar kolom `promo_*` pada tabel
-  `services` dan `id` pada RPC `public_promos()` tersedia.
+- Jalankan ulang `supabase/schema.sql` agar kolom `promo_list` (daftar
+  multi-promo) dan `promo_*` pada tabel `services`, kolom
+  `target`/`sparepart_ids` pada tabel `promos`, dan `id`/`target` pada RPC
+  `public_promos()` tersedia. Skrip juga menyalin
+  sasaran sparepart lama (satu id) ke kolom daftar baru dan mengakhiri
+  dengan `notify pgrst, 'reload schema'` agar API langsung mengenali
+  kolom baru. Selama kolom belum ada, penyimpanan promo/service tetap
+  berhasil (kolom sasaran sparepart dilewati) dan muncul peringatan di
+  halaman; jalankan ulang schema untuk mengaktifkan sasaran sparepart.
 
 ---
 
@@ -585,6 +650,27 @@ semua ulasan di halaman khusus **Ulasan**.
 - Tombol tema di **topbar semua halaman** + halaman login.
 - Pengaturan customer: **Terang / Gelap / Ikuti Sistem**.
 - Skrip di `<head>` menerapkan tema sebelum halaman digambar (tidak ada "kedipan").
+
+---
+
+## 💬 Notifikasi WhatsApp (Info Kendaraan)
+
+Web bisa memberitahu pelanggan **info kendaraan** lewat WhatsApp
+otomatis saat status service berubah (ajuan diterima, disetujui/ditolak,
+dikerjakan, selesai, pembayaran lunas) — memakai
+[Baileys](https://github.com/whiskeysockets/Baileys) via folder
+`whatsapp-service/`:
+
+```bash
+cd whatsapp-service && npm install && npm start   # scan QR sekali di terminal
+```
+
+- Frontend mengirim event setelah penyimpanan sukses (`js/db.js`),
+  dikonfigurasi lewat `WA_SERVER_URL` + `WA_API_KEY` di `.env`
+  (→ `node scripts/build-config.js`).
+- Opsional: Supabase Database Webhook sebagai jalur utama supaya tetap
+  terkirim tanpa browser terbuka.
+- Detail lengkap: **[whatsapp-service/README.md](whatsapp-service/README.md)**.
 
 ---
 

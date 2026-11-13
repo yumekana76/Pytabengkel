@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; font-src 'self' https://cdnjs.cloudflare.com; img-src 'self' data: https://*.supabase.co; connect-src 'self' https://*.supabase.co wss://*.supabase.co; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+      content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; font-src 'self' https://cdnjs.cloudflare.com; img-src 'self' data: https://*.supabase.co; connect-src 'self' https://*.supabase.co wss://*.supabase.co http://localhost:3000; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
     />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Dashboard Customer | Pytabengkel</title>
@@ -326,10 +326,10 @@
                   <div id="requestKeluhanList" class="service-part-list"></div>
                 </div>
               <div class="form-group form-full">
-                <label for="requestPromo">Diskon / Promo</label>
-                <select id="requestPromo" class="form-control"></select>
+                <label id="requestPromoLabel">Diskon / Promo</label>
+                <div id="requestPromoList" class="promo-check-list" role="group" aria-labelledby="requestPromoLabel"></div>
                 <span class="form-hint" id="requestPromoHint">
-                  Pilih promo yang ingin diklaim. Diskon akan dipotong otomatis dari total tagihan.
+                  Centang satu atau lebih promo yang ingin diklaim. Diskon akan dipotong otomatis dari total tagihan.
                 </span>
               </div>
               <div class="form-group">
