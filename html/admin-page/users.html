@@ -100,9 +100,6 @@
             <i class="fa-solid fa-clock-rotate-left nav-icon" aria-hidden="true"></i
             ><span>Riwayat</span>
           </a>
-          <a href="ulasan.html" class="nav-link">
-            <i class="fa-solid fa-star nav-icon" aria-hidden="true"></i><span>Ulasan</span>
-          </a>
           <a href="keuangan.html" class="nav-link">
             <i class="fa-solid fa-wallet nav-icon" aria-hidden="true"></i><span>Keuangan</span>
           </a>
@@ -112,8 +109,9 @@
           <a href="sparepart.html" class="nav-link">
             <i class="fa-solid fa-gears nav-icon" aria-hidden="true"></i><span>Sparepart</span>
           </a>
-          <a href="diskon.html" class="nav-link"
-          ><i class="fa-solid fa-tags nav-icon" aria-hidden="true"></i><span>Diskon</span>
+          <a href="landing.html" class="nav-link" data-super-admin-only hidden>
+            <i class="fa-solid fa-wand-magic-sparkles nav-icon" aria-hidden="true"></i>
+            <span>Landing Page</span>
           </a>
           <a href="users.html" class="nav-link active" aria-current="page">
             <i class="fa-solid fa-crown nav-icon" aria-hidden="true"></i
@@ -128,7 +126,10 @@
         <section class="page-header">
           <div>
             <h2>Kelola Pengguna</h2>
-            <p>Atur role akun: Super Admin, Administrator, atau Customer.</p>
+            <p>
+              Atur role, blokir, atau hapus akun: Super Admin, Administrator,
+              atau Customer.
+            </p>
           </div>
         </section>
 
@@ -137,9 +138,11 @@
           <div>
             <strong>Khusus Super Admin</strong>
             <p>
-              Administrator biasa dapat mengelola operasional bengkel, tetapi
-              tidak dapat mengubah role akun. Role akun Anda sendiri juga tidak
-              bisa diubah dari halaman ini.
+              Halaman ini hanya terbuka untuk Super Admin — admin biasa tidak
+              memiliki akses Kelola Pengguna. Dari sini Super Admin bisa
+              mengubah role, memblokir, maupun menghapus akun (kecuali akun
+              sendiri dan akun Super Admin lain). Role akun Anda sendiri juga
+              tidak bisa diubah dari halaman ini.
             </p>
           </div>
         </section>
@@ -204,6 +207,7 @@
                   <th scope="col">Role Saat Ini</th>
                   <th scope="col">Data Customer</th>
                   <th scope="col">Ubah Role</th>
+                  <th scope="col">Aksi</th>
                 </tr>
               </thead>
               <tbody id="userTable"></tbody>

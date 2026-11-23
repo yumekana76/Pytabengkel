@@ -3126,6 +3126,8 @@ document.addEventListener("DOMContentLoaded", async function () {
   if (typeof initKeuanganPage === "function") initKeuanganPage();
   if (typeof initUlasanPage === "function") initUlasanPage();
   if (typeof initDiskonPage === "function") initDiskonPage();
+  if (typeof initBlokPage === "function") initBlokPage();
+  if (typeof initLandingAdminPage === "function") initLandingAdminPage();
   if (typeof initUsersPage === "function") initUsersPage();
 });
 

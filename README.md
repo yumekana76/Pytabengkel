@@ -40,9 +40,9 @@ ke Supabase saja.
 │   │   ├── keuangan.html       #   Pendapatan per bulan
 │   │   ├── mekanik.html        #   Data mekanik
 │   │   ├── sparepart.html      #   Stok sparepart
-│   │   ├── diskon.html         #   Promo & diskon (kode, nilai, periode)
-│   │   ├── users.html          #   Kelola Pengguna & role (khusus super admin)
-│   │   └── pengaturan.html     #   Info bengkel, backup, reset data
+│   │   ├── landing.html       #   Kelola Landing Page: hero, info bengkel, promo, blok, ulasan (khusus super admin)
+│   │   ├── users.html          #   Kelola Pengguna: role, blokir, hapus akun (khusus super admin)
+│   │   └── pengaturan.html     #   Backup, restore, reset data, log error
 │   └── customers-page/         # 👤 Portal Customer
 │       ├── register.html       #   Pendaftaran akun baru
 │       ├── dashboard.html      #   Ringkasan kendaraan, service, tagihan
@@ -74,7 +74,10 @@ ke Supabase saja.
 │   ├── login.js                # Logika halaman login terpadu
 │   ├── global.js               # Helper bersama
 │   ├── landing.js              # Logika landing page (data publik, ulasan, navigasi)
-│   ├── diskon.js               # Logika halaman Diskon/Promo
+│   ├── landing-admin.js        # Logika halaman Kelola Landing (hero + info bengkel)
+│   ├── diskon.js               # Logika panel Promo & Diskon (halaman Kelola Landing)
+│   ├── blok.js                 # Logika panel Blok Konten (halaman Kelola Landing)
+│   ├── ulasan.js               # Logika panel Ulasan (halaman Kelola Landing)
 │   ├── users.js                # Logika halaman Kelola Pengguna
 │   └── vendor/supabase.min.js  # Library Supabase (self-hosted)
 ```
@@ -94,8 +97,9 @@ Landing publik (html/landing.html — juga root "/")
         ├─ Administrator / Super Admin ──► html/admin-page/dashboard.html
         │                            ├─ customers · kendaraan · service
         │                            ├─ riwayat · keuangan · mekanik
-        │                            ├─ sparepart · diskon · pengaturan
-        │                            └─ … + users.html (Kelola Pengguna)
+        │                            ├─ sparepart · pengaturan
+        │                            └─ super admin saja: landing.html
+        │                               (Kelola Landing) · users.html
         │
         └─ Customer ─────────────► html/customers-page/dashboard.html
                                      ├─ kendaraan · service · riwayat
@@ -156,7 +160,7 @@ File tersebut membuat:
 | `spareparts` | Stok & harga sparepart |
 | `reviews` | Ulasan/rating customer (maksimal 1 ulasan per service) |
 | `workshop_info` | Info bengkel (nama, alamat, kontak) — baris tunggal |
-| `profiles` | Profil user: role (`super_admin`/`admin`/`customer`) + tautan ke `customers` |
+| `profiles` | Profil user: role (`super_admin`/`admin`/`customer`), status blokir (`banned_at`), + tautan ke `customers` |
 | `service_photos` | Foto service (Supabase Storage, bucket `service-photos`) |
 | `activity_logs` | Jejak perubahan (siapa mengubah apa) |
 | `client_errors` | Log error JavaScript dari sisi client |
@@ -164,9 +168,13 @@ File tersebut membuat:
 | `ensure_my_profile()` | RPC: memperbaiki profil yang hilang (dipanggil tiap login) |
 | `is_admin()` / `is_super_admin()` / `my_customer_id()` / `can_review()` | Helper RLS & hierarki role |
 | `admin_set_user_role()` | RPC super admin untuk mengubah role akun (dijaga di database) |
+| `admin_delete_user()` | RPC super admin untuk menghapus akun admin/customer |
+| `admin_set_user_ban()` | RPC super admin untuk memblokir / membuka blokir akun |
 | `promos` | Diskon/promo: kode, tipe (`persen`/`nominal`), nilai, sasaran (`total`/`jasa`/`sparepart`, bisa beberapa sparepart), periode, status aktif |
+| `page_blocks` | Blok konten landing page: judul, isi, tipe (`teks`/`gambar`/`cta`), gambar, tautan tombol, urutan, status aktif |
 | `public_reviews()` | Fungsi baca ulasan publik untuk landing page (tanpa login) |
 | `public_promos()` | Fungsi baca promo aktif untuk landing & pilihan promo customer (tanpa login) |
+| `public_page_blocks()` | Fungsi baca blok konten aktif untuk landing page (tanpa login) |
 | `public_workshop_info()` | Fungsi baca info bengkel publik untuk landing page (tanpa login) |
 | `delete_my_account()` | Fungsi customer menghapus akunnya sendiri |
 | RLS policies | Customer hanya bisa melihat & mengubah datanya sendiri |
@@ -324,6 +332,9 @@ Akun dibuat **hanya lewat Supabase Auth** — tidak ada lagi akun demo lokal:
   baru diatur dari tautan itu — bukan lewat form di aplikasi.
 - Role (super_admin / admin / customer) dikelola super admin di
   **Kelola Pengguna**, dijaga RPC `admin_set_user_role()`.
+- **Blokir / hapus akun** (khusus super admin) juga di **Kelola Pengguna**,
+  dijaga RPC `admin_set_user_ban()` & `admin_delete_user()` — lihat
+  [Fitur Blokir & Hapus Akun](#-fitur-blokir--hapus-akun).
 
 ---
 
@@ -333,7 +344,7 @@ Akun dibuat **hanya lewat Supabase Auth** — tidak ada lagi akun demo lokal:
 |---|---|
 | Daftar akun | Data customer **muncul di tabel Customers** (dibuat trigger) |
 | Ajukan service | Masuk **antrean Service** dengan status `Menunggu` |
-| Klaim promo saat ajukan service | Promo tersimpan di service, total tagihan otomatis dipotong, dan jumlah klaim bertambah di halaman **Diskon** |
+| Klaim promo saat ajukan service | Promo tersimpan di service, total tagihan otomatis dipotong, dan jumlah klaim bertambah di halaman **Kelola Landing Page** |
 | Ubah profil | Nama/telepon/alamat **terupdate di tabel Customers** |
 | Tandai tagihan lunas | Kolom **Pembayaran** di Service & Riwayat ikut berubah |
 | Hapus akun | Akun login dihapus permanen; data kendaraan & riwayat service tetap tersimpan di bengkel |
@@ -353,6 +364,8 @@ Sebaliknya dari sisi admin:
 - **Customer menghapus akun sendiri** lewat Pengaturan → Keamanan → Hapus Akun.
   Jalankan ulang `supabase/schema.sql` agar fungsi
   `delete_my_account()` tersedia.
+- **Blokir / hapus akun** dari menu **Kelola Pengguna** (oleh super admin)
+  — lihat [Fitur Blokir & Hapus Akun](#-fitur-blokir--hapus-akun).
 
 ---
 
@@ -381,7 +394,8 @@ python3 -m http.server 8080
 | Kredensial Supabase | `.env` lalu `node scripts/build-config.js` (atau Vercel Environment Variables) |
 | Warna / tema / layout | `css/global.css` (semua token di `:root`) |
 | Landing page | `html/landing.html` · `css/landing.css` · `js/landing.js` |
-| Kelola Pengguna & role | `html/admin-page/users.html` · `js/users.js` |
+| Isi landing (hero, info bengkel, promo, blok, ulasan) | `html/admin-page/landing.html` · `js/landing-admin.js` (+ `js/blok.js`, `js/diskon.js`, `js/ulasan.js`) |
+| Kelola Pengguna, blokir & hapus akun | `html/admin-page/users.html` · `js/users.js` |
 | Style halaman customer | `css/customer.css` |
 | Tabel & data layer | `js/db.js` |
 | Logic halaman admin | `js/<halaman>.js` |
@@ -538,7 +552,7 @@ Karena project ini **statis tanpa build**, langsung upload/drag-drop saja:
 | **Riwayat** | Bulan + **Tab Lunas / Belum Lunas** + Sort | **Modal detail lengkap + stepper status + rincian tagihan + cetak struk** |
 | **Riwayat → Aktivitas** | Entitas + Aksi + Sort + Cari | Tabel jejak perubahan (siapa mengubah apa) |
 | **Keuangan** | Tahun, Bulan + **Tab Lunas / Belum Lunas** + Sort | **Modal detail transaksi (rincian biaya, periode, sisa tagihan) + stepper status + cetak struk** |
-| **Ulasan** | Rating (1–5) + Sort + Cari | **Modal detail service + ulasan customer + hapus ulasan** |
+| **Kelola Landing → Ulasan** | Rating (1–5) + Sort + Cari | **Modal detail service + ulasan customer + hapus ulasan** |
 | **Mekanik** | Status (Aktif / Izin) + Sort | Modal edit (+ nomor HP) |
 | **Sparepart** | Stok + Sort (harga, stok, nama) | Modal edit |
 | **Customer** | Status + Sort + **tab lunas/belum lunas** | Invoice + tandai lunas |
@@ -568,12 +582,12 @@ Karena project ini **statis tanpa build**, langsung upload/drag-drop saja:
 
 ## 🏷️ Fitur Diskon & Promo
 
-Admin membuat promo di halaman **Diskon** (persen atau nominal, periode,
-status aktif). Promo aktif tampil di landing page, dan tombol **Klaim**
-langsung membuka form pengisian service dengan promo tersebut sudah
-tercentang — customer diarahkan ke form ajukan service (setelah login bila
-belum masuk), sedangkan admin/super langsung ke form Input Data service di
-dashboard.
+Super admin membuat promo di halaman **Kelola Landing Page** (persen atau
+nominal, periode, status aktif). Promo aktif tampil di landing page, dan
+tombol **Klaim** langsung membuka form pengisian service dengan promo
+tersebut sudah tercentang — customer diarahkan ke form ajukan service
+(setelah login bila belum masuk), sedangkan admin/super langsung ke form
+Input Data service di dashboard.
 
 - Diskon adalah pilihan **terpisah** di form ajukan service, bukan bagian
   dari keluhan. Satu service boleh memakai **lebih dari satu promo**
@@ -590,7 +604,7 @@ dashboard.
   baris yang terkena diskon ikut ditampilkan sudah terpotong di detail
   service, modal invoice, dan struk; invoice/struk juga menampilkan satu
   baris diskon per promo.
-- Halaman Diskon menampilkan **Pelanggan Klaim** (jumlah customer unik)
+- Panel **Pelanggan Klaim** (jumlah customer unik)
   dan kolom **Diklaim** per promo; klik angkanya untuk melihat daftar
   pelanggan dan service yang memakai promo tersebut. Ajuan yang ditolak
   tidak dihitung.
@@ -603,6 +617,81 @@ dashboard.
   kolom baru. Selama kolom belum ada, penyimpanan promo/service tetap
   berhasil (kolom sasaran sparepart dilewati) dan muncul peringatan di
   halaman; jalankan ulang schema untuk mengaktifkan sasaran sparepart.
+
+---
+
+## 🧱 Fitur Blok Konten (Landing Page)
+
+Super admin membuat **blok konten** di halaman **Kelola Landing Page**
+(menu samping, khusus super admin). Blok aktif otomatis tampil di landing page pada section
+**Informasi Terbaru** (`#blok`), diurutkan sesuai kolom **Urutan** (angka
+kecil tampil lebih dulu).
+
+- **Tipe blok:**
+  - **Teks** — judul + paragraf (pengumuman, tips, info bengkel).
+  - **Gambar** — foto + judul/keterangan (poster promo, foto kegiatan).
+    Isi **URL Gambar** dengan gambar publik (mis. bucket Supabase
+    `site-assets`); bila URL diblokir CSP atau gagal dimuat, kartu tetap
+    tampil tanpa gambar.
+  - **Tombol** — judul + paragraf + tombol ajakan berisi **Label** dan
+    **Tautan** (boleh anchor `#kontak`, halaman relatif, atau URL
+    `https://…` — tautan eksternal terbuka di tab baru).
+- Blok **nonaktif** disembunyikan dari landing page tanpa perlu dihapus
+  (bisa diaktifkan lagi kapan pun).
+- CRUD mengikuti pola halaman lain: **Tambah / Edit / Hapus** (hapus
+  memakai konfirmasi dua klik), pencarian, filter status, dan pengurutan.
+- Perubahan tercatat di **Aktivitas** (menu Riwayat) sebagai entitas `Blok`.
+- Landing page membaca blok lewat RPC `public_page_blocks()` (aman dibaca
+  tanpa login); tabel `page_blocks` sendiri hanya terbaca & tertulis oleh
+  admin lewat RLS.
+- **Instalasi / update:** jalankan ulang `supabase/schema.sql`
+  (idempoten) supaya tabel `page_blocks` + RPC `public_page_blocks()`
+  tersedia, lalu muat ulang halaman.
+
+---
+
+## 🔒 Fitur Blokir & Hapus Akun (Kelola Pengguna)
+
+Menu **Kelola Pengguna** dan **Landing Page** tetap **khusus super admin** —
+admin biasa tidak
+memiliki akses ke halaman ini (nav tersembunyi di sidebar, dan guard
+halaman mengembalikan admin biasa ke dashboard). Dari kolom **Aksi** di
+tabel pengguna:
+
+| Aksi | Siapa yang boleh | Target yang diizinkan |
+|---|---|---|
+| **Ubah Role** | Super admin saja | Semua akun kecuali akun sendiri |
+| **Blokir / Buka Blokir** | Super admin saja | Akun admin & customer (bukan super admin, bukan akun sendiri) |
+| **Hapus** | Super admin saja | Akun admin & customer (bukan super admin, bukan akun sendiri) |
+
+**Cara kerja Blokir:**
+
+- Blokir menyetel `profiles.banned_at` lewat RPC `admin_set_user_ban()`
+  (konfirmasi dua klik di UI).
+- Akun yang diblokir **tidak bisa login** — `Auth.signIn` menolak dengan
+  pesan "Akun ini diblokir oleh admin", dan sesi lama yang masih aktif
+  langsung diakhiri saat halaman mana pun dibuka (`Auth.restoreSession`).
+- **Buka Blokir** menghapus `banned_at` sehingga akun bisa login lagi —
+  data customer/service tidak pernah tersentuh.
+- Pemblokiran tidak bisa dilepas sendiri oleh akun yang terblokir, maupun
+  oleh admin biasa: trigger `guard_profile_write` menolak perubahan
+  `banned_at` dari non-super admin.
+
+**Cara kerja Hapus:**
+
+- Hapus memanggil RPC `admin_delete_user()` (konfirmasi dua klik) yang
+  menghapus baris `auth.users`; profil ikut terhapus (`on delete cascade`),
+  sedangkan **data customer/service tetap tersimpan** sebagai riwayat
+  bengkel — sama seperti hapus akun sendiri oleh customer.
+- Akun super admin dan akun sendiri dilindungi **di database** (RPC
+  menolaknya), bukan hanya disembunyikan di UI.
+
+- Perubahan tercatat di **Aktivitas** (entitas `Pengguna`) sebagai
+  `blokir_pengguna` / `buka_blokir` / `hapus_pengguna`.
+- **Instalasi / update:** jalankan ulang `supabase/schema.sql`
+  (idempoten) supaya kolom `profiles.banned_at` + RPC
+  `admin_set_user_ban()` dan `admin_delete_user()` tersedia, lalu
+  muat ulang halaman.
 
 ---
 
