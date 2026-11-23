@@ -27,10 +27,11 @@ ke Supabase saja.
 
 ```
 .
-├── index.html                  # Redirect root → html/landing.html
+├── index.html                  # Redirect root → html/index.html
 ├── html/                       # 📄 Semua halaman HTML
-│   ├── landing.html            # ⭐ Landing page publik (beranda)
-│   ├── index.html              # Login terpadu (Admin / Super Admin / Customer)
+│   ├── index.html              # ⭐ Landing page publik (beranda)
+│   ├── login.html              # Login terpadu (Admin / Super Admin / Customer)
+│   ├── detail.html             # Detail konten kartu landing (promo / informasi / layanan / ulasan)
 │   ├── admin-page/             # 🔧 Portal Admin & Super Admin
 │   │   ├── dashboard.html      #   Dashboard
 │   │   ├── customers.html      #   Manajemen customer (+ kelola akun login)
@@ -90,10 +91,13 @@ ke Supabase saja.
 ### 🗺️ Alur Halaman
 
 ```
-Landing publik (html/landing.html — juga root "/")
+Landing publik (html/index.html — juga root "/")
    ├─ Nav di header · hero · promo & diskon · layanan · ulasan · kontak
    │
-   └─ Masuk ► html/index.html (login terpadu)
+   ├─ Kartu promo / informasi / layanan / ulasan ──► html/detail.html?type=…&id=…
+   │                            (routing: promo | informasi | layanan | ulasan)
+   │
+   └─ Masuk ► html/login.html (login terpadu)
         ├─ Administrator / Super Admin ──► html/admin-page/dashboard.html
         │                            ├─ customers · kendaraan · service
         │                            ├─ riwayat · keuangan · mekanik
@@ -106,7 +110,7 @@ Landing publik (html/landing.html — juga root "/")
                                      ├─ keuangan
                                      └─ profil · pengaturan
 
-Guard auth: belum login → arahkan ke ../index.html?role=admin|super_admin|customer
+Guard auth: belum login → arahkan ke ../login.html?role=admin|super_admin|customer
 ```
 
 ## 👥 Role & Hak Akses
@@ -219,7 +223,7 @@ Di **Supabase Dashboard → Authentication → Providers → Email**:
 
 ### Langkah 5 — Buat akun admin / super admin
 
-1. Buka `html/index.html` → daftar lewat tombol **Kirim Link Login**,
+1. Buka `html/login.html` → daftar lewat tombol **Kirim Link Login**,
    atau jalankan di SQL Editor:
 
 ```sql
@@ -277,7 +281,7 @@ where id = (select id from auth.users where email = 'owner@workshop.com')
   and role <> 'super_admin';
 ```
 
-4. Login di `html/index.html?role=admin` (atau `?role=super_admin`).
+4. Login di `html/login.html?role=admin` (atau `?role=super_admin`).
    Setelah itu, super admin bisa mengatur role akun lain di menu
    **Kelola Pengguna** tanpa perlu SQL lagi.
 
@@ -375,13 +379,13 @@ Sebaliknya dari sisi admin:
 
 ```bash
 # Cara 1 — buka langsung
-start html\landing.html          # Windows
-xdg-open html/landing.html       # Linux
-open html/landing.html           # macOS
+start html\index.html             # Windows
+xdg-open html/index.html          # Linux
+open html/index.html              # macOS
 
 # Cara 2 — server statis (disarankan, agar fetch & cookie rapi)
 python3 -m http.server 8080
-# lalu buka http://localhost:8080/ (landing) atau /html/index.html (login)
+# lalu buka http://localhost:8080/ (landing) atau /html/login.html (login)
 ```
 
 > Memakai `file://` juga bisa jalan, tapi **server statis lebihrecommended**
@@ -393,7 +397,8 @@ python3 -m http.server 8080
 |---|---|
 | Kredensial Supabase | `.env` lalu `node scripts/build-config.js` (atau Vercel Environment Variables) |
 | Warna / tema / layout | `css/global.css` (semua token di `:root`) |
-| Landing page | `html/landing.html` · `css/landing.css` · `js/landing.js` |
+| Landing page | `html/index.html` · `css/landing.css` · `js/landing.js` |
+| Halaman detail (routing dari kartu landing) | `html/detail.html` · `js/detail.js` |
 | Isi landing (hero, info bengkel, promo, blok, ulasan) | `html/admin-page/landing.html` · `js/landing-admin.js` (+ `js/blok.js`, `js/diskon.js`, `js/ulasan.js`) |
 | Kelola Pengguna, blokir & hapus akun | `html/admin-page/users.html` · `js/users.js` |
 | Style halaman customer | `css/customer.css` |
@@ -710,7 +715,7 @@ semua ulasan di halaman khusus **Ulasan**.
   ulasan bulan ini, service belum dinilai) + tabel ulasan dengan filter
   rating, sort, dan pencarian → **Detail** untuk membuka service + ulasan →
   **Hapus Ulasan** (konfirmasi dua klik).
-- **Publik** → landing page (`html/landing.html`) menampilkan section
+- **Publik** → landing page (`html/index.html`) menampilkan section
   **ulasan pelanggan**: rating rata-rata + testimoni terbaru (nama depan
   saja). Data diambil lewat fungsi SQL `public_reviews()` yang aman
   dibaca tanpa login — tabel `reviews` sendiri tetap tertutup oleh RLS.

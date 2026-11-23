@@ -53,7 +53,7 @@ create table if not exists public.workshop_info (
   hari_buka   text not null default '',
   -- URL publik foto latar hero landing page (bucket site-assets); kosong = gradien tema.
   hero_foto   text not null default '',
-  -- Teks hero landing page; kosong = teks default di html/landing.html.
+  -- Teks hero landing page; kosong = teks default di html/index.html.
   hero_label     text not null default '',
   hero_judul     text not null default '',
   hero_deskripsi text not null default '',
@@ -62,7 +62,7 @@ create table if not exists public.workshop_info (
 
 -- Blok konten modular landing page (dikelola admin di halaman Blok).
 -- Satu baris = satu blok (teks / gambar / tombol) yang dirender di
--- section #blok html/landing.html sesuai urutan & status aktif.
+-- section #blok html/index.html sesuai urutan & status aktif.
 -- id bigint tanpa default — frontend mengirim id eksplisit lewat
 -- upsert, sama seperti tabel promos/services.
 create table if not exists public.page_blocks (

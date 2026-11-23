@@ -243,6 +243,22 @@
     }
     comment.textContent = text;
 
+    /* Routing ke halaman detail — kunci route memakai created_at karena
+       RPC publik public_reviews() tidak mengeluarkan id ulasan. */
+    if (row.created_at) {
+      var detailLink = document.createElement("a");
+      detailLink.className = "lp-card-detail";
+      detailLink.href =
+        "detail.html?type=ulasan&id=" +
+        encodeURIComponent(String(row.created_at));
+      detailLink.appendChild(document.createTextNode("Lihat detail "));
+      var detailArrow = document.createElement("i");
+      detailArrow.className = "fa-solid fa-arrow-right";
+      detailArrow.setAttribute("aria-hidden", "true");
+      detailLink.appendChild(detailArrow);
+      card.appendChild(detailLink);
+    }
+
     card.appendChild(head);
     card.appendChild(rating);
     card.appendChild(comment);
@@ -402,7 +418,7 @@
          tetap terpilih setelah berhasil masuk. next diarahkan ke form
          customer; login admin/super memiliki tujuan sendiri. */
       var href =
-        "index.html?role=customer&next=" +
+        "login.html?role=customer&next=" +
         encodeURIComponent(loggedHref) +
         (code ? "&klaim=" + encodeURIComponent(code) : "");
       var card = document.createElement("article");
@@ -414,6 +430,7 @@
         "</div>" +
         "<h4></h4>" +
         "<p></p>" +
+        '<a class="lp-card-detail" href="#">Lihat detail <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></a>' +
         '<div class="lp-promo-code"><span>Kode promo</span><strong></strong></div>' +
         '<div class="lp-promo-foot"><span><i class="fa-solid fa-calendar" aria-hidden="true"></i> <span class="lp-promo-period"></span></span>' +
           '<a data-auth-link data-loggedin-label="Klaim">Klaim <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></a>' +
@@ -423,7 +440,14 @@
       card.querySelector("p").textContent = promo.deskripsi || "Promo berlaku sesuai ketentuan bengkel.";
       card.querySelector(".lp-promo-code strong").textContent = code || "-";
       card.querySelector(".lp-promo-period").textContent = formatPromoPeriode(promo);
-      var link = card.querySelector("a");
+      /* Routing ke halaman detail — id utama, kode promo cadangan. */
+      card
+        .querySelector(".lp-card-detail")
+        .setAttribute(
+          "href",
+          "detail.html?type=promo&id=" + encodeURIComponent(String(promo.id || code)),
+        );
+      var link = card.querySelector(".lp-promo-foot a");
       link.setAttribute("href", href);
       link.setAttribute("data-loggedin-href", loggedHref);
       link.setAttribute("data-admin-href", adminHref);
@@ -451,6 +475,11 @@
 
     var card = document.createElement("article");
     card.className = "stat-card lp-block-card";
+
+    /* Routing ke halaman detail — hanya bila blok punya id. */
+    var detailHref = block.id
+      ? "detail.html?type=informasi&id=" + encodeURIComponent(String(block.id))
+      : "";
 
     var head = document.createElement("div");
     head.className = "lp-block-head";
@@ -492,7 +521,15 @@
 
     if (judul) {
       var heading = document.createElement("h4");
-      heading.textContent = judul;
+      if (detailHref) {
+        var titleLink = document.createElement("a");
+        titleLink.className = "lp-card-detail-title";
+        titleLink.href = detailHref;
+        titleLink.textContent = judul;
+        heading.appendChild(titleLink);
+      } else {
+        heading.textContent = judul;
+      }
       card.appendChild(heading);
     }
 
@@ -519,6 +556,20 @@
       link.appendChild(arrow);
       foot.appendChild(link);
       card.appendChild(foot);
+    } else if (detailHref) {
+      /* Tanpa tautan eksternal → tawarkan buka halaman detail. */
+      var detailFoot = document.createElement("div");
+      detailFoot.className = "lp-block-foot";
+      var detailLink = document.createElement("a");
+      detailLink.className = "lp-card-detail";
+      detailLink.href = detailHref;
+      detailLink.appendChild(document.createTextNode("Lihat detail "));
+      var detailArrow = document.createElement("i");
+      detailArrow.className = "fa-solid fa-arrow-right";
+      detailArrow.setAttribute("aria-hidden", "true");
+      detailLink.appendChild(detailArrow);
+      detailFoot.appendChild(detailLink);
+      card.appendChild(detailFoot);
     }
 
     return card;

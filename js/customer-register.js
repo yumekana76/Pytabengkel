@@ -1,6 +1,6 @@
 /* =========================================
    PENDAFTARAN CUSTOMER
-   Halaman login sudah menyatu di index.html (pilih role).
+   Halaman login sudah menyatu di login.html (pilih role).
    ========================================= */
 
 const registerForm = document.getElementById("registerForm");
