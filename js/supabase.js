@@ -181,6 +181,19 @@ var Auth = {
       };
     }
 
+    /* Akun diblokir admin (banned_at terisi): sesi langsung dibatalkan
+       supaya tidak pernah masuk ke halaman mana pun. */
+    if (profile.banned_at) {
+      await supabaseClient.auth.signOut();
+      authState.user = null;
+      authState.profile = null;
+      return {
+        ok: false,
+        error:
+          "Akun ini diblokir oleh admin. Hubungi bengkel untuk membuka blokir.",
+      };
+    }
+
     authState.user = data.user;
     authState.profile = profile;
 
@@ -412,6 +425,13 @@ var Auth = {
     }
 
     const profile = await this.loadProfile(data.session.user);
+
+    /* Akun yang diblokir admin tidak boleh punya sesi aktif —
+       sesi lama diakhiri, guard halaman akan mengembalikan ke login. */
+    if (profile?.banned_at) {
+      await this.signOut();
+      return null;
+    }
 
     authState.user = data.session.user;
     authState.profile = profile;

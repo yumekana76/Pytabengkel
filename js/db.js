@@ -23,6 +23,7 @@ var DB = {
     spareparts: [],
     reviews: [],
     promos: [],
+    page_blocks: [],
     accounts: [],
     logs: [],
     info: {},
@@ -34,6 +35,7 @@ var DB = {
     spareparts: new Set(),
     reviews: new Set(),
     promos: new Set(),
+    page_blocks: new Set(),
   },
   queue: Promise.resolve(),
   writeErrors: 0,
@@ -653,6 +655,37 @@ function promoFromDb(row) {
   };
 }
 
+/* Blok konten landing page (halaman Blok). */
+function blockToDb(row) {
+  return {
+    id: Number(row.id),
+    kode: row.kode || "",
+    judul: row.judul || "",
+    deskripsi: row.deskripsi || "",
+    tipe: row.tipe === "gambar" || row.tipe === "cta" ? row.tipe : "teks",
+    gambar_url: row.gambarUrl || "",
+    tautan: row.tautan || "",
+    tautan_label: row.tautanLabel || "",
+    urutan: Number(row.urutan) || 0,
+    aktif: row.aktif !== false,
+  };
+}
+
+function blockFromDb(row) {
+  return {
+    id: Number(row.id),
+    kode: row.kode || "",
+    judul: row.judul || "",
+    deskripsi: row.deskripsi || "",
+    tipe: row.tipe === "gambar" || row.tipe === "cta" ? row.tipe : "teks",
+    gambarUrl: row.gambar_url || "",
+    tautan: row.tautan || "",
+    tautanLabel: row.tautan_label || "",
+    urutan: Number(row.urutan) || 0,
+    aktif: row.aktif !== false,
+  };
+}
+
 /* Promo/diskon: aktif=true dan berada dalam rentang mulai–sampai (bila diisi). */
 function isPromoActive(promo, now) {
   if (!promo || promo.aktif === false) return false;
@@ -745,6 +778,24 @@ async function dbInitOnce() {
         return [];
       });
 
+    /* Blok konten landing page — sama seperti promos: dimuat terpisah
+       supaya halaman lain tetap berfungsi bila tabel belum ada. */
+    const blocksReady = supabaseClient
+      .from("page_blocks")
+      .select("*")
+      .order("id")
+      .then((result) => {
+        if (result.error) throw result.error;
+        return (result.data || []).map(blockFromDb);
+      })
+      .catch((error) => {
+        dbLog(
+          "Gagal memuat page_blocks (jalankan ulang supabase/schema.sql?):",
+          error.message,
+        );
+        return [];
+      });
+
     /* Posisi antrean service (RPC queue_positions) dimuat berbarengan
        dengan tabel lain. Catch sendiri: kalau fungsi RPC belum dibuat
        (schema.sql belum dijalankan ulang) halaman lain tetap jalan dan
@@ -816,6 +867,7 @@ async function dbInitOnce() {
     DB.cache.spareparts = ensureKode(rawSpareparts, "sparepart");
     DB.cache.reviews = ensureKode(await reviewsReady, "reviews");
     DB.cache.promos = ensureKode(await promosReady, "promos");
+    DB.cache.page_blocks = ensureKode(await blocksReady, "page_blocks");
     DB.cache.info = info.data?.[0]
       ? {
           nama: info.data[0].nama,
@@ -836,6 +888,7 @@ async function dbInitOnce() {
       email: row.email,
       nama: row.nama,
       role: row.role,
+      bannedAt: row.banned_at || null,
     }));
 
     DB.cache.logs = await logsReady;
@@ -898,6 +951,9 @@ function dbSyncKnown() {
   );
   DB.known.reviews = new Set(DB.cache.reviews.map((item) => Number(item.id)));
   DB.known.promos = new Set(DB.cache.promos.map((item) => Number(item.id)));
+  DB.known.page_blocks = new Set(
+    DB.cache.page_blocks.map((item) => Number(item.id)),
+  );
 }
 
 /* Simpan kode yang belum ada di server (hasil backfill). */
@@ -942,6 +998,7 @@ var KODE_PREFIX = {
   sparepart: "spp",
   reviews: "rev",
   promos: "prm",
+  page_blocks: "blk",
 };
 
 function formatKode(prefix, nomor, panjang = 3) {
@@ -1421,6 +1478,50 @@ function savePromos(promos) {
   });
 }
 
+/* BLOK KONTEN LANDING PAGE */
+
+function getPageBlocks() {
+  return DB.cache.page_blocks || [];
+}
+
+function savePageBlocks(blocks) {
+  DB.cache.page_blocks = blocks;
+
+  if (!supabaseClient) {
+    return;
+  }
+
+  var known = DB.known.page_blocks || new Set();
+  var current = new Set(
+    blocks.map(function (item) { return Number(item.id); }),
+  );
+  var removed = [];
+  known.forEach(function (id) { if (!current.has(id)) removed.push(id); });
+
+  DB.known.page_blocks = current;
+
+  if (!dbIsAdmin()) {
+    return;
+  }
+
+  dbQueue(async function () {
+    var payload = blocks.map(blockToDb);
+
+    if (payload.length) {
+      var result = await upsertRows("page_blocks", payload);
+
+      if (result.error) {
+        notifyDbError(result.error.message);
+        return;
+      }
+    }
+
+    if (removed.length) {
+      await supabaseClient.from("page_blocks").delete().in("id", removed);
+    }
+  });
+}
+
 /* ---------------------------------------------------------------------
    FOTO SERVICE (Supabase Storage)
    Hanya admin yang mengunggah/menghapus; customer hanya membaca foto
@@ -1599,6 +1700,7 @@ function saveCustomerAccounts(accounts) {
     nama: item.nama,
     password: item.password,
     role: item.role || "customer",
+    bannedAt: item.bannedAt || null,
   }));
 
 
@@ -1617,7 +1719,7 @@ async function dbReloadCustomerAccounts() {
 
   const { data, error } = await supabaseClient
     .from("profiles")
-    .select("id, customer_id, email, nama, role");
+    .select("id, customer_id, email, nama, role, banned_at");
 
   if (error) {
     dbLog("Gagal memuat ulang daftar akun:", error.message);
@@ -1630,6 +1732,7 @@ async function dbReloadCustomerAccounts() {
     email: row.email,
     nama: row.nama,
     role: row.role,
+    bannedAt: row.banned_at || null,
   }));
 
   return DB.cache.accounts;

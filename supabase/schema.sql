@@ -60,6 +60,27 @@ create table if not exists public.workshop_info (
   updated_at  timestamptz not null default now()
 );
 
+-- Blok konten modular landing page (dikelola admin di halaman Blok).
+-- Satu baris = satu blok (teks / gambar / tombol) yang dirender di
+-- section #blok html/landing.html sesuai urutan & status aktif.
+-- id bigint tanpa default — frontend mengirim id eksplisit lewat
+-- upsert, sama seperti tabel promos/services.
+create table if not exists public.page_blocks (
+  id           bigint primary key,
+  kode         text    not null default '',
+  judul        text    not null default '',
+  deskripsi    text    not null default '',
+  tipe         text    not null default 'teks'
+               check (tipe in ('teks', 'gambar', 'cta')),
+  gambar_url   text    not null default '',
+  tautan       text    not null default '',
+  tautan_label text    not null default '',
+  urutan       integer not null default 0,
+  aktif        boolean not null default true,
+  created_at   timestamptz not null default now(),
+  updated_at   timestamptz not null default now()
+);
+
 -- Data customer (master data, sama dengan tabel Customers di portal admin)
 create table if not exists public.customers (
   /* BY DEFAULT (bukan ALWAYS): frontend mengirim id eksplisit lewat
@@ -263,6 +284,9 @@ create table if not exists public.profiles (
   alamat      text not null default '',
   role        public.user_role not null default 'customer',
   customer_id bigint references public.customers (id) on delete set null,
+  -- Diblokir admin: tidak null = akun tidak boleh login (lihat
+  -- admin_set_user_ban() + pengecekan di Auth.signIn/restoreSession).
+  banned_at   timestamptz,
   created_at  timestamptz not null default now(),
   updated_at  timestamptz not null default now()
 );
@@ -394,6 +418,15 @@ begin
         raise exception 'Email profil tidak bisa diubah langsung; email login diubah lewat menu ganti email';
       end if;
     end if;
+
+    /* Status blokir akun hanya boleh diubah lewat RPC
+       admin_set_user_ban() (dijaga is_super_admin()); tanpa pengecekan
+       ini akun yang sedang diblokir bisa melepas blokirnya sendiri,
+       dan admin biasa pun tidak boleh menyentuh kolom ini. */
+    if new.banned_at is distinct from old.banned_at
+       and not public.is_super_admin() then
+      raise exception 'Hanya super admin yang boleh mengubah status blokir akun';
+    end if;
   end if;
   return new;
 end $$;
@@ -458,8 +491,8 @@ declare
   t text;
 begin
   foreach t in array array[
-    'workshop_info', 'customers', 'mechanics', 'mechanics_private', 'spareparts',
-    'services', 'profiles', 'activity_logs', 'reviews'
+    'workshop_info', 'page_blocks', 'customers', 'mechanics', 'mechanics_private',
+    'spareparts', 'services', 'profiles', 'activity_logs', 'reviews'
   ] loop
     execute format('drop trigger if exists set_updated_at on public.%I', t);
     execute format(
@@ -714,6 +747,105 @@ end $$;
 
 revoke all on function public.admin_set_user_role(uuid, text) from public;
 grant execute on function public.admin_set_user_role(uuid, text) to authenticated;
+
+-- ---------------------------------------------------------------------
+--  RPC: admin_delete_user()
+--  Hapus akun (admin/customer) dari halaman Kelola Pengguna.
+--  Dijalankan KHUSUS super admin (is_super_admin()); pengaman:
+--    * tidak bisa menghapus akun sendiri;
+--    * akun super admin tidak bisa dihapus siapa pun;
+--    * baris profiles ikut terhapus lewat ON DELETE CASCADE,
+--      data customer/service tetap tersimpan (riwayat bengkel).
+-- ---------------------------------------------------------------------
+create or replace function public.admin_delete_user(p_user uuid)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_row public.profiles%rowtype;
+begin
+  if not public.is_super_admin() then
+    raise exception 'Hanya super admin yang boleh menghapus akun pengguna';
+  end if;
+
+  if p_user is null then
+    raise exception 'Akun pengguna tidak ditemukan';
+  end if;
+
+  if p_user = auth.uid() then
+    raise exception 'Anda tidak dapat menghapus akun sendiri';
+  end if;
+
+  select * into v_row from public.profiles where id = p_user;
+
+  if not found then
+    raise exception 'Akun pengguna tidak ditemukan';
+  end if;
+
+  if v_row.role::text = 'super_admin' then
+    raise exception 'Akun super admin tidak dapat dihapus';
+  end if;
+
+  delete from auth.users where id = p_user;
+end $$;
+
+revoke all on function public.admin_delete_user(uuid) from public;
+grant execute on function public.admin_delete_user(uuid) to authenticated;
+
+-- ---------------------------------------------------------------------
+--  RPC: admin_set_user_ban()
+--  Blokir / buka blokir akun (admin/customer) dari halaman Kelola
+--  Pengguna. p_banned = true  -> banned_at = now() (tidak boleh login);
+--  p_banned = false -> banned_at dibersihkan. Dijalankan KHUSUS super
+--  admin; akun sendiri dan akun super admin dilindungi.
+-- ---------------------------------------------------------------------
+create or replace function public.admin_set_user_ban(
+  p_user   uuid,
+  p_banned boolean
+)
+returns public.profiles
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_row public.profiles%rowtype;
+begin
+  if not public.is_super_admin() then
+    raise exception 'Hanya super admin yang boleh memblokir pengguna';
+  end if;
+
+  if p_user is null then
+    raise exception 'Akun pengguna tidak ditemukan';
+  end if;
+
+  if p_user = auth.uid() then
+    raise exception 'Anda tidak dapat memblokir akun sendiri';
+  end if;
+
+  select * into v_row from public.profiles where id = p_user;
+
+  if not found then
+    raise exception 'Akun pengguna tidak ditemukan';
+  end if;
+
+  if v_row.role::text = 'super_admin' then
+    raise exception 'Akun super admin tidak dapat diblokir';
+  end if;
+
+  update public.profiles
+     set banned_at   = case when coalesce(p_banned, false) then now() else null end,
+         updated_at  = now()
+   where id = p_user
+   returning * into v_row;
+
+  return v_row;
+end $$;
+
+revoke all on function public.admin_set_user_ban(uuid, boolean) from public;
+grant execute on function public.admin_set_user_ban(uuid, boolean) to authenticated;
 
 -- ---------------------------------------------------------------------
 --  ROW LEVEL SECURITY
@@ -1070,6 +1202,8 @@ alter table public.services   add column if not exists kode text not null defaul
 alter table public.workshop_info add column if not exists email     text not null default '';
 alter table public.workshop_info add column if not exists jam_buka  text not null default '';
 alter table public.workshop_info add column if not exists hari_buka text not null default '';
+-- Blokir akun (halaman Kelola Pengguna): null = tidak diblokir.
+alter table public.profiles      add column if not exists banned_at timestamptz;
 
 -- ---------------------------------------------------------------------
 --  MIGRASI: default id customers (instalasi lama)
@@ -1245,6 +1379,57 @@ as $$
 $$;
 
 grant execute on function public.public_promos() to anon, authenticated;
+
+-- ---------------------------------------------------------------------
+--  BLOK KONTEN LANDING PAGE (dikelola admin)
+--  Tabel page_blocks hanya terbaca oleh admin; pengunjung landing
+--  memakai RPC public_page_blocks() yang hanya mengembalikan blok
+--  aktif, diurutkan sesuai urutan yang disetel admin.
+-- ---------------------------------------------------------------------
+alter table public.page_blocks enable row level security;
+
+drop policy if exists "page_blocks_select" on public.page_blocks;
+create policy "page_blocks_select" on public.page_blocks for select
+  using (public.is_admin());
+
+drop policy if exists "page_blocks_insert" on public.page_blocks;
+create policy "page_blocks_insert" on public.page_blocks for insert
+  with check (public.is_admin());
+
+drop policy if exists "page_blocks_update" on public.page_blocks;
+create policy "page_blocks_update" on public.page_blocks for update
+  using (public.is_admin()) with check (public.is_admin());
+
+drop policy if exists "page_blocks_delete" on public.page_blocks;
+create policy "page_blocks_delete" on public.page_blocks for delete
+  using (public.is_admin());
+
+drop function if exists public.public_page_blocks();
+create or replace function public.public_page_blocks()
+returns table (
+  id           bigint,
+  kode         text,
+  judul        text,
+  deskripsi    text,
+  tipe         text,
+  gambar_url   text,
+  tautan       text,
+  tautan_label text,
+  urutan       integer
+)
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select id, kode, judul, deskripsi, tipe, gambar_url, tautan,
+         tautan_label, urutan
+  from public.page_blocks
+  where aktif = true
+  order by urutan asc, id asc;
+$$;
+
+grant execute on function public.public_page_blocks() to anon, authenticated;
 
 -- Segarkan cache skema PostgREST supaya kolom & RPC baru langsung
 -- dikenali API tanpa menunggu reload otomatis.

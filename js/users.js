@@ -1,13 +1,17 @@
 /* =========================================
    KELOLA PENGGUNA (KHUSUS SUPER ADMIN)
    ---------------------------------------------------------------
-   Super admin dapat mengubah role akun lain:
+   Hanya super admin yang bisa membuka halaman ini — admin biasa
+   TIDAK punya akses Kelola Pengguna (dijaga guard + nav tersembunyi):
+      * Ubah role   -> super admin (RPC admin_set_user_role)
+      * Blokir akun -> super admin (RPC admin_set_user_ban)
+      * Hapus akun  -> super admin (RPC admin_delete_user)
      super_admin -> akses penuh + kelola role
      admin       -> operasional bengkel
      customer    -> portal customer
 
-   Perubahan role di Supabase memakai RPC admin_set_user_role()
-   (security definer) sehingga aturan tetap dijaga di database.
+   Semua operasi memakai RPC security definer sehingga aturan tetap
+   dijaga di database, bukan hanya di UI.
    Tidak ada lagi penyimpanan lokal — semua lewat Supabase.
    ========================================= */
 
@@ -122,7 +126,7 @@ function renderUserRows() {
   if (!filtered.length) {
     tbody.innerHTML = `
       <tr>
-        <td colspan="5" class="users-empty">
+        <td colspan="6" class="users-empty">
           <i class="fa-solid fa-user-slash" aria-hidden="true"></i>
           Tidak ada akun yang cocok dengan pencarian.
         </td>
@@ -131,19 +135,29 @@ function renderUserRows() {
     return;
   }
 
+  const viewerIsSuper = isSuperAdminRole(getCurrentProfile()?.role);
+
   tbody.innerHTML = filtered
     .map((account) => {
       const role = getUserRole(account);
       const own = isOwnAccount(account);
+      const banned = Boolean(account.bannedAt);
       const name = account.nama || account.email || "Tanpa nama";
       const email = account.email || "-";
       const customerText = account.customerId
         ? `<span class="users-customer-link"><i class="fa-solid fa-link" aria-hidden="true"></i> #${escapeHTML(String(account.customerId))}</span>`
         : '<span class="users-customer-link">—</span>';
 
+      const bannedBadge = banned
+        ? ' <span class="users-banned-badge"><i class="fa-solid fa-ban" aria-hidden="true"></i> Diblokir</span>'
+        : "";
+
+      /* Ubah role: hanya super admin (dan bukan akun sendiri).
+         Admin biasa melihat keterangan terkunci. */
       const roleSelect = own
         ? '<span class="users-own-role"><i class="fa-solid fa-lock" aria-hidden="true"></i> Akun Anda</span>'
-        : `
+        : viewerIsSuper
+          ? `
           <select
             class="role-select"
             data-user-id="${escapeHTML(String(account.id))}"
@@ -154,7 +168,31 @@ function renderUserRows() {
                 `<option value="${option}"${option === role ? " selected" : ""}>${getRoleLabel(option)}</option>`,
             ).join("")}
           </select>
-        `;
+        `
+          : '<span class="users-own-role" title="Hanya super admin yang dapat mengubah role"><i class="fa-solid fa-lock" aria-hidden="true"></i> Khusus Super Admin</span>';
+
+      /* Aksi: blokir/buka blokir + hapus — tersedia untuk admin DAN
+         super admin, kecuali akun sendiri atau akun super admin
+         (keduanya dilindungi juga di database lewat RPC). */
+      const canManage = !own && role !== "super_admin";
+      const aksiCell = canManage
+        ? `
+          <div class="users-actions">
+            <button
+              type="button"
+              class="action-btn"
+              data-ban-user="${escapeHTML(String(account.id))}"
+              aria-label="${banned ? "Buka blokir" : "Blokir"} ${escapeHTML(name)}"
+            >${banned ? "Buka Blokir" : "Blokir"}</button>
+            <button
+              type="button"
+              class="action-btn danger"
+              data-delete-user="${escapeHTML(String(account.id))}"
+              aria-label="Hapus ${escapeHTML(name)}"
+            >Hapus</button>
+          </div>
+        `
+        : '<span class="users-protected" title="Akun sendiri dan akun super admin tidak dapat diblokir atau dihapus">—</span>';
 
       return `
         <tr>
@@ -162,7 +200,7 @@ function renderUserRows() {
             <div class="user-cell">
               <span class="user-avatar" aria-hidden="true">${escapeHTML(getInitials(account.nama, account.email))}</span>
               <div>
-                <strong>${escapeHTML(name)}</strong>
+                <strong>${escapeHTML(name)}${bannedBadge}</strong>
                 <small>${own ? "Anda" : "Akun pengguna"}</small>
               </div>
             </div>
@@ -176,6 +214,7 @@ function renderUserRows() {
           </td>
           <td>${customerText}</td>
           <td>${roleSelect}</td>
+          <td>${aksiCell}</td>
         </tr>
       `;
     })
@@ -225,6 +264,107 @@ async function setUserRole(account, nextRole) {
       error: belumAktif
         ? "Fitur ubah role belum aktif di server. Jalankan ulang supabase/schema.sql."
         : pesan || "Gagal mengubah role pengguna.",
+    };
+  }
+
+  return { ok: true };
+}
+
+/* Blokir / buka blokir akun lewat RPC admin_set_user_ban().
+   Khusus super admin; database juga menolak pemanggil non-super,
+   akun sendiri, dan akun super admin. */
+async function setUserBan(account, banned) {
+  if (!isSuperAdminRole(getCurrentProfile()?.role)) {
+    return {
+      ok: false,
+      error: "Hanya super admin yang boleh memblokir pengguna.",
+    };
+  }
+
+  if (isOwnAccount(account)) {
+    return {
+      ok: false,
+      error: "Anda tidak dapat memblokir akun sendiri.",
+    };
+  }
+
+  if (getUserRole(account) === "super_admin") {
+    return { ok: false, error: "Akun super admin tidak dapat diblokir." };
+  }
+
+  if (!isSupabaseMode() || !supabaseClient) {
+    return {
+      ok: false,
+      error: "Aplikasi belum terhubung ke Supabase. Muat ulang halaman lalu coba lagi.",
+    };
+  }
+
+  const { error } = await supabaseClient.rpc("admin_set_user_ban", {
+    p_user: account.id,
+    p_banned: Boolean(banned),
+  });
+
+  if (error) {
+    const pesan = String(error.message || "");
+    const belumAktif =
+      pesan.toLowerCase().includes("could not find the function") ||
+      pesan.toLowerCase().includes("does not exist");
+
+    return {
+      ok: false,
+      error: belumAktif
+        ? "Fitur blokir akun belum aktif di server. Jalankan ulang supabase/schema.sql."
+        : pesan || "Gagal mengubah status blokir akun.",
+    };
+  }
+
+  return { ok: true };
+}
+
+/* Hapus akun lewat RPC admin_delete_user() (menghapus baris
+   auth.users; profiles ikut cascade, data customer/service tetap).
+   Khusus super admin. */
+async function deleteUserAccount(account) {
+  if (!isSuperAdminRole(getCurrentProfile()?.role)) {
+    return {
+      ok: false,
+      error: "Hanya super admin yang boleh menghapus akun pengguna.",
+    };
+  }
+
+  if (isOwnAccount(account)) {
+    return {
+      ok: false,
+      error: "Anda tidak dapat menghapus akun sendiri.",
+    };
+  }
+
+  if (getUserRole(account) === "super_admin") {
+    return { ok: false, error: "Akun super admin tidak dapat dihapus." };
+  }
+
+  if (!isSupabaseMode() || !supabaseClient) {
+    return {
+      ok: false,
+      error: "Aplikasi belum terhubung ke Supabase. Muat ulang halaman lalu coba lagi.",
+    };
+  }
+
+  const { error } = await supabaseClient.rpc("admin_delete_user", {
+    p_user: account.id,
+  });
+
+  if (error) {
+    const pesan = String(error.message || "");
+    const belumAktif =
+      pesan.toLowerCase().includes("could not find the function") ||
+      pesan.toLowerCase().includes("does not exist");
+
+    return {
+      ok: false,
+      error: belumAktif
+        ? "Fitur hapus akun belum aktif di server. Jalankan ulang supabase/schema.sql."
+        : pesan || "Gagal menghapus akun.",
     };
   }
 
@@ -293,7 +433,119 @@ async function handleUserRoleChange(select) {
   renderUserRows();
 }
 
+/* Blokir / buka blokir dari tombol di tabel (konfirmasi 2 klik). */
+async function handleUserBan(button) {
+  const account = findUserAccount(button.dataset.banUser);
+  if (!account) return;
+
+  const banned = Boolean(account.bannedAt);
+  const name = account.nama || account.email || "Pengguna";
+  const aksi = banned ? "membuka blokir" : "memblokir";
+
+  if (
+    typeof armConfirmButton === "function" &&
+    !armConfirmButton(
+      button,
+      (banned ? "Klik lagi untuk buka blokir " : "Klik lagi untuk blokir ") +
+        name,
+    )
+  ) {
+    if (typeof showPageNotice === "function") {
+      showPageNotice(
+        "Klik sekali lagi untuk " + aksi + " akun " + name + ".",
+        "error",
+      );
+    }
+    return;
+  }
+
+  button.disabled = true;
+  const result = await setUserBan(account, !banned);
+  button.disabled = false;
+
+  if (!result.ok) {
+    showPageNotice(
+      result.error || "Gagal mengubah status blokir akun.",
+      "error",
+    );
+    return;
+  }
+
+  /* Sinkronkan cache akun di memori. */
+  account.bannedAt = banned ? null : new Date().toISOString();
+  saveCustomerAccounts(getCustomerAccounts());
+
+  if (typeof addLog === "function") {
+    addLog(
+      banned ? "buka_blokir" : "blokir_pengguna",
+      "Pengguna",
+      `Akun ${account.email || name} ${banned ? "dibuka blokir" : "diblokir"}.`,
+      account.email || name,
+    );
+  }
+
+  showPageNotice(
+    banned
+      ? `Akun ${name} berhasil dibuka blokir.`
+      : `Akun ${name} berhasil diblokir dan tidak bisa login.`,
+    "success",
+  );
+
+  renderUserRows();
+}
+
+/* Hapus akun dari tombol di tabel (konfirmasi 2 klik). */
+async function handleUserDelete(button) {
+  const account = findUserAccount(button.dataset.deleteUser);
+  if (!account) return;
+
+  const name = account.nama || account.email || "Pengguna";
+
+  if (
+    typeof armConfirmButton === "function" &&
+    !armConfirmButton(button, "Klik lagi untuk hapus " + name)
+  ) {
+    if (typeof showPageNotice === "function") {
+      showPageNotice(
+        "Klik Hapus sekali lagi untuk menghapus akun " + name + ".",
+        "error",
+      );
+    }
+    return;
+  }
+
+  button.disabled = true;
+  const result = await deleteUserAccount(account);
+  button.disabled = false;
+
+  if (!result.ok) {
+    showPageNotice(result.error || "Gagal menghapus akun.", "error");
+    return;
+  }
+
+  saveCustomerAccounts(
+    getCustomerAccounts().filter(
+      (item) => String(item.id) !== String(account.id),
+    ),
+  );
+
+  if (typeof addLog === "function") {
+    addLog(
+      "hapus_pengguna",
+      "Pengguna",
+      `Akun ${account.email || name} (${getRoleLabel(getUserRole(account))}) dihapus.`,
+      account.email || name,
+    );
+  }
+
+  showPageNotice(`Akun ${name} berhasil dihapus.`, "success");
+
+  renderUserRows();
+}
+
 function initUsersPage() {
+  /* Hanya super admin — admin biasa dikembalikan ke dashboard
+     (tidak memaksa keluar dari akun). */
   if (!isSuperAdminRole(getCurrentProfile()?.role)) {
     window.location.replace("dashboard.html");
     return;
@@ -308,6 +560,15 @@ function initUsersPage() {
     tbody.addEventListener("change", (event) => {
       const select = event.target.closest(".role-select");
       if (select) handleUserRoleChange(select);
+    });
+    tbody.addEventListener("click", (event) => {
+      const banButton = event.target.closest("[data-ban-user]");
+      if (banButton) {
+        handleUserBan(banButton);
+        return;
+      }
+      const deleteButton = event.target.closest("[data-delete-user]");
+      if (deleteButton) handleUserDelete(deleteButton);
     });
   }
 

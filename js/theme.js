@@ -662,7 +662,14 @@ function skeletonPreset() {
       cols: 7,
       footer: "info",
     },
-    "admin-page/pengaturan.html": { cards: 0, settingRows: 5 },
+    "admin-page/pengaturan.html": { cards: 0, settingRows: 4 },
+    "admin-page/landing.html": {
+      cards: 4,
+      toolbar: 3,
+      toolbarButtons: 1,
+      cols: 9,
+      footer: "info",
+    },
     "admin-page/riwayat.html": {
       cards: 3,
       toolbar: 2,
@@ -684,8 +691,7 @@ function skeletonPreset() {
       cols: 6,
       footer: "info",
     },
-    "admin-page/ulasan.html": { cards: 4, toolbar: 2, cols: 8, footer: "pag" },
-    "admin-page/users.html": { cards: 4, toolbar: 2, cols: 5, footer: "info" },
+    "admin-page/users.html": { cards: 4, toolbar: 2, cols: 6, footer: "info" },
 
     /* --- Portal customer (sidebar 7 menu) --- */
     "customers-page/dashboard.html": {

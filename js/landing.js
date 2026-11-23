@@ -434,6 +434,115 @@
 
   var landingCustomerProfile = null;
 
+  /* ---------- BLOK KONTEN (dinamis, dikelola admin) ---------- */
+
+  async function getPublicBlocks() {
+    var rows = await fetchRpc("public_page_blocks");
+    return Array.isArray(rows) ? rows : [];
+  }
+
+  function buildBlockCard(block) {
+    var tipe = String(block.tipe || "teks");
+    var judul = String(block.judul || "").trim();
+    var isi = String(block.deskripsi || "").trim();
+    var gambar = String(block.gambar_url || "").trim();
+    var tautan = String(block.tautan || "").trim();
+    var label = String(block.tautan_label || "").trim();
+
+    var card = document.createElement("article");
+    card.className = "stat-card lp-block-card";
+
+    var head = document.createElement("div");
+    head.className = "lp-block-head";
+
+    var icon = document.createElement("span");
+    icon.className = "lp-block-icon";
+    var iconEl = document.createElement("i");
+    iconEl.className =
+      "fa-solid " +
+      (tipe === "gambar"
+        ? "fa-image"
+        : tipe === "cta"
+          ? "fa-hand-point-right"
+          : "fa-newspaper");
+    iconEl.setAttribute("aria-hidden", "true");
+    icon.appendChild(iconEl);
+    head.appendChild(icon);
+
+    var badge = document.createElement("span");
+    badge.className = "badge working";
+    badge.textContent =
+      tipe === "gambar" ? "Gambar" : tipe === "cta" ? "Ajakan" : "Info";
+    head.appendChild(badge);
+    card.appendChild(head);
+
+    /* Gambar opsional (URL apa pun yang diizinkan CSP halaman).
+       Gagal dimuat -> elemen dilepas, kartu tetap terbaca. */
+    if (gambar) {
+      var img = document.createElement("img");
+      img.className = "lp-block-img";
+      img.src = gambar;
+      img.alt = judul || "Gambar informasi";
+      img.loading = "lazy";
+      img.addEventListener("error", function () {
+        img.remove();
+      });
+      card.appendChild(img);
+    }
+
+    if (judul) {
+      var heading = document.createElement("h4");
+      heading.textContent = judul;
+      card.appendChild(heading);
+    }
+
+    if (isi) {
+      var body = document.createElement("p");
+      body.textContent = isi;
+      card.appendChild(body);
+    }
+
+    if (tautan && label) {
+      var foot = document.createElement("div");
+      foot.className = "lp-block-foot";
+      var link = document.createElement("a");
+      link.href = tautan;
+      link.textContent = label;
+      /* Tautan eksternal terbuka di tab baru & tanpa akses window. */
+      if (/^https?:\/\//i.test(tautan)) {
+        link.target = "_blank";
+        link.rel = "noopener noreferrer";
+      }
+      var arrow = document.createElement("i");
+      arrow.className = "fa-solid fa-arrow-right";
+      arrow.setAttribute("aria-hidden", "true");
+      link.appendChild(arrow);
+      foot.appendChild(link);
+      card.appendChild(foot);
+    }
+
+    return card;
+  }
+
+  function renderBlocks(rows) {
+    var list = document.getElementById("lpBlockList");
+    if (!list) return;
+
+    list.textContent = "";
+
+    if (!Array.isArray(rows) || !rows.length) {
+      var empty = document.createElement("div");
+      empty.className = "review-card review-card-empty";
+      empty.textContent = "Belum ada informasi terbaru.";
+      list.appendChild(empty);
+      return;
+    }
+
+    rows.forEach(function (block) {
+      list.appendChild(buildBlockCard(block));
+    });
+  }
+
   function applyAuthLinks(root) {
     var scope = root && root.querySelectorAll ? root : document;
     var links = Array.from(scope.querySelectorAll("[data-auth-link]"));
@@ -489,6 +598,9 @@
 
     var promos = await getPublicPromos();
     renderPromos(promos);
+
+    var blocks = await getPublicBlocks();
+    renderBlocks(blocks);
 
     var reviews = await fetchRpc("public_reviews");
     renderReviews(reviews);
