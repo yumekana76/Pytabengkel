@@ -39,8 +39,8 @@
   --primary-soft: #eff6ff;
   --primary-soft-strong: #edf5ff;
   --primary-border: #d8e8ff;
-  --primary-gradient: linear-gradient(160deg, #1767e9, #104fc2);
-  --focus-ring: rgba(37, 99, 235, 0.12);
+  --primary-gradient: linear-gradient(150deg, #1e6bf0 0%, #1657d6 48%, #0f3f9e 100%);
+  --focus-ring: rgba(37, 99, 235, 0.14);
 
   --background: #f8fafc;
   --background-glow: #e8f2ff;
@@ -50,7 +50,9 @@
   --surface-input: #f8fbff;
   --surface-hover: #f8fafc;
   --surface-overlay: rgba(15, 23, 42, 0.45);
-  --topbar-bg: rgba(255, 255, 255, 0.88);
+  /* Nyaris pekat: ikon/konten yang tergulir di belakang topbar tidak
+     tembus pandang (tetap ada blur halus di tepinya). */
+  --topbar-bg: rgba(255, 255, 255, 0.97);
 
   --text: #0f172a;
   --secondary: #5e6e85;
@@ -93,10 +95,12 @@
   --stat-3-tint: #f0f6ff;
   --stat-4-tint: #ebfbf6;
 
-  --shadow-sm: 0 10px 26px rgba(38, 83, 151, 0.055);
-  --shadow-md: 0 12px 30px rgba(15, 23, 42, 0.16);
-  --shadow-primary: 0 8px 16px rgba(18, 100, 232, 0.18);
-  --shadow-circle: 0 10px 24px rgba(24, 89, 197, 0.12);
+  --shadow-sm:
+    0 1px 2px rgba(15, 23, 42, 0.035), 0 10px 26px -14px rgba(38, 83, 151, 0.28);
+  --shadow-md:
+    0 2px 4px rgba(15, 23, 42, 0.04), 0 22px 44px -22px rgba(30, 64, 175, 0.38);
+  --shadow-primary: 0 12px 24px -12px rgba(18, 100, 232, 0.65);
+  --shadow-circle: 0 10px 24px rgba(24, 89, 197, 0.16);
 
   --sidebar-text: rgba(255, 255, 255, 0.84);
   --sidebar-hover: rgba(255, 255, 255, 0.18);
@@ -140,7 +144,7 @@
   --surface-input: #141d30;
   --surface-hover: #172135;
   --surface-overlay: rgba(2, 6, 15, 0.62);
-  --topbar-bg: rgba(15, 23, 42, 0.86);
+  --topbar-bg: rgba(15, 23, 42, 0.95);
 
   --text: #e6edf7;
   --secondary: #98a7bf;
@@ -183,10 +187,12 @@
   --stat-3-tint: #152036;
   --stat-4-tint: #122a25;
 
-  --shadow-sm: 0 10px 26px rgba(0, 0, 0, 0.32);
-  --shadow-md: 0 12px 30px rgba(0, 0, 0, 0.45);
-  --shadow-primary: 0 8px 16px rgba(37, 99, 235, 0.28);
-  --shadow-circle: 0 10px 24px rgba(0, 0, 0, 0.4);
+  --shadow-sm:
+    0 1px 2px rgba(0, 0, 0, 0.3), 0 12px 30px -16px rgba(0, 0, 0, 0.6);
+  --shadow-md:
+    0 2px 4px rgba(0, 0, 0, 0.3), 0 26px 50px -24px rgba(0, 0, 0, 0.7);
+  --shadow-primary: 0 12px 26px -14px rgba(37, 99, 235, 0.75);
+  --shadow-circle: 0 10px 24px rgba(0, 0, 0, 0.45);
 
   --sidebar-shadow: 10px 0 28px rgba(0, 0, 0, 0.45);
 
@@ -288,7 +294,7 @@ a {
   background: var(--topbar-bg);
   color: var(--text);
   border-bottom: 1px solid var(--border);
-  backdrop-filter: blur(12px);
+  backdrop-filter: blur(16px) saturate(150%);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -297,6 +303,7 @@ a {
   top: 0;
   z-index: 100;
   min-width: 0;
+  box-shadow: 0 1px 0 rgba(15, 23, 42, 0.02), 0 14px 30px -28px rgba(15, 23, 42, 0.55);
 }
 
 .brand {
@@ -306,6 +313,7 @@ a {
   min-width: 0;
   flex: 1 1 auto;
 }
+
 
 /* Wordmark Pytabengkel — SAMAKAN dengan .lp-brand-text strong,
    .login-brand-text strong, dan .brand (register): 21px/800/-0.02em */
@@ -425,6 +433,8 @@ a {
   border-color: var(--primary-text);
   color: var(--primary-text);
   background: var(--primary-soft);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-sm);
 }
 
 /* Tautan kembali ke landing page di topbar portal customer. */
@@ -491,7 +501,10 @@ a {
 .sidebar {
   width: 244px;
   border: 0;
-  background: var(--primary-gradient);
+  background:
+    radial-gradient(circle at 12% -6%, rgba(255, 255, 255, 0.26), transparent 42%),
+    radial-gradient(circle at 110% 108%, rgba(2, 132, 199, 0.4), transparent 55%),
+    var(--primary-gradient);
   padding-top: 12px;
   box-shadow: var(--sidebar-shadow);
   flex-shrink: 0;
@@ -516,13 +529,22 @@ a {
   text-decoration: none;
   color: var(--sidebar-text);
   padding: 12px 15px;
-  border-radius: 8px;
+  border-radius: 10px;
   font-size: 14px;
   font-weight: 550;
   transition: 0.2s;
   display: flex;
   align-items: center;
   gap: 10px;
+}
+
+.nav-icon {
+  font-size: 15px;
+  transition: transform 0.2s ease;
+}
+
+.nav-link:hover .nav-icon {
+  transform: scale(1.08);
 }
 
 /* Menu yang hanya untuk super admin disembunyikan sampai sesi
@@ -543,8 +565,17 @@ a {
   background: var(--sidebar-hover);
 }
 
+.nav-link:hover {
+  transform: translateX(2px);
+}
+
 .nav-link.active {
   font-weight: 700;
+  background: rgba(255, 255, 255, 0.16);
+  box-shadow:
+    inset 3px 0 0 0 rgba(255, 255, 255, 0.9),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.14),
+    0 10px 20px -14px rgba(2, 6, 23, 0.75);
 }
 
 .nav-separator {
@@ -605,7 +636,10 @@ a {
   box-shadow: var(--shadow-sm);
   padding: 19px;
   min-width: 0;
-  transition: 0.2s;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease,
+    border-color 0.2s ease;
   position: relative;
   overflow: hidden;
 }
@@ -625,17 +659,50 @@ a {
 
 .stat-icon {
   position: absolute;
-  top: 12px;
+  top: 13px;
   right: 14px;
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border-radius: 11px;
+  background: var(--primary-soft-strong);
   color: var(--primary-text);
-  font-size: 26px;
-  opacity: 0.16;
+  font-size: 14px;
+  box-shadow: inset 0 0 0 1px var(--primary-border);
   pointer-events: none;
 }
 
+/* Nominal uang lebih panjang dari angka biasa: beri ruang untuk chip
+   ikon dan kecilkan sedikit supaya tidak menabrak di layar sempit. */
+.stat-card .stat-number.money {
+  font-size: 17px;
+  padding-right: 26px;
+}
+
+@media (max-width: 700px) {
+  .stat-card .stat-number.money {
+    font-size: 15px;
+    padding-right: 24px;
+  }
+}
+
+.stat-card:nth-child(2) .stat-icon {
+  background: var(--badge-waiting-bg);
+  color: var(--badge-waiting-text);
+  box-shadow: inset 0 0 0 1px rgba(245, 158, 11, 0.28);
+}
+
+.stat-card:nth-child(4) .stat-icon {
+  background: var(--badge-done-bg);
+  color: var(--badge-done-text);
+  box-shadow: inset 0 0 0 1px rgba(22, 163, 74, 0.28);
+}
+
 .stat-card:hover {
-  transform: translateY(-2px);
+  transform: translateY(-3px);
   border-color: var(--primary-text);
+  box-shadow: var(--shadow-md);
 }
 
 /* Kartu dengan nominal lebih kecil: angkanya diperkecil. */
@@ -660,9 +727,11 @@ a.stat-card:focus-visible {
 .stat-number {
   display: block;
   font-size: 26px;
-  font-weight: 700;
+  font-weight: 750;
   color: var(--text);
   margin-bottom: 7px;
+  letter-spacing: -0.4px;
+  font-variant-numeric: tabular-nums;
 }
 
 .stat-label {
@@ -693,7 +762,7 @@ a.stat-card:focus-visible {
 .panel {
   background: var(--surface);
   border: 1px solid var(--border-soft);
-  border-radius: 16px;
+  border-radius: 18px;
   box-shadow: var(--shadow-sm);
   overflow: hidden;
 }
@@ -720,6 +789,7 @@ a.stat-card:focus-visible {
   gap: var(--space-lg);
   padding: var(--space-lg) var(--space-xl);
   border-bottom: 1px solid var(--border);
+  background: linear-gradient(180deg, var(--surface-2), var(--surface));
   flex-wrap: wrap;
   min-width: 0;
 }
@@ -731,6 +801,7 @@ a.stat-card:focus-visible {
 
 .panel-header h3 {
   font-size: 16px;
+  letter-spacing: -0.2px;
   margin-bottom: 5px;
 }
 
@@ -897,9 +968,12 @@ table {
 }
 
 th {
-  background: var(--surface-3);
+  background: linear-gradient(180deg, var(--surface-3), var(--surface-2));
   color: var(--muted-strong);
   font-weight: 700;
+  font-size: 11px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
   text-align: left;
   padding: 14px 16px;
   border-bottom: 1px solid var(--border);
@@ -921,8 +995,12 @@ th.wrap {
   overflow-wrap: anywhere;
 }
 
+tbody tr {
+  transition: background-color 0.15s ease;
+}
+
 tbody tr:hover {
-  background: var(--surface-hover);
+  background: var(--primary-soft);
 }
 
 tbody tr:last-child td {
@@ -931,8 +1009,10 @@ tbody tr:last-child td {
 
 .empty-row td {
   text-align: center;
-  padding: 30px;
+  padding: 40px 30px;
   color: var(--secondary);
+  font-size: 13px;
+  line-height: 1.7;
 }
 
 /* =========================================
@@ -942,12 +1022,26 @@ tbody tr:last-child td {
 .badge {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  padding: 5px 10px;
+  gap: 6px;
+  padding: 5px 11px;
   border-radius: 999px;
   font-size: 11px;
-  font-weight: 600;
+  font-weight: 650;
   white-space: nowrap;
+  box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.04);
+}
+
+/* Titik status kecil di badge supaya status lebih cepat terbaca. */
+.badge.waiting::before,
+.badge.working::before,
+.badge.qc::before,
+.badge.done::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  flex-shrink: 0;
 }
 
 .badge.waiting {
@@ -1046,6 +1140,11 @@ tbody tr:last-child td {
   color: var(--primary-text);
   font-size: 13px;
   font-weight: 600;
+}
+
+/* Jangan tampilkan strip kosong saat belum ada info antrean. */
+.antrian-customer:empty {
+  display: none;
 }
 
 /* Badge status + ajuan disusun bertumpuk dalam satu sel tabel. */
@@ -1378,14 +1477,14 @@ input[type="search"]::-webkit-search-cancel-button {
   border-radius: 16px;
 }
 
-/* .stat-icon: ikon dekoratif 26px di pojok kanan atas */
+/* .stat-icon: chip ikon 34px di pojok kanan atas */
 .sk-card-icon {
   position: absolute;
-  top: 12px;
+  top: 13px;
   right: 14px;
-  width: 26px;
-  height: 26px;
-  border-radius: 7px;
+  width: 34px;
+  height: 34px;
+  border-radius: 11px;
 }
 
 .sk-card-number {
@@ -1398,11 +1497,11 @@ input[type="search"]::-webkit-search-cancel-button {
   height: 16px;
 }
 
-/* .panel: radius 16px, border --border-soft */
+/* .panel: radius 18px, border --border-soft */
 .sk-panel {
   background: var(--surface);
   border: 1px solid var(--border-soft);
-  border-radius: 16px;
+  border-radius: 18px;
   overflow: hidden;
 }
 
@@ -1563,7 +1662,7 @@ input[type="search"]::-webkit-search-cancel-button {
   border-radius: 10px;
 }
 
-/* .customer-hero: padding 24px 26px, radius 18px, margin-bottom 20px */
+/* .customer-hero: padding 24px 26px, radius 20px, margin-bottom 20px */
 .sk-hero {
   display: flex;
   align-items: center;
@@ -1572,7 +1671,7 @@ input[type="search"]::-webkit-search-cancel-button {
   padding: 24px 26px;
   margin-bottom: var(--space-xl);
   border: 1px solid var(--border-strong);
-  border-radius: 18px;
+  border-radius: 20px;
   background: var(--surface);
 }
 
@@ -1996,7 +2095,7 @@ input[type="search"]::-webkit-search-cancel-button {
   flex-direction: column;
   justify-content: space-between;
   padding: var(--space-3xl);
-  background: linear-gradient(160deg, var(--brand-panel), var(--brand-panel-2));
+  background: var(--primary-gradient);
 }
 
 /* Balok di atas panel gelap: pakai putih transparan supaya tetap terlihat */
@@ -2545,15 +2644,34 @@ th.cell-id-col {
 }
 
 .btn-primary {
-  background: var(--primary-solid);
+  background: var(--primary-gradient);
   color: #fff;
-  box-shadow: var(--shadow-primary);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.2),
+    var(--shadow-primary);
   opacity: 1;
 }
 
 .btn-primary:hover {
-  background: var(--primary-solid-hover);
+  background: var(--primary-gradient);
   color: #fff;
+  transform: translateY(-1px);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.24),
+    0 16px 28px -12px rgba(18, 100, 232, 0.7);
+  filter: saturate(1.08);
+}
+
+.btn-primary:active {
+  transform: translateY(0);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.16), var(--shadow-sm);
+}
+
+.btn:focus-visible,
+.action-btn:focus-visible,
+.icon-btn:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
 }
 
 .btn-secondary {
@@ -2563,7 +2681,9 @@ th.cell-id-col {
 }
 
 .btn-secondary:hover {
-  background: var(--border);
+  background: var(--surface-2);
+  border-color: var(--border-strong);
+  transform: translateY(-1px);
 }
 
 .btn-danger {
@@ -2830,11 +2950,25 @@ body.modal-open {
   color: var(--text);
   font-size: 13px;
   font-family: inherit;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease,
+    background-color 0.15s ease;
+}
+
+.form-control:hover:not(:disabled):not(:focus) {
+  border-color: var(--border-input);
+}
+
+.form-control::placeholder {
+  color: var(--secondary);
+  opacity: 0.7;
 }
 
 .form-control:focus {
   border-color: var(--primary-text);
-  box-shadow: 0 0 0 3px var(--focus-ring);
+  background: var(--surface);
+  box-shadow: 0 0 0 4px var(--focus-ring);
 }
 
 /* Select filter toolbar harus ringkas & sebelahan. Tanpa ini
@@ -3714,6 +3848,9 @@ textarea.form-control {
     padding: 0 14px;
     justify-content: flex-start;
     gap: 10px;
+    /* Topbar selalu di atas sidebar off-canvas: ikon menu/konten tidak
+       pernah menembus atau menimpa ikon topbar. */
+    z-index: 1003;
   }
   .topbar-actions {
     gap: 6px;
@@ -4539,5 +4676,90 @@ a.btn,
   outline-offset: 2px;
 }
 
-/* Tampilkan keluhan multi-baris dengan rapi */
-td, .detail-value, .stepper-desc { white-space: pre-line; }
+/* Tampilkan keluhan multi-baris dengan rapi. Hanya sel yang memang
+   butuh multi-baris; sel lain tetap nowrap supaya tabel tidak pecah
+   jadi 2-3 baris per kolom. */
+td.wrap,
+.detail-value,
+.stepper-desc {
+  white-space: pre-line;
+}
+
+/* =========================================
+   HP KECIL: ukuran tulisan, tombol, dan kartu ikut mengecil
+   (fluid, supaya proporsional di 320-450px).
+   ========================================= */
+
+@media (max-width: 450px) {
+  .page-header h2 {
+    font-size: clamp(19px, 6vw, 23px);
+  }
+
+  .panel-header {
+    padding: clamp(12px, 4vw, 16px);
+  }
+
+  .panel-header h3 {
+    font-size: clamp(14.5px, 4.4vw, 16px);
+  }
+
+  .panel-header p {
+    font-size: clamp(11px, 3.3vw, 12px);
+  }
+
+  .panel-body {
+    padding: clamp(12px, 4vw, 16px);
+  }
+
+  .stat-card {
+    padding: clamp(13px, 4.2vw, 17px);
+    border-radius: 14px;
+  }
+
+  .stat-number {
+    font-size: clamp(20px, 6.4vw, 24px);
+  }
+
+  .stat-label {
+    font-size: clamp(10.5px, 3.2vw, 12px);
+  }
+
+  .stat-card .stat-icon {
+    width: 30px;
+    height: 30px;
+    font-size: 12px;
+    top: 11px;
+    right: 11px;
+  }
+
+  .btn {
+    font-size: clamp(11.5px, 3.4vw, 13px);
+    padding: clamp(8px, 2.6vw, 10px) clamp(11px, 3.4vw, 14px);
+  }
+
+  .badge {
+    font-size: clamp(9.5px, 2.9vw, 11px);
+    padding: 4px 9px;
+  }
+}
+
+/* Font Awesome dimuat SETELAH global.css dan menimpa `display` pada
+   <i class="fa-solid ...">, sehingga ikon kartu statistik jatuh ke
+   pojok kotak (bahkan keluar dari kotaknya). Selector yang lebih
+   spesifik mengembalikan ikon ke tengah kotak. */
+.stat-card .stat-icon {
+  display: grid;
+  place-items: center;
+  line-height: 1;
+}
+
+/* Ikon topbar (juga elemen <i>) tetap sejajar walau Font Awesome
+   mengubah display-nya. */
+.topbar-actions .icon-btn,
+.topbar-actions .icon-btn i,
+.topbar-landing,
+.topbar-landing i,
+.burger,
+.burger i {
+  line-height: 1;
+}

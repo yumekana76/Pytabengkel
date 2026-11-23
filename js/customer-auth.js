@@ -66,14 +66,14 @@ async function requireCustomerAuth() {
 
   if (!profile) {
     clearCustomerSession();
-    window.location.replace("/html/index.html?role=customer");
+    window.location.replace("/html/login.html?role=customer");
     return false;
   }
 
   if (profile.role !== "customer" || !profile.customer_id) {
     await Auth.signOut();
     clearCustomerSession();
-    window.location.replace("/html/index.html?role=customer");
+    window.location.replace("/html/login.html?role=customer");
     return false;
   }
 

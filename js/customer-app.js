@@ -63,7 +63,7 @@ async function customerLogout() {
   }
 
   clearCustomerSession();
-  window.location.href = "/html/index.html?role=customer";
+  window.location.href = "/html/login.html?role=customer";
 }
 
 /* HEADER */
@@ -2220,7 +2220,7 @@ function initCustomerSettings() {
 
       closeModal("deleteAccountModal");
       clearCustomerSession();
-      window.location.replace("/html/index.html?role=customer&accountDeleted=1");
+      window.location.replace("/html/login.html?role=customer&accountDeleted=1");
     });
 }
 

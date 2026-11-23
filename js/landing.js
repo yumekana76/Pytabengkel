@@ -46,6 +46,116 @@
     });
   }
 
+  /* Galeri di HP: satu baris foto yang digeser dengan tombol sebelumnya /
+     berikutnya. Di layar lebar tombol disembunyikan dan grid mosaik tetap. */
+  function initGallerySlider() {
+    var grid = document.getElementById("lpGalleryGrid");
+    var nav = document.querySelector(".lp-gallery-nav");
+    var prev = document.getElementById("lpGalleryPrev");
+    var next = document.getElementById("lpGalleryNext");
+    if (!grid || !nav || !prev || !next) return;
+
+    var mobile = window.matchMedia("(max-width: 720px)");
+
+    function langkah() {
+      var item = grid.querySelector(".lp-gallery-item");
+      return item
+        ? item.getBoundingClientRect().width + 10
+        : grid.clientWidth * 0.8;
+    }
+
+    function update() {
+      nav.hidden = !mobile.matches;
+      if (!mobile.matches) {
+        grid.scrollLeft = 0;
+        return;
+      }
+      var sisa = grid.scrollWidth - grid.clientWidth;
+      prev.disabled = grid.scrollLeft <= 2;
+      next.disabled = grid.scrollLeft >= sisa - 2;
+    }
+
+    if (grid.dataset.sliderReady !== "1") {
+      grid.dataset.sliderReady = "1";
+      prev.addEventListener("click", function () {
+        grid.scrollBy({ left: -langkah(), behavior: "smooth" });
+      });
+      next.addEventListener("click", function () {
+        grid.scrollBy({ left: langkah(), behavior: "smooth" });
+      });
+      grid.addEventListener("scroll", update, { passive: true });
+      window.addEventListener("resize", update);
+      if (typeof mobile.addEventListener === "function") {
+        mobile.addEventListener("change", update);
+      } else if (typeof mobile.addListener === "function") {
+        mobile.addListener(update);
+      }
+    }
+
+    update();
+  }
+
+  /* Galeri bengkel dari admin. Data berupa array [{ url, judul, deskripsi }].
+     Tanpa data (atau format lama) galeri bawaan di HTML dibiarkan. */
+  function renderGallery(rows) {
+    var grid = document.querySelector(".lp-gallery-grid");
+    if (!grid) return;
+
+    var list = rows;
+
+    if (typeof list === "string") {
+      try {
+        list = JSON.parse(list);
+      } catch (error) {
+        list = null;
+      }
+    }
+
+    if (!Array.isArray(list)) return;
+
+    var items = list
+      .filter(function (item) {
+        return item && typeof item === "object" && String(item.url || "").trim();
+      })
+      .slice(0, 8);
+
+    if (!items.length) return;
+
+    grid.textContent = "";
+    /* Mosaik hanya untuk 4 foto (1 besar + 3 kecil); jumlah lain dibuat
+       rata supaya tidak ada lubang di grid. */
+    grid.classList.toggle("lp-gallery-mosaic", items.length === 4);
+
+    items.forEach(function (item, index) {
+      var figure = document.createElement("figure");
+      figure.className =
+        "lp-gallery-item" +
+        (items.length === 4 && index === 0 ? " lp-gallery-wide" : "");
+
+      var img = document.createElement("img");
+      img.src = String(item.url).trim();
+      img.alt = String(item.judul || "Foto bengkel Pytabengkel").trim();
+      img.loading = "lazy";
+
+      var caption = document.createElement("figcaption");
+      var judul = document.createElement("strong");
+      judul.textContent = String(item.judul || "Galeri Bengkel").trim();
+      caption.appendChild(judul);
+
+      if (item.deskripsi) {
+        var detail = document.createElement("span");
+        detail.textContent = String(item.deskripsi).trim();
+        caption.appendChild(detail);
+      }
+
+      figure.appendChild(img);
+      figure.appendChild(caption);
+      grid.appendChild(figure);
+    });
+
+    initGallerySlider();
+  }
+
   /* ---------- DATA PUBLIK ---------- */
 
   async function fetchRpc(name) {
@@ -59,6 +169,254 @@
       return result.data;
     } catch (error) {
       return null;
+    }
+  }
+
+  /* ---------- HERO SLIDES ----------
+     Hero bisa memakai beberapa slide (foto + teks) dan berganti otomatis
+     bila admin mengaktifkannya. Tanpa data slide, teks/foto tunggal dari
+     kolom hero_* (perilaku lama) atau HTML bawaan tetap dipakai. */
+
+  var HERO_TEXT_DEFAULT = {
+    label: "Promo bulan ini",
+    judul: "Rawat kendaraan tanpa antre dan tanpa ribet.",
+    deskripsi:
+      "Dari servis berkala, tune-up, ganti oli, hingga perbaikan " +
+      "menyeluruh. Dapatkan promo terbaik, cek review jujur pelanggan " +
+      "kami, dan konsultasi langsung dengan teknisi bengkel.",
+  };
+
+  var heroSlides = [];
+  var heroSlideIndex = 0;
+  var heroAutoplayAktif = false;
+  var heroTimer = null;
+  var heroAutoplayBound = false;
+  var heroChangeToken = 0;
+  var heroAutoplayManual = false;
+
+  function prefersReducedMotion() {
+    return Boolean(
+      window.matchMedia &&
+        window.matchMedia("(prefers-reduced-motion: reduce)").matches,
+    );
+  }
+
+  function parseHeroSlides(info) {
+    var list = info.hero_slides;
+
+    if (typeof list === "string") {
+      try {
+        list = JSON.parse(list);
+      } catch (error) {
+        list = null;
+      }
+    }
+
+    var slides = Array.isArray(list)
+      ? list
+          .filter(function (item) {
+            return item && typeof item === "object";
+          })
+          .map(function (item) {
+            return {
+              foto: String(item.foto || "").trim(),
+              label: String(item.label || "").trim(),
+              judul: String(item.judul || "").trim(),
+              deskripsi: String(item.deskripsi || "").trim(),
+            };
+          })
+          .filter(function (item) {
+            return item.foto || item.label || item.judul || item.deskripsi;
+          })
+          .slice(0, 5)
+      : [];
+
+    /* Kompatibilitas data lama: satu hero tanpa tabel slide. */
+    if (!slides.length) {
+      var lama = {
+        foto: String(info.hero_foto || "").trim(),
+        label: String(info.hero_label || "").trim(),
+        judul: String(info.hero_judul || "").trim(),
+        deskripsi: String(info.hero_deskripsi || "").trim(),
+      };
+
+      if (lama.foto || lama.label || lama.judul || lama.deskripsi) {
+        slides.push(lama);
+      }
+    }
+
+    return slides;
+  }
+
+  function setHeroBackground(foto) {
+    var hero = document.querySelector(".lp-hero");
+    if (!hero) return;
+
+    var url = String(foto || "").trim();
+
+    if (!url) {
+      hero.style.removeProperty("--lp-hero-image");
+      return;
+    }
+
+    var preload = new Image();
+    preload.onload = function () {
+      hero.style.setProperty(
+        "--lp-hero-image",
+        'url("' + url.replace(/"/g, "%22") + '")',
+      );
+    };
+    preload.onerror = function () {
+      hero.style.removeProperty("--lp-hero-image");
+    };
+    preload.src = url;
+  }
+
+  function updateHeroDots() {
+    var dots = document.getElementById("lpHeroDots");
+    if (!dots) return;
+
+    Array.prototype.forEach.call(
+      dots.querySelectorAll("button"),
+      function (button, index) {
+        var aktif = index === heroSlideIndex;
+        button.classList.toggle("is-active", aktif);
+        if (aktif) {
+          button.setAttribute("aria-current", "true");
+        } else {
+          button.removeAttribute("aria-current");
+        }
+      },
+    );
+  }
+
+  function renderHeroDots() {
+    var dots = document.getElementById("lpHeroDots");
+    if (!dots) return;
+
+    dots.textContent = "";
+
+    if (heroSlides.length < 2) {
+      dots.hidden = true;
+      return;
+    }
+
+    heroSlides.forEach(function (slide, index) {
+      var button = document.createElement("button");
+      button.type = "button";
+      button.className = "lp-hero-slide-dot";
+      button.setAttribute("aria-label", "Slide " + (index + 1));
+      button.addEventListener("click", function () {
+        /* Memilih slide manual menghentikan autoplay agar teks tidak
+           langsung berganti lagi sebelum sempat dibaca. */
+        heroAutoplayManual = true;
+        stopHeroAutoplay();
+        showHeroSlide(index, true);
+      });
+      dots.appendChild(button);
+    });
+
+    dots.hidden = false;
+    updateHeroDots();
+  }
+
+  function stopHeroAutoplay() {
+    if (heroTimer) {
+      window.clearInterval(heroTimer);
+      heroTimer = null;
+    }
+  }
+
+  function startHeroAutoplay() {
+    stopHeroAutoplay();
+
+    if (
+      !heroAutoplayAktif ||
+      heroAutoplayManual ||
+      heroSlides.length < 2 ||
+      prefersReducedMotion()
+    ) {
+      return;
+    }
+
+    heroTimer = window.setInterval(function () {
+      showHeroSlide((heroSlideIndex + 1) % heroSlides.length, true);
+    }, 6500);
+  }
+
+  function showHeroSlide(index, animate) {
+    if (!heroSlides.length) return;
+
+    heroSlideIndex =
+      ((Number(index) || 0) + heroSlides.length) % heroSlides.length;
+
+    var slide = heroSlides[heroSlideIndex];
+    var token = (heroChangeToken += 1);
+    var copy = document.querySelector(".lp-hero-copy");
+
+    function apply() {
+      if (token !== heroChangeToken) return;
+
+      var label = document.getElementById("lpHeroLabel");
+      var judul = document.getElementById("lpHeroJudul");
+      var deskripsi = document.getElementById("lpHeroDeskripsi");
+
+      if (label) label.textContent = slide.label || HERO_TEXT_DEFAULT.label;
+      if (judul) judul.textContent = slide.judul || HERO_TEXT_DEFAULT.judul;
+      if (deskripsi) {
+        deskripsi.textContent =
+          slide.deskripsi || HERO_TEXT_DEFAULT.deskripsi;
+      }
+
+      setHeroBackground(slide.foto);
+      updateHeroDots();
+    }
+
+    if (animate && copy && !prefersReducedMotion()) {
+      copy.classList.add("is-hero-fading");
+      window.setTimeout(function () {
+        apply();
+        copy.classList.remove("is-hero-fading");
+      }, 220);
+      return;
+    }
+
+    apply();
+  }
+
+  function renderHero(info) {
+    var slides = parseHeroSlides(info);
+    if (!slides.length) return;
+
+    heroSlides = slides;
+    heroAutoplayAktif =
+      info.hero_autoplay === true ||
+      String(info.hero_autoplay || "").toLowerCase() === "true";
+    heroSlideIndex = 0;
+
+    renderHeroDots();
+    showHeroSlide(0, false);
+    startHeroAutoplay();
+
+    if (!heroAutoplayBound) {
+      var hero = document.querySelector(".lp-hero");
+
+      if (hero) {
+        hero.addEventListener("mouseenter", stopHeroAutoplay);
+        hero.addEventListener("mouseleave", startHeroAutoplay);
+        hero.addEventListener("focusin", stopHeroAutoplay);
+        hero.addEventListener("focusout", startHeroAutoplay);
+      }
+
+      document.addEventListener("visibilitychange", function () {
+        if (document.hidden) {
+          stopHeroAutoplay();
+        } else {
+          startHeroAutoplay();
+        }
+      });
+
+      heroAutoplayBound = true;
     }
   }
 
@@ -88,54 +446,28 @@
       email.setAttribute("href", "mailto:" + String(info.email).trim());
     }
 
-    /* Teks hero (judul, deskripsi, label) diatur admin lewat Pengaturan.
-       Kosong -> teks default yang sudah ada di HTML dipertahankan. */
-    setText("lpHeroLabel", info.hero_label);
-    setText("lpHeroJudul", info.hero_judul);
-    setText("lpHeroDeskripsi", info.hero_deskripsi);
+    /* Hero (foto + teks) diatur admin; bisa satu slide atau berganti
+       otomatis bila autoplay diaktifkan. Tanpa data, HTML bawaan tetap. */
+    renderHero(info);
 
-    /* Foto latar hero (diatur admin lewat halaman Pengaturan).
-       Kosong / gagal dimuat -> gradien tema tetap dipakai. */
-    var hero = document.querySelector(".lp-hero");
-    if (hero) {
-      var heroUrl = String(info.hero_foto || "").trim();
+    /* Galeri bengkel diatur admin lewat halaman Landing Page. Kalau
+       kosong, galeri bawaan di HTML tetap tampil. */
+    renderGallery(info.galeri_foto);
 
-      if (!heroUrl) {
-        hero.style.removeProperty("--lp-hero-image");
-        return;
-      }
-
-      var preload = new Image();
-      preload.onload = function () {
-        hero.style.setProperty(
-          "--lp-hero-image",
-          'url("' + heroUrl.replace(/"/g, '%22') + '")',
-        );
-      };
-      preload.onerror = function () {
-        hero.style.removeProperty("--lp-hero-image");
-      };
-      preload.src = heroUrl;
-    }
   }
 
-  /* Rating bintang di baris trust hero memakai data ulasan yang sama
-     dengan bagian ulasan (rata-rata + jumlah ulasan asli). */
+  /* Kartu rating di hero (satu-satunya tampilan ulasan di hero) memakai
+     data yang sama dengan bagian ulasan: rata-rata + jumlah ulasan asli. */
   function renderHeroRating(average, total) {
-    var stars = document.getElementById("lpHeroStars");
-    var label = document.getElementById("lpHeroRating");
-
     if (!average || !total) {
-      if (stars) stars.textContent = "";
-      setText("lpHeroRating", "Belum ada ulasan");
+      setText("lpHeroMediaRating", "Belum ada ulasan");
       return;
     }
 
-    setStars(stars, average);
-    if (label) {
-      label.textContent =
-        average.toFixed(1).replace(".", ",") + " · " + total + " ulasan";
-    }
+    setText(
+      "lpHeroMediaRating",
+      average.toFixed(1).replace(".", ",") + " · " + total + " ulasan",
+    );
   }
 
   /* ---------- ULASAN: FILTER BINTANG ---------- */
@@ -242,6 +574,22 @@
       text = "Memberi penilaian tanpa menulis komentar.";
     }
     comment.textContent = text;
+
+    /* Routing ke halaman detail — kunci route memakai created_at karena
+       RPC publik public_reviews() tidak mengeluarkan id ulasan. */
+    if (row.created_at) {
+      var detailLink = document.createElement("a");
+      detailLink.className = "lp-card-detail";
+      detailLink.href =
+        "detail.html?type=ulasan&id=" +
+        encodeURIComponent(String(row.created_at));
+      detailLink.appendChild(document.createTextNode("Lihat detail "));
+      var detailArrow = document.createElement("i");
+      detailArrow.className = "fa-solid fa-arrow-right";
+      detailArrow.setAttribute("aria-hidden", "true");
+      detailLink.appendChild(detailArrow);
+      card.appendChild(detailLink);
+    }
 
     card.appendChild(head);
     card.appendChild(rating);
@@ -402,7 +750,7 @@
          tetap terpilih setelah berhasil masuk. next diarahkan ke form
          customer; login admin/super memiliki tujuan sendiri. */
       var href =
-        "index.html?role=customer&next=" +
+        "login.html?role=customer&next=" +
         encodeURIComponent(loggedHref) +
         (code ? "&klaim=" + encodeURIComponent(code) : "");
       var card = document.createElement("article");
@@ -414,6 +762,7 @@
         "</div>" +
         "<h4></h4>" +
         "<p></p>" +
+        '<a class="lp-card-detail" href="#">Lihat detail <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></a>' +
         '<div class="lp-promo-code"><span>Kode promo</span><strong></strong></div>' +
         '<div class="lp-promo-foot"><span><i class="fa-solid fa-calendar" aria-hidden="true"></i> <span class="lp-promo-period"></span></span>' +
           '<a data-auth-link data-loggedin-label="Klaim">Klaim <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></a>' +
@@ -423,7 +772,14 @@
       card.querySelector("p").textContent = promo.deskripsi || "Promo berlaku sesuai ketentuan bengkel.";
       card.querySelector(".lp-promo-code strong").textContent = code || "-";
       card.querySelector(".lp-promo-period").textContent = formatPromoPeriode(promo);
-      var link = card.querySelector("a");
+      /* Routing ke halaman detail — id utama, kode promo cadangan. */
+      card
+        .querySelector(".lp-card-detail")
+        .setAttribute(
+          "href",
+          "detail.html?type=promo&id=" + encodeURIComponent(String(promo.id || code)),
+        );
+      var link = card.querySelector(".lp-promo-foot a");
       link.setAttribute("href", href);
       link.setAttribute("data-loggedin-href", loggedHref);
       link.setAttribute("data-admin-href", adminHref);
@@ -451,6 +807,11 @@
 
     var card = document.createElement("article");
     card.className = "stat-card lp-block-card";
+
+    /* Routing ke halaman detail — hanya bila blok punya id. */
+    var detailHref = block.id
+      ? "detail.html?type=informasi&id=" + encodeURIComponent(String(block.id))
+      : "";
 
     var head = document.createElement("div");
     head.className = "lp-block-head";
@@ -492,7 +853,15 @@
 
     if (judul) {
       var heading = document.createElement("h4");
-      heading.textContent = judul;
+      if (detailHref) {
+        var titleLink = document.createElement("a");
+        titleLink.className = "lp-card-detail-title";
+        titleLink.href = detailHref;
+        titleLink.textContent = judul;
+        heading.appendChild(titleLink);
+      } else {
+        heading.textContent = judul;
+      }
       card.appendChild(heading);
     }
 
@@ -519,6 +888,20 @@
       link.appendChild(arrow);
       foot.appendChild(link);
       card.appendChild(foot);
+    } else if (detailHref) {
+      /* Tanpa tautan eksternal → tawarkan buka halaman detail. */
+      var detailFoot = document.createElement("div");
+      detailFoot.className = "lp-block-foot";
+      var detailLink = document.createElement("a");
+      detailLink.className = "lp-card-detail";
+      detailLink.href = detailHref;
+      detailLink.appendChild(document.createTextNode("Lihat detail "));
+      var detailArrow = document.createElement("i");
+      detailArrow.className = "fa-solid fa-arrow-right";
+      detailArrow.setAttribute("aria-hidden", "true");
+      detailLink.appendChild(detailArrow);
+      detailFoot.appendChild(detailLink);
+      card.appendChild(detailFoot);
     }
 
     return card;
@@ -703,8 +1086,10 @@
         return;
       }
 
+      /* Hero sengaja tidak ikut animasi reveal: elemen pertama di layar
+         harus langsung terlihat, bukan sempat transparan saat load. */
       var targets = document.querySelectorAll(
-        ".lp-hero, .lp-stats-strip, .lp-layout .panel, .lp-cta-banner",
+        ".lp-stats-strip, .lp-layout .panel, .lp-cta-banner",
       );
       if (!targets.length) return;
 
@@ -743,6 +1128,7 @@
 
   initReveal();
   initLandingNav();
+  initGallerySlider();
   initAuthLinks();
   initReviewFilter();
   loadPublicData();

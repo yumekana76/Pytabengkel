@@ -1,0 +1,202 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; font-src 'self' https://cdnjs.cloudflare.com; img-src 'self' data: https://*.supabase.co; connect-src 'self' https://*.supabase.co wss://*.supabase.co http://localhost:3000; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+    />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="Detail promo, informasi, dan layanan bengkel dari halaman utama Pytabengkel."
+    />
+    <title>Detail | Pytabengkel</title>
+    <link rel="stylesheet" href="../css/fonts.css" />
+    <link rel="stylesheet" href="../css/global.css" />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
+    />
+    <link rel="stylesheet" href="../css/customer.css" />
+    <link rel="stylesheet" href="../css/ulasan.css" />
+    <link rel="stylesheet" href="../css/landing.css" />
+    <script src="../js/error-logger.js"></script>
+    <script src="../js/theme.js"></script>
+    <script src="../js/config.js"></script>
+    <script src="../js/vendor/supabase.min.js"></script>
+    <script src="../js/supabase.js"></script>
+    <script>
+      applyThemeBeforePaint();
+    </script>
+  </head>
+  <body class="lp-page">
+    <header class="topbar lp-header">
+      <div class="lp-header-row">
+        <a href="index.html" class="brand lp-brand-link">
+          <span class="lp-brand-text">
+            <strong>Pytabengkel</strong>
+            <small>Workshop &amp; Care</small>
+          </span>
+        </a>
+        <div class="topbar-actions">
+          <button
+            type="button"
+            class="icon-btn theme-toggle"
+            data-theme-toggle
+            aria-label="Aktifkan mode gelap"
+            aria-pressed="false"
+            title="Ganti tema terang / gelap"
+          >
+            <i class="fa-solid fa-sun icon-sun" aria-hidden="true"></i>
+            <i class="fa-solid fa-moon icon-moon" aria-hidden="true"></i>
+          </button>
+          <a
+            href="login.html?role=customer"
+            class="btn btn-primary lp-topbar-login"
+            data-auth-link
+            data-profile-label="Profil"
+          >
+            <i class="fa-solid fa-right-to-bracket" aria-hidden="true"></i>
+            <span>Masuk</span>
+          </a>
+        </div>
+      </div>
+    </header>
+
+    <div class="layout lp-layout">
+      <main class="main">
+        <div class="lp-detail-wrap">
+          <!-- Navigasi balik — tujuan #anchor menyesuaikan jenis konten -->
+          <nav class="lp-detail-crumb" aria-label="Navigasi balik">
+            <a class="lp-detail-back" href="index.html" id="detailBack">
+              <i class="fa-solid fa-arrow-left" aria-hidden="true"></i>
+              <span>Kembali ke Beranda</span>
+            </a>
+            <ol class="lp-detail-path" id="detailPath">
+              <li>
+                <a href="index.html">Beranda</a>
+              </li>
+              <li aria-current="page">Detail</li>
+            </ol>
+          </nav>
+
+          <section class="panel vehicle-panel" id="detailPanel">
+            <div class="panel-header">
+              <div>
+                <h3 id="detailKicker">Detail</h3>
+                <p id="detailSubtitle">Memuat halaman detail…</p>
+              </div>
+              <div class="vehicle-toolbar">
+                <span class="badge working" id="detailBadge">
+                  <i class="fa-solid fa-spinner fa-spin" aria-hidden="true"></i>
+                  Memuat
+                </span>
+              </div>
+            </div>
+
+            <div class="panel-body">
+              <!-- STATE 1 — memuat -->
+              <div class="review-card review-card-empty" id="detailLoading">
+                <i class="fa-solid fa-spinner fa-spin" aria-hidden="true"></i>
+                <span>Memuat detail…</span>
+              </div>
+
+              <!-- STATE 2 — konten ditemukan -->
+              <article class="lp-detail" id="detailContent" hidden>
+                <div class="lp-detail-head">
+                  <span class="lp-detail-icon" id="detailIcon" aria-hidden="true">
+                    <i></i>
+                  </span>
+                  <div class="lp-detail-headtext">
+                    <span class="lp-detail-kicker" id="detailKickerChip"></span>
+                    <h1 id="detailTitle"></h1>
+                    <p class="lp-detail-lead" id="detailLead"></p>
+                  </div>
+                </div>
+
+                <div class="lp-detail-meta" id="detailMeta"></div>
+
+                <figure class="lp-detail-figure" id="detailFigure" hidden>
+                  <img id="detailImg" alt="" loading="lazy" />
+                </figure>
+
+                <div class="lp-detail-body" id="detailBody"></div>
+
+                <ul class="lp-detail-points" id="detailPoints" hidden></ul>
+
+                <div class="lp-detail-cta" id="detailCta"></div>
+              </article>
+
+              <!-- STATE 3 — tidak ditemukan / gagal muat -->
+              <div class="lp-detail-empty" id="detailError" hidden>
+                <span class="lp-detail-emptyicon" aria-hidden="true">
+                  <i class="fa-regular fa-circle-question"></i>
+                </span>
+                <h4 id="detailErrorTitle">Detail tidak ditemukan</h4>
+                <p id="detailErrorText">
+                  Konten yang Anda cari tidak tersedia atau sudah tidak
+                  ditampilkan.
+                </p>
+                <div class="lp-detail-cta">
+                  <a class="btn btn-primary" href="index.html">
+                    <i class="fa-solid fa-house" aria-hidden="true"></i>
+                    <span>Kembali ke Beranda</span>
+                  </a>
+                  <a class="btn btn-secondary" id="detailErrorAlt" href="index.html">
+                    <i class="fa-solid fa-arrow-rotate-left" aria-hidden="true"></i>
+                    <span>Lihat daftarnya</span>
+                  </a>
+                </div>
+              </div>
+            </div>
+          </section>
+        </div>
+      </main>
+
+      <footer class="lp-footer">
+        <div class="lp-footer-top">
+          <div class="lp-footer-brand">
+            <div class="lp-brand-link">
+              <span class="lp-brand-text">
+                <strong>Pytabengkel</strong>
+                <small>Workshop &amp; Care</small>
+              </span>
+            </div>
+            <p class="lp-footer-tagline">
+              Solusi perawatan bengkel modern, transparan, dan terpercaya untuk
+              semua tipe kendaraan Anda.
+            </p>
+          </div>
+          <div class="lp-footer-col">
+            <h5>Navigasi</h5>
+            <ul class="lp-footer-menu">
+              <li><a href="index.html">Beranda</a></li>
+              <li><a href="index.html#keunggulan">Keunggulan</a></li>
+              <li><a href="index.html#promo">Promo &amp; Diskon</a></li>
+              <li><a href="index.html#blok">Informasi</a></li>
+              <li><a href="index.html#layanan">Layanan</a></li>
+            </ul>
+          </div>
+          <div class="lp-footer-col">
+            <h5>Lainnya</h5>
+            <ul class="lp-footer-menu">
+              <li><a href="index.html#cara-kerja">Alur Servis</a></li>
+              <li><a href="index.html#ulasan">Ulasan Pelanggan</a></li>
+              <li><a href="index.html#faq">FAQ</a></li>
+              <li><a href="index.html#kontak">Kontak Kami</a></li>
+            </ul>
+          </div>
+        </div>
+        <div class="lp-footer-bottom">
+          <span>&copy; <span id="lpYear">2026</span> Pytabengkel. Hak cipta dilindungi.</span>
+          <span class="lp-footer-badge">Sistem Manajemen Servis Bengkel</span>
+        </div>
+      </footer>
+    </div>
+
+    <!-- global.js dulu (helper tema/topbar), detail.js (routing & render) -->
+    <script src="../js/global.js"></script>
+    <script src="../js/detail.js"></script>
+  </body>
+</html>

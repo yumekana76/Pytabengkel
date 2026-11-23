@@ -26,22 +26,24 @@
   --primary-solid-hover: #1d4ed8;
   --primary-text: #1d4ed8;
   --primary-soft: #eff6ff;
+  /* Token berikut SAMA dengan css/global.css supaya halaman login/daftar
+     memakai tema yang seragam dengan portal admin & customer. */
+  --primary-gradient: linear-gradient(150deg, #1e6bf0 0%, #1657d6 48%, #0f3f9e 100%);
 
-  --background: #f4f6f8;
+  --background: #f8fafc;
+  --background-glow: #e8f2ff;
   --surface: #ffffff;
-  --surface-2: #f3f4f6;
+  --surface-2: #f8fbff;
   --surface-overlay: rgba(15, 23, 42, 0.45);
 
-  --text: #1f2937;
-  --heading: #111827;
-  --secondary: #6b7280;
-  --muted: #9ca3af;
+  --text: #0f172a;
+  --heading: #0f172a;
+  --secondary: #5e6e85;
+  --muted: #7d8ca5;
 
-  --border: #d1d5db;
-  --border-soft: #e5e7eb;
+  --border: #e2e8f0;
+  --border-soft: #e0eaf8;
 
-  --brand-panel: #111827;
-  --brand-panel-2: #1f2937;
 
   --danger-bg: #fee2e2;
   --danger-soft-bg: #fef2f2;
@@ -52,10 +54,13 @@
   --success-text: #15803d;
   --warning-text: #92400e;
 
-  --focus-ring: rgba(37, 99, 235, 0.1);
-  --shadow: 0 15px 40px rgba(0, 0, 0, 0.08);
-  --shadow-sm: 0 10px 26px rgba(0, 0, 0, 0.05);
-  --shadow-md: 0 12px 30px rgba(0, 0, 0, 0.16);
+  --focus-ring: rgba(37, 99, 235, 0.14);
+  --shadow: 0 26px 50px -26px rgba(15, 23, 42, 0.45);
+  --shadow-sm:
+    0 1px 2px rgba(15, 23, 42, 0.035), 0 10px 26px -14px rgba(38, 83, 151, 0.28);
+  --shadow-md:
+    0 2px 4px rgba(15, 23, 42, 0.04), 0 22px 44px -22px rgba(30, 64, 175, 0.38);
+  --shadow-primary: 0 12px 24px -12px rgba(18, 100, 232, 0.65);
 }
 
 [data-theme="dark"] {
@@ -68,22 +73,22 @@
   --primary-solid-hover: #1d4ed8;
   --primary-text: #bfdbfe;
   --primary-soft: rgba(59, 130, 246, 0.16);
+  --primary-gradient: linear-gradient(160deg, #1d3a8a, #101c3f);
 
   --background: #0b1220;
+  --background-glow: #16233d;
   --surface: #111a2b;
   --surface-2: #162034;
   --surface-overlay: rgba(2, 6, 15, 0.62);
 
-  --text: #dbe4f0;
+  --text: #e6edf7;
   --heading: #f1f5f9;
   --secondary: #98a7bf;
-  --muted: #7d8ca5;
+  --muted: #8fa0ba;
 
-  --border: #2b3854;
-  --border-soft: #24314c;
+  --border: #24314c;
+  --border-soft: #263452;
 
-  --brand-panel: #0d1626;
-  --brand-panel-2: #16233d;
 
   --danger-bg: rgba(220, 38, 38, 0.22);
   --danger-soft-bg: rgba(220, 38, 38, 0.14);
@@ -94,11 +99,14 @@
   --success-text: #86efac;
   --warning-text: #fcd34a;
 
-  --shadow-sm: 0 10px 26px rgba(0, 0, 0, 0.35);
-  --shadow-md: 0 12px 30px rgba(0, 0, 0, 0.45);
+  --shadow-sm:
+    0 1px 2px rgba(0, 0, 0, 0.3), 0 12px 30px -16px rgba(0, 0, 0, 0.6);
+  --shadow-md:
+    0 2px 4px rgba(0, 0, 0, 0.3), 0 26px 50px -24px rgba(0, 0, 0, 0.7);
+  --shadow-primary: 0 12px 26px -14px rgba(37, 99, 235, 0.75);
 
   --focus-ring: rgba(96, 165, 250, 0.22);
-  --shadow: 0 18px 46px rgba(0, 0, 0, 0.5);
+  --shadow: 0 26px 54px -26px rgba(0, 0, 0, 0.85);
 }
 
 html,
@@ -120,7 +128,13 @@ body {
   display: flex;
   align-items: flex-start;
   justify-content: center;
-  background: var(--background);
+  background:
+    radial-gradient(
+      circle at 85% 0%,
+      var(--background-glow) 0,
+      transparent 30%
+    ),
+    var(--background);
   color: var(--text);
   padding: 0;
   overflow-x: hidden;
@@ -211,7 +225,8 @@ body {
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  background: linear-gradient(160deg, var(--brand-panel), var(--brand-panel-2));
+  /* Sama dengan gradient sidebar portal supaya identitas warnanya seragam. */
+  background: var(--primary-gradient);
   color: #fff;
 }
 
@@ -408,7 +423,7 @@ body {
   border: 1px solid transparent;
   border-radius: 10px;
   padding: 10px 16px;
-  background: var(--primary-solid);
+  background: var(--primary-gradient);
   color: #fff;
   font-size: 14px;
   font-weight: 700;
@@ -419,12 +434,23 @@ body {
   justify-content: center;
   gap: 10px;
   font-family: inherit;
-  box-shadow: var(--shadow-primary, none);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.2),
+    var(--shadow-primary);
 }
 
 .login-button:hover {
-  background: var(--primary-solid-hover);
+  background: var(--primary-gradient);
   color: #fff;
+  transform: translateY(-1px);
+  filter: saturate(1.08);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.24),
+    0 16px 28px -12px rgba(18, 100, 232, 0.7);
+}
+
+.login-button:active {
+  transform: translateY(0);
 }
 
 .login-button:disabled {
@@ -756,11 +782,7 @@ main.login-standalone {
   background: var(--surface);
   border: 1px solid var(--border-soft);
   border-radius: 24px;
-  box-shadow: 0 20px 48px rgba(15, 23, 42, 0.08);
-}
-
-[data-theme="dark"] .login-standalone .login-form-wrap {
-  box-shadow: 0 20px 48px rgba(0, 0, 0, 0.45);
+  box-shadow: var(--shadow-md);
 }
 
 /* Brand header di form login */

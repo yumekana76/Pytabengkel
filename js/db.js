@@ -82,7 +82,10 @@ function missingDbColumn(error) {
   const match =
     message.match(/Could not find the '([^']+)' column/i) ||
     message.match(/column "([^"]+)" of relation/i) ||
-    message.match(/column "([^"]+)" does not exist/i);
+    message.match(/column "([^"]+)" does not exist/i) ||
+    /* PostgREST/Supabase sering mengirim tanpa tanda kutip:
+       "column workshop_info.galeri_foto does not exist". */
+    message.match(/column\s+[\w.]+\.([a-zA-Z0-9_]+)\s+does not exist/i);
   return match ? match[1] : "";
 }
 
@@ -112,9 +115,9 @@ async function upsertRows(table, rows, onConflict = "id") {
       missingColumnNotified = true;
       if (typeof showPageNotice === "function") {
         showPageNotice(
-          "Data tersimpan, tetapi kolom baru belum ada di database. " +
-            "Jalankan ulang supabase/schema.sql agar sasaran & daftar diskon " +
-            "(termasuk multi-promo) ikut tersimpan.",
+          "Data tersimpan, tetapi sebagian kolom baru belum ada di database. " +
+            "Jalankan ulang supabase/schema.sql agar fitur terbaru " +
+            "(multi-promo, galeri & slide hero landing) ikut tersimpan.",
           "error",
         );
       }
@@ -880,6 +883,9 @@ async function dbInitOnce() {
           heroLabel: info.data[0].hero_label || "",
           heroJudul: info.data[0].hero_judul || "",
           heroDeskripsi: info.data[0].hero_deskripsi || "",
+          galeriFoto: normalizeGalleryFoto(info.data[0].galeri_foto),
+          heroSlides: normalizeHeroSlides(info.data[0].hero_slides),
+          heroAutoplay: info.data[0].hero_autoplay === true,
         }
       : {};
     DB.cache.accounts = (profiles.data || []).map((row) => ({
@@ -1053,6 +1059,62 @@ function getMekanikAktif() {
    INFORMASI BENGKEL
    ========================================= */
 
+/* Galeri landing disimpan sebagai array JSON: [{ url, judul, deskripsi }].
+   Terima juga string JSON (data lama / hasil restore backup) supaya
+   halaman tidak rusak karena format yang berbeda. */
+function normalizeGalleryFoto(value) {
+  let list = value;
+
+  if (typeof list === "string") {
+    try {
+      list = JSON.parse(list);
+    } catch (error) {
+      list = [];
+    }
+  }
+
+  if (!Array.isArray(list)) return [];
+
+  return list
+    .filter((item) => item && typeof item === "object")
+    .map((item) => ({
+      url: String(item.url || "").trim(),
+      judul: String(item.judul || "").trim(),
+      deskripsi: String(item.deskripsi || "").trim(),
+    }))
+    .filter((item) => item.url)
+    .slice(0, 8);
+}
+
+/* Slide hero landing: [{ foto, label, judul, deskripsi }]. Maksimal 5
+   slide; slide yang benar-benar kosong tidak ikut disimpan. */
+function normalizeHeroSlides(value) {
+  let list = value;
+
+  if (typeof list === "string") {
+    try {
+      list = JSON.parse(list);
+    } catch (error) {
+      list = [];
+    }
+  }
+
+  if (!Array.isArray(list)) return [];
+
+  return list
+    .filter((item) => item && typeof item === "object")
+    .map((item) => ({
+      foto: String(item.foto || "").trim(),
+      label: String(item.label || "").trim(),
+      judul: String(item.judul || "").trim(),
+      deskripsi: String(item.deskripsi || "").trim(),
+    }))
+    .filter(
+      (item) => item.foto || item.label || item.judul || item.deskripsi,
+    )
+    .slice(0, 5);
+}
+
 function getBengkelInfoLengkap() {
   const info = getWorkshopInfo() || {};
 
@@ -1067,6 +1129,9 @@ function getBengkelInfoLengkap() {
     heroLabel: info.heroLabel || "",
     heroJudul: info.heroJudul || "",
     heroDeskripsi: info.heroDeskripsi || "",
+    galeriFoto: normalizeGalleryFoto(info.galeriFoto),
+    heroSlides: normalizeHeroSlides(info.heroSlides),
+    heroAutoplay: info.heroAutoplay === true,
   };
 }
 
@@ -1641,8 +1706,15 @@ async function uploadHeroPhoto(file) {
     throw new Error("Ukuran foto maksimal 5 MB.");
   }
 
+  /* Foto hero juga dikompres supaya landing cepat dibuka di HP. */
+  const siapUpload = await compressLandingPhoto(file);
+
+  if (siapUpload.size > 5 * 1024 * 1024) {
+    throw new Error("Foto masih lebih dari 5 MB setelah dikompres.");
+  }
+
   const extRaw =
-    String(file.name || "")
+    String(siapUpload.name || "")
       .split(".")
       .pop() || "jpg";
   const ext = extRaw.toLowerCase().replace(/[^a-z0-9]/g, "") || "jpg";
@@ -1650,7 +1722,10 @@ async function uploadHeroPhoto(file) {
 
   const { error: uploadError } = await supabaseClient.storage
     .from("site-assets")
-    .upload(path, file, { upsert: false, contentType: file.type });
+    .upload(path, siapUpload, {
+      upsert: false,
+      contentType: siapUpload.type || "image/jpeg",
+    });
 
   if (uploadError) {
     throw new Error(uploadError.message);
@@ -1663,9 +1738,136 @@ async function uploadHeroPhoto(file) {
   return pub.publicUrl;
 }
 
-/* Hapus object foto hero lama dari storage (best-effort: URL yang bukan
-   milik bucket site-assets — misal hasil backup — dibiarkan). */
-async function removeHeroPhoto(url) {
+/* Muat file gambar menjadi <img> lewat data: URL — blob: diblokir CSP
+   img-src halaman admin. Dipakai untuk kompresi foto galeri & hero. */
+function loadImageForCompression(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+
+    reader.onload = () => {
+      const image = new Image();
+
+      image.onload = () => resolve(image);
+      image.onerror = () => reject(new Error("Foto tidak dapat dibaca."));
+      image.src = String(reader.result || "");
+    };
+
+    reader.onerror = () => reject(new Error("Foto tidak dapat dibaca."));
+    reader.readAsDataURL(file);
+  });
+}
+
+/* Kompres foto galeri di browser sebelum diunggah: sisi terpanjang
+   maksimal 1600 px, lalu di-encode ulang ke WebP kualitas 0.82.
+   Foto kecil yang sudah di bawah batas dibiarkan apa adanya, dan bila
+   hasil kompresi justru lebih besar, file asli yang dipakai. */
+async function compressLandingPhoto(file) {
+  const tipe = String(file.type || "");
+
+  /* GIF/SVG tidak diproses canvas (animasi bisa hilang). */
+  if (!/^image\/(jpeg|png|webp)$/i.test(tipe)) return file;
+
+  const MAKS_SISI = 1600;
+  const BATAS_KOMPRES = 500 * 1024;
+
+  const image = await loadImageForCompression(file);
+  const lebar = image.naturalWidth || image.width;
+  const tinggi = image.naturalHeight || image.height;
+
+  if (!lebar || !tinggi) return file;
+
+  const skala = Math.min(1, MAKS_SISI / Math.max(lebar, tinggi));
+
+  if (skala === 1 && file.size <= BATAS_KOMPRES) return file;
+
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.max(1, Math.round(lebar * skala));
+  canvas.height = Math.max(1, Math.round(tinggi * skala));
+
+  const context = canvas.getContext("2d");
+
+  if (!context) return file;
+
+  context.drawImage(image, 0, 0, canvas.width, canvas.height);
+
+  const blob = await new Promise((resolve) => {
+    canvas.toBlob(resolve, "image/webp", 0.82);
+  });
+
+  if (!blob || blob.size >= file.size) return file;
+
+  const namaDasar =
+    String(file.name || "galeri")
+      .replace(/\.[^.]+$/, "")
+      .trim() || "galeri";
+  /* Browser lama bisa mengembalikan PNG dari toBlob("image/webp").
+     Nama file & content type mengikuti blob yang benar-benar dihasilkan. */
+  const tipeHasil = String(blob.type || "image/jpeg");
+  const extHasil =
+    tipeHasil === "image/png" ? "png" : tipeHasil === "image/jpeg" ? "jpg" : "webp";
+
+  return new File([blob], `${namaDasar}.${extHasil}`, {
+    type: tipeHasil,
+    lastModified: Date.now(),
+  });
+}
+
+/* Unggah satu foto galeri bengkel ke bucket site-assets. URL publiknya
+   disimpan sebagai salah satu item workshop_info.galeri_foto. */
+async function uploadGalleryPhoto(file, skipCompress) {
+  if (!supabaseClient) {
+    throw new Error("Foto hanya tersedia pada mode Supabase.");
+  }
+
+  if (!dbIsAdmin()) {
+    throw new Error("Hanya admin yang dapat mengubah galeri.");
+  }
+
+  if (!file || !String(file.type || "").startsWith("image/")) {
+    throw new Error("File harus berupa gambar (jpg/png/webp).");
+  }
+
+  if (file.size > 5 * 1024 * 1024) {
+    throw new Error("Ukuran foto maksimal 5 MB.");
+  }
+
+  /* Foto besar diperkecil & dikonversi dulu supaya upload hemat kuota
+     dan galeri tetap cepat dibuka pengunjung. Admin sudah mengompres
+     saat memilih file, jadi kompresi bisa dilewati lewat skipCompress. */
+  const siapUpload = skipCompress ? file : await compressLandingPhoto(file);
+
+  if (siapUpload.size > 5 * 1024 * 1024) {
+    throw new Error("Foto masih lebih dari 5 MB setelah dikompres.");
+  }
+
+  const extRaw =
+    String(siapUpload.name || "")
+      .split(".")
+      .pop() || "jpg";
+  const ext = extRaw.toLowerCase().replace(/[^a-z0-9]/g, "") || "jpg";
+  const path = `galeri-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+
+  const { error: uploadError } = await supabaseClient.storage
+    .from("site-assets")
+    .upload(path, siapUpload, {
+      upsert: false,
+      contentType: siapUpload.type || "image/jpeg",
+    });
+
+  if (uploadError) {
+    throw new Error(uploadError.message);
+  }
+
+  const { data: pub } = supabaseClient.storage
+    .from("site-assets")
+    .getPublicUrl(path);
+
+  return pub.publicUrl;
+}
+
+/* Hapus object foto dari bucket site-assets (best-effort: URL yang bukan
+   milik bucket ini — misal hasil backup — dibiarkan). */
+async function removeSiteAsset(url) {
   if (!supabaseClient || !url) {
     return;
   }
@@ -1684,6 +1886,14 @@ async function removeHeroPhoto(url) {
   }
 
   await supabaseClient.storage.from("site-assets").remove([path]);
+}
+
+async function removeHeroPhoto(url) {
+  await removeSiteAsset(url);
+}
+
+async function removeGalleryPhoto(url) {
+  await removeSiteAsset(url);
 }
 
 /* AKUN CUSTOMER */
@@ -1887,6 +2097,10 @@ function saveWorkshopInfo(info) {
   const prev = DB.cache.info || {};
   const keep = (key) =>
     info[key] !== undefined ? info[key] : prev[key] || "";
+  const heroAutoplay =
+    info.heroAutoplay !== undefined
+      ? Boolean(info.heroAutoplay)
+      : Boolean(prev.heroAutoplay);
 
   DB.cache.info = {
     ...info,
@@ -1894,6 +2108,9 @@ function saveWorkshopInfo(info) {
     heroLabel: keep("heroLabel"),
     heroJudul: keep("heroJudul"),
     heroDeskripsi: keep("heroDeskripsi"),
+    galeriFoto: normalizeGalleryFoto(keep("galeriFoto")),
+    heroSlides: normalizeHeroSlides(keep("heroSlides")),
+    heroAutoplay: heroAutoplay,
   };
 
   if (!supabaseClient || !dbIsAdmin()) {
@@ -1901,24 +2118,27 @@ function saveWorkshopInfo(info) {
   }
 
   dbQueue(async () => {
-    const { error } = await supabaseClient.from("workshop_info").upsert(
-      [
-        {
-          id: 1,
-          nama: info.nama || "",
-          alamat: info.alamat || "",
-          kontak: info.kontak || "",
-          email: info.email || "",
-          jam_buka: info.jamBuka || "",
-          hari_buka: info.hariBuka || "",
-          hero_foto: DB.cache.info.heroFoto,
-          hero_label: DB.cache.info.heroLabel,
-          hero_judul: DB.cache.info.heroJudul,
-          hero_deskripsi: DB.cache.info.heroDeskripsi,
-        },
-      ],
-      { onConflict: "id" },
-    );
+    /* upsertRows membuang kolom yang belum ada di database lalu
+       mengulang simpan, sehingga perubahan tetap tersimpan walau
+       supabase/schema.sql belum dijalankan ulang. */
+    const { error } = await upsertRows("workshop_info", [
+      {
+        id: 1,
+        nama: info.nama || "",
+        alamat: info.alamat || "",
+        kontak: info.kontak || "",
+        email: info.email || "",
+        jam_buka: info.jamBuka || "",
+        hari_buka: info.hariBuka || "",
+        hero_foto: DB.cache.info.heroFoto,
+        hero_label: DB.cache.info.heroLabel,
+        hero_judul: DB.cache.info.heroJudul,
+        hero_deskripsi: DB.cache.info.heroDeskripsi,
+        galeri_foto: DB.cache.info.galeriFoto || [],
+        hero_slides: DB.cache.info.heroSlides || [],
+        hero_autoplay: Boolean(DB.cache.info.heroAutoplay),
+      },
+    ]);
 
     if (error) {
       notifyDbError(error.message);

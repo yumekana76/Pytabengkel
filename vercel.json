@@ -5,22 +5,32 @@
   "redirects": [
     {
       "source": "/",
-      "destination": "/html/landing.html",
+      "destination": "/html/index.html",
       "permanent": false
     },
     {
       "source": "/index.html",
-      "destination": "/html/landing.html",
+      "destination": "/html/index.html",
       "permanent": false
     },
     {
       "source": "/landing",
-      "destination": "/html/landing.html",
+      "destination": "/html/index.html",
       "permanent": false
     },
     {
       "source": "/landing/",
-      "destination": "/html/landing.html",
+      "destination": "/html/index.html",
+      "permanent": false
+    },
+    {
+      "source": "/detail",
+      "destination": "/html/detail.html",
+      "permanent": false
+    },
+    {
+      "source": "/detail/",
+      "destination": "/html/detail.html",
       "permanent": false
     },
     {

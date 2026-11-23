@@ -25,14 +25,14 @@ async function requireAdminAuth() {
 
   if (!profile) {
     clearAdminSession();
-    window.location.replace("/html/index.html?role=admin");
+    window.location.replace("/html/login.html?role=admin");
     return false;
   }
 
   if (!isAdminRole(profile.role)) {
     await Auth.signOut();
     clearAdminSession();
-    window.location.replace("/html/index.html?role=admin");
+    window.location.replace("/html/login.html?role=admin");
     return false;
   }
 
@@ -51,7 +51,7 @@ async function requireSuperAdminAuth() {
 
   if (!profile) {
     clearAdminSession();
-    window.location.replace("/html/index.html?role=super_admin");
+    window.location.replace("/html/login.html?role=super_admin");
     return false;
   }
 
