@@ -85,6 +85,10 @@
             <i class="fa-solid fa-screwdriver-wrench nav-icon" aria-hidden="true"></i>
             <span>Layanan</span>
           </a>
+          <a href="#galeri" class="nav-link">
+            <i class="fa-solid fa-images nav-icon" aria-hidden="true"></i>
+            <span>Galeri</span>
+          </a>
           <a href="#cara-kerja" class="nav-link">
             <i class="fa-solid fa-list-check nav-icon" aria-hidden="true"></i>
             <span>Alur Service</span>
@@ -126,22 +130,28 @@
               langsung dengan teknisi bengkel.
             </p>
             <div class="lp-hero-actions">
-              <a href="#promo" class="btn btn-primary">
-                <i class="fa-solid fa-arrow-down" aria-hidden="true"></i>
-                Lihat Promo
+              <a
+                href="login.html?role=customer"
+                class="btn btn-primary"
+                data-auth-link
+                data-loggedin-href="customers-page/service.html"
+                data-admin-href="admin-page/service.html"
+                data-loggedin-label="Ajukan Servis"
+              >
+                <i class="fa-solid fa-calendar-plus" aria-hidden="true"></i>
+                <span>Ajukan Servis</span>
               </a>
               <a href="#layanan" class="btn btn-secondary">
                 <i class="fa-solid fa-screwdriver-wrench" aria-hidden="true"></i>
-                <span>Layanan Kami</span>
+                <span>Lihat Layanan</span>
               </a>
             </div>
+            <p class="lp-hero-note">
+              <i class="fa-solid fa-circle-check" aria-hidden="true"></i>
+              Konsultasi dan estimasi biaya gratis sebelum pengerjaan.
+            </p>
             <div class="lp-hero-trust">
               <span><i class="fa-solid fa-circle-check" aria-hidden="true"></i> <span id="lpPromoCount">Promo aktif</span></span>
-              <span class="lp-hero-dot" aria-hidden="true"></span>
-              <span class="lp-hero-rating">
-                <span class="lp-hero-stars" id="lpHeroStars" aria-hidden="true"></span>
-                <span id="lpHeroRating">Ulasan asli pelanggan</span>
-              </span>
               <span class="lp-hero-dot" aria-hidden="true"></span>
               <span>
                 <i class="fa-solid fa-location-dot" aria-hidden="true"></i>
@@ -149,6 +159,37 @@
               </span>
             </div>
           </div>
+          <div class="lp-hero-media">
+            <figure class="lp-hero-photo">
+              <span class="lp-media-fallback lp-media-hero" aria-hidden="true">
+                <i class="fa-solid fa-car-side"></i>
+              </span>
+            </figure>
+            <figure class="lp-hero-photo-mini">
+              <span class="lp-media-fallback lp-media-mini" aria-hidden="true">
+                <i class="fa-solid fa-clipboard-check"></i>
+              </span>
+              <figcaption>
+                <i class="fa-solid fa-circle-check" aria-hidden="true"></i>
+                Quality Check
+              </figcaption>
+            </figure>
+            <div class="lp-hero-float lp-hero-float-b">
+              <span class="lp-hero-float-icon lp-hero-float-star" aria-hidden="true">
+                <i class="fa-solid fa-star"></i>
+              </span>
+              <div>
+                <strong>Rating Pelanggan</strong>
+                <span id="lpHeroMediaRating">Ulasan asli</span>
+              </div>
+            </div>
+          </div>
+          <div
+            class="lp-hero-dots"
+            id="lpHeroDots"
+            aria-label="Pilih slide hero"
+            hidden
+          ></div>
         </section>
 
         <!-- STATS STRIP — angka diisi dari data publik (ulasan, promo, info bengkel) -->
@@ -201,34 +242,49 @@
             </div>
           </div>
           <div class="panel-body">
-            <div class="lp-features-grid">
-              <div class="lp-feature-card">
-                <div class="lp-feature-icon">
-                  <i class="fa-solid fa-mobile-screen-button" aria-hidden="true"></i>
+            <div class="lp-feature-layout">
+              <figure class="lp-feature-photo">
+                <span class="lp-media-fallback lp-media-feature" aria-hidden="true">
+                  <i class="fa-solid fa-user-gear"></i>
+                </span>
+                <figcaption class="lp-feature-photo-caption">
+                  <span class="lp-feature-photo-badge">
+                    <i class="fa-solid fa-user-gear" aria-hidden="true"></i>
+                    Mekanik Berpengalaman
+                  </span>
+                  <strong>Ditangani langsung oleh teknisi ahli</strong>
+                  <span>Setiap kendaraan diperiksa teliti sebelum diserahkan kembali.</span>
+                </figcaption>
+              </figure>
+              <div class="lp-features-grid">
+                <div class="lp-feature-card">
+                  <div class="lp-feature-icon">
+                    <i class="fa-solid fa-mobile-screen-button" aria-hidden="true"></i>
+                  </div>
+                  <h4>Pantau dari Mana Saja</h4>
+                  <p>Mulai dari antrean masuk, pengerjaan montir, hingga tes kelayakan jalan bisa Anda ikuti langsung lewat HP.</p>
                 </div>
-                <h4>Pantau dari Mana Saja</h4>
-                <p>Mulai dari antrean masuk, pengerjaan montir, hingga tes kelayakan jalan bisa Anda ikuti langsung lewat HP.</p>
-              </div>
-              <div class="lp-feature-card">
-                <div class="lp-feature-icon">
-                  <i class="fa-solid fa-receipt" aria-hidden="true"></i>
+                <div class="lp-feature-card">
+                  <div class="lp-feature-icon">
+                    <i class="fa-solid fa-receipt" aria-hidden="true"></i>
+                  </div>
+                  <h4>Biaya Jelas &amp; Terbuka</h4>
+                  <p>Estimasi biaya kami sampaikan di awal. Tidak ada biaya dadakan atau penggantian part tanpa izin Anda.</p>
                 </div>
-                <h4>Biaya Jelas &amp; Terbuka</h4>
-                <p>Estimasi biaya kami sampaikan di awal. Tidak ada biaya dadakan atau penggantian part tanpa izin Anda.</p>
-              </div>
-              <div class="lp-feature-card">
-                <div class="lp-feature-icon">
-                  <i class="fa-solid fa-award" aria-hidden="true"></i>
+                <div class="lp-feature-card">
+                  <div class="lp-feature-icon">
+                    <i class="fa-solid fa-award" aria-hidden="true"></i>
+                  </div>
+                  <h4>Teknisi Handal &amp; Teliti</h4>
+                  <p>Ditangani mekanik berpengalaman dengan alat diagnostik akurat untuk mencari sumber masalah kendaraan.</p>
                 </div>
-                <h4>Teknisi Handal &amp; Teliti</h4>
-                <p>Ditangani mekanik berpengalaman dengan alat diagnostik akurat untuk mencari sumber masalah kendaraan.</p>
-              </div>
-              <div class="lp-feature-card">
-                <div class="lp-feature-icon">
-                  <i class="fa-solid fa-box-open" aria-hidden="true"></i>
+                <div class="lp-feature-card">
+                  <div class="lp-feature-icon">
+                    <i class="fa-solid fa-box-open" aria-hidden="true"></i>
+                  </div>
+                  <h4>Suku Cadang Asli</h4>
+                  <p>Setiap part pengganti dijamin 100% original dan otomatis tercatat di buku riwayat servis digital Anda.</p>
                 </div>
-                <h4>Suku Cadang Asli</h4>
-                <p>Setiap part pengganti dijamin 100% original dan otomatis tercatat di buku riwayat servis digital Anda.</p>
               </div>
             </div>
           </div>
@@ -291,8 +347,11 @@
           <div class="panel-body">
             <div class="lp-service-grid">
               <a class="lp-service-card" href="detail.html?type=layanan&id=servis-rutin-tune-up">
-                <div class="lp-service-icon-wrap">
-                  <i class="fa-solid fa-oil-can" aria-hidden="true"></i>
+                <div class="lp-service-media">
+                  <span class="lp-media-fallback lp-media-service" aria-hidden="true"></span>
+                  <div class="lp-service-icon-wrap">
+                    <i class="fa-solid fa-oil-can" aria-hidden="true"></i>
+                  </div>
                 </div>
                 <div class="lp-service-details">
                   <strong>Servis Rutin & Tune Up</strong>
@@ -301,8 +360,11 @@
                 </div>
               </a>
               <a class="lp-service-card" href="detail.html?type=layanan&id=perbaikan-diagnosa-mesin">
-                <div class="lp-service-icon-wrap">
-                  <i class="fa-solid fa-wrench" aria-hidden="true"></i>
+                <div class="lp-service-media">
+                  <span class="lp-media-fallback lp-media-service" aria-hidden="true"></span>
+                  <div class="lp-service-icon-wrap">
+                    <i class="fa-solid fa-wrench" aria-hidden="true"></i>
+                  </div>
                 </div>
                 <div class="lp-service-details">
                   <strong>Perbaikan & Diagnosa Mesin</strong>
@@ -311,8 +373,11 @@
                 </div>
               </a>
               <a class="lp-service-card" href="detail.html?type=layanan&id=suku-cadang-kaki-kaki">
-                <div class="lp-service-icon-wrap">
-                  <i class="fa-solid fa-gears" aria-hidden="true"></i>
+                <div class="lp-service-media">
+                  <span class="lp-media-fallback lp-media-service" aria-hidden="true"></span>
+                  <div class="lp-service-icon-wrap">
+                    <i class="fa-solid fa-gears" aria-hidden="true"></i>
+                  </div>
                 </div>
                 <div class="lp-service-details">
                   <strong>Suku Cadang & Kaki-kaki</strong>
@@ -321,8 +386,11 @@
                 </div>
               </a>
               <a class="lp-service-card" href="detail.html?type=layanan&id=quality-control-test-drive">
-                <div class="lp-service-icon-wrap">
-                  <i class="fa-solid fa-clipboard-check" aria-hidden="true"></i>
+                <div class="lp-service-media">
+                  <span class="lp-media-fallback lp-media-service" aria-hidden="true"></span>
+                  <div class="lp-service-icon-wrap">
+                    <i class="fa-solid fa-clipboard-check" aria-hidden="true"></i>
+                  </div>
                 </div>
                 <div class="lp-service-details">
                   <strong>Quality Control & Test Drive</strong>
@@ -330,6 +398,76 @@
                   <span class="lp-service-tag"><i class="fa-solid fa-circle-check"></i> 25 Titik Cek</span>
                 </div>
               </a>
+            </div>
+          </div>
+        </section>
+
+        <!-- GALERI BENGKEL -->
+        <section class="panel vehicle-panel" id="galeri">
+          <div class="panel-header">
+            <div>
+              <h3>Galeri Bengkel</h3>
+              <p>Intip suasana bengkel, area pengerjaan, dan hasil perawatan kendaraan.</p>
+            </div>
+            <div class="vehicle-toolbar">
+              <span class="badge done">
+                <i class="fa-solid fa-camera" aria-hidden="true"></i>
+                Foto Asli Bengkel
+              </span>
+            </div>
+          </div>
+          <div class="panel-body">
+            <div class="lp-gallery-wrap">
+              <div class="lp-gallery-grid lp-gallery-mosaic" id="lpGalleryGrid">
+              <figure class="lp-gallery-item lp-gallery-wide">
+                <span class="lp-media-fallback lp-media-gallery" aria-hidden="true"><i class="fa-solid fa-motorcycle"></i></span>
+                <figcaption>
+                  <strong>Area Servis Motor</strong>
+                  <span>Pengerjaan cepat untuk kendaraan harian</span>
+                </figcaption>
+              </figure>
+              <figure class="lp-gallery-item">
+                <span class="lp-media-fallback lp-media-gallery" aria-hidden="true"><i class="fa-solid fa-life-ring"></i></span>
+                <figcaption>
+                  <strong>Cek &amp; Pasang Ban</strong>
+                  <span>Tekanan dan tapak diperiksa</span>
+                </figcaption>
+              </figure>
+              <figure class="lp-gallery-item">
+                <span class="lp-media-fallback lp-media-gallery" aria-hidden="true"><i class="fa-solid fa-wand-magic-sparkles"></i></span>
+                <figcaption>
+                  <strong>Detailing</strong>
+                  <span>Kendaraan kembali kinclong</span>
+                </figcaption>
+              </figure>
+              <figure class="lp-gallery-item">
+                <span class="lp-media-fallback lp-media-gallery" aria-hidden="true"><i class="fa-solid fa-couch"></i></span>
+                <figcaption>
+                  <strong>Resepsionis &amp; Ruang Tunggu</strong>
+                  <span>Nyaman menunggu kendaraan selesai</span>
+                </figcaption>
+              </figure>
+              </div>
+              <div class="lp-gallery-nav" hidden>
+                <button
+                  type="button"
+                  class="lp-gallery-btn"
+                  id="lpGalleryPrev"
+                  aria-label="Foto sebelumnya"
+                  aria-controls="lpGalleryGrid"
+                >
+                  <i class="fa-solid fa-chevron-left" aria-hidden="true"></i>
+                </button>
+                <button
+                  type="button"
+                  class="lp-gallery-btn"
+                  id="lpGalleryNext"
+                  aria-label="Foto berikutnya"
+                  aria-controls="lpGalleryGrid"
+                >
+                  <i class="fa-solid fa-chevron-right" aria-hidden="true"></i>
+                </button>
+              </div>
             </div>
           </div>
         </section>
@@ -607,6 +745,7 @@
               <li><a href="#promo">Promo &amp; Diskon</a></li>
               <li><a href="#blok">Informasi</a></li>
               <li><a href="#layanan">Layanan</a></li>
+              <li><a href="#galeri">Galeri</a></li>
             </ul>
           </div>
           <div class="lp-footer-col">

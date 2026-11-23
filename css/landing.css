@@ -232,22 +232,6 @@ html {
   color: #fbbf24;
 }
 
-.lp-hero-rating {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.lp-hero-stars {
-  display: inline-flex;
-  gap: 2px;
-  font-size: 10px;
-}
-
-.lp-hero-stars:empty {
-  display: none;
-}
-
 .lp-hero-dot {
   width: 3px;
   height: 3px;
@@ -2550,4 +2534,1548 @@ a.lp-service-card:focus-visible {
    kalau tidak, konten yang "disembunyikan" tetap ikut tampil. */
 .lp-detail-wrap [hidden] {
   display: none !important;
+}
+
+/* =========================================
+   FOTO & GALERI — tampilan landing lebih hidup
+   ---------------------------------------------------------------
+   Bagian ini menambahkan elemen visual berupa foto: hero dua kolom,
+   foto teknisi di panel keunggulan, thumbnail di kartu layanan, dan
+   galeri bengkel. Semua aturan ditulis setelah blok lama sehingga
+   menimpa tampilan "kotak penuh ikon" tanpa mengubah perilaku JS.
+   ========================================= */
+
+/* ---------- HERO: teks kiri, foto kanan ---------- */
+
+.lp-hero {
+  justify-content: space-between;
+  gap: clamp(24px, 4vw, 56px);
+  padding: clamp(36px, 4vw, 60px) clamp(24px, 3.5vw, 56px);
+  border-radius: 24px;
+}
+
+.lp-hero-copy {
+  flex: 1 1 420px;
+  min-width: 0;
+  max-width: 620px;
+}
+
+/* Hierarki teks hero: judul lebih tegas, paragraf lebih nyaman dibaca,
+   dan tombol punya target sentuh yang cukup besar. */
+.lp-hero h2 {
+  max-width: 600px;
+  margin-bottom: 14px;
+  font-size: clamp(32px, 3.6vw, 50px);
+  line-height: 1.06;
+  letter-spacing: -1.6px;
+  text-wrap: balance;
+}
+
+.lp-hero p {
+  max-width: 560px;
+  font-size: clamp(14px, 1.05vw, 16px);
+  line-height: 1.7;
+}
+
+.lp-hero-actions {
+  gap: 12px;
+}
+
+.lp-hero-actions .btn {
+  min-height: 46px;
+}
+
+.lp-hero-actions .btn:focus-visible {
+  outline: 3px solid rgba(255, 255, 255, 0.9);
+  outline-offset: 3px;
+}
+
+.lp-hero-note {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 12px 0 0;
+  color: rgba(255, 255, 255, 0.74) !important;
+  font-size: 12.5px !important;
+  line-height: 1.5 !important;
+}
+
+.lp-hero-note i {
+  color: #86efac;
+  font-size: 12px;
+}
+
+.lp-hero-trust {
+  margin-top: 16px;
+  font-size: 12px;
+}
+
+.lp-hero-media {
+  position: relative;
+  z-index: 1;
+  flex: 0 1 400px;
+  min-width: 0;
+  align-self: center;
+  padding: 6px 0;
+}
+
+.lp-hero-photo {
+  position: relative;
+  overflow: hidden;
+  margin: 0;
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 26px 50px rgba(2, 12, 36, 0.42);
+  transform: rotate(-1.5deg);
+  transition: transform 0.45s ease, box-shadow 0.45s ease;
+}
+
+.lp-hero-photo:hover {
+  transform: rotate(-1.5deg) scale(1.015);
+  box-shadow: 0 30px 58px rgba(2, 12, 36, 0.5);
+}
+
+.lp-hero-photo img {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+}
+
+.lp-hero-float {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px 10px 10px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.96);
+  color: #0f172a;
+  box-shadow: 0 16px 32px rgba(2, 12, 36, 0.3);
+  pointer-events: none;
+  animation: lp-float-y 5s ease-in-out infinite alternate;
+}
+
+/* Foto kecil pendukung di sudut foto utama — memberi konteks proses
+   pengerjaan tanpa menambah deretan kartu ikon. */
+.lp-hero-photo-mini {
+  position: absolute;
+  left: -30px;
+  bottom: -22px;
+  width: 158px;
+  margin: 0;
+  overflow: hidden;
+  border: 4px solid rgba(255, 255, 255, 0.92);
+  border-radius: 14px;
+  background: #0f172a;
+  box-shadow: 0 18px 34px rgba(2, 12, 36, 0.35);
+  transform: rotate(3deg);
+  transition: transform 0.4s ease;
+}
+
+.lp-hero-photo-mini:hover {
+  transform: rotate(0deg) scale(1.03);
+}
+
+.lp-hero-photo-mini img {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+}
+
+.lp-hero-photo-mini figcaption {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 22px 9px 8px;
+  background: linear-gradient(
+    180deg,
+    rgba(6, 15, 35, 0) 0%,
+    rgba(6, 15, 35, 0.88) 100%
+  );
+  color: #fff;
+  font-size: 10.5px;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.lp-hero-photo-mini figcaption i {
+  color: #86efac;
+  font-size: 10px;
+}
+
+.lp-hero-float strong {
+  display: block;
+  font-size: 12.5px;
+  font-weight: 800;
+  line-height: 1.3;
+}
+
+.lp-hero-float div > span {
+  display: block;
+  font-size: 11px;
+  font-weight: 500;
+  color: #475569;
+}
+
+.lp-hero-float-icon {
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  background: linear-gradient(140deg, #2563eb, #1d4ed8);
+  color: #fff;
+  font-size: 13px;
+}
+
+.lp-hero-float-star {
+  background: linear-gradient(140deg, #f59e0b, #d97706);
+}
+
+.lp-hero-float-b {
+  top: -18px;
+  right: -16px;
+  animation-delay: -2.4s;
+}
+
+@keyframes lp-float-y {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    transform: translate3d(0, -8px, 0);
+  }
+}
+
+/* ---------- KEUNGGULAN: foto teknisi + 2x2 kartu ---------- */
+
+.lp-feature-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr);
+  gap: 20px;
+  align-items: stretch;
+}
+
+.lp-feature-photo {
+  position: relative;
+  overflow: hidden;
+  margin: 0;
+  min-height: 340px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--surface-2);
+}
+
+.lp-feature-photo img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: transform 0.6s ease;
+}
+
+.lp-feature-photo:hover img {
+  transform: scale(1.04);
+}
+
+.lp-feature-photo::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    180deg,
+    rgba(6, 15, 35, 0) 32%,
+    rgba(6, 15, 35, 0.86) 100%
+  );
+  pointer-events: none;
+}
+
+.lp-feature-photo-caption {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 20px;
+  color: #fff;
+}
+
+.lp-feature-photo-caption > strong {
+  font-size: 16px;
+  font-weight: 800;
+  line-height: 1.3;
+}
+
+.lp-feature-photo-caption > span:not(.lp-feature-photo-badge) {
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: rgba(255, 255, 255, 0.82);
+}
+
+.lp-feature-photo-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  width: fit-content;
+  margin-bottom: 2px;
+  padding: 5px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.32);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.16);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.lp-features-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.lp-features-grid .lp-feature-card {
+  padding: 20px 18px;
+}
+
+/* ---------- LAYANAN: kartu bergambar ---------- */
+
+.lp-service-grid {
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 16px;
+}
+
+.lp-service-grid .lp-service-card {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0;
+  padding: 0 0 18px;
+  overflow: hidden;
+}
+
+.lp-service-media {
+  position: relative;
+  overflow: hidden;
+  aspect-ratio: 16 / 10;
+  background: var(--surface-3);
+}
+
+.lp-service-media img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.55s ease;
+}
+
+.lp-service-card:hover .lp-service-media img {
+  transform: scale(1.06);
+}
+
+.lp-service-media::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    180deg,
+    rgba(6, 15, 35, 0) 52%,
+    rgba(6, 15, 35, 0.42) 100%
+  );
+  pointer-events: none;
+}
+
+.lp-service-grid .lp-service-media .lp-service-icon-wrap {
+  position: absolute;
+  left: 14px;
+  bottom: 14px;
+  z-index: 1;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+}
+
+.lp-service-details {
+  padding: 16px 18px 0;
+}
+
+/* ---------- GALERI BENGKEL ---------- */
+
+.lp-gallery-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-auto-rows: 190px;
+  gap: 12px;
+}
+
+/* Jumlah foto selain 4 dibuat rata dan mengisi lebar panel. */
+.lp-gallery-grid:not(.lp-gallery-mosaic) {
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.lp-gallery-item {
+  position: relative;
+  overflow: hidden;
+  margin: 0;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface-2);
+}
+
+.lp-gallery-grid.lp-gallery-mosaic .lp-gallery-wide {
+  grid-column: span 2;
+  grid-row: span 2;
+}
+
+.lp-gallery-grid.lp-gallery-mosaic .lp-gallery-item:nth-child(4) {
+  grid-column: span 2;
+}
+
+.lp-gallery-item img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.65s cubic-bezier(0.16, 0.84, 0.44, 1);
+}
+
+.lp-gallery-item:hover img,
+.lp-gallery-item:focus-within img {
+  transform: scale(1.07);
+}
+
+.lp-gallery-item::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    180deg,
+    rgba(6, 15, 35, 0) 45%,
+    rgba(6, 15, 35, 0.82) 100%
+  );
+  pointer-events: none;
+}
+
+.lp-gallery-item figcaption {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 14px 16px;
+  color: #fff;
+}
+
+.lp-gallery-item figcaption strong {
+  font-size: 13.5px;
+  font-weight: 800;
+  line-height: 1.3;
+}
+
+.lp-gallery-item figcaption span {
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.lp-gallery-grid.lp-gallery-mosaic .lp-gallery-wide figcaption strong {
+  font-size: 17px;
+}
+
+/* ---------- RESPONSIF FOTO & GALERI ---------- */
+
+@media (max-width: 1024px) {
+  .lp-feature-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .lp-feature-photo {
+    min-height: 260px;
+  }
+}
+
+@media (max-width: 960px) {
+  .lp-hero {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 34px;
+  }
+
+  .lp-hero h2 {
+    font-size: clamp(28px, 5vw, 38px);
+    letter-spacing: -1px;
+  }
+
+  .lp-hero-copy {
+    max-width: none;
+  }
+
+  .lp-hero-media {
+    flex: 0 0 auto;
+    align-self: stretch;
+    max-width: 480px;
+    width: 100%;
+    margin: 0 auto;
+  }
+
+  .lp-hero-photo {
+    transform: none;
+  }
+
+  .lp-hero-photo-mini {
+    left: -10px;
+    bottom: -18px;
+    width: 136px;
+  }
+
+  .lp-hero-float-b {
+    right: -6px;
+  }
+}
+
+@media (max-width: 900px) {
+  .lp-gallery-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-auto-rows: 180px;
+  }
+
+  .lp-gallery-grid.lp-gallery-mosaic .lp-gallery-wide {
+    grid-column: span 2;
+    grid-row: span 1;
+  }
+
+  .lp-gallery-grid.lp-gallery-mosaic .lp-gallery-item:nth-child(4) {
+    grid-column: span 2;
+  }
+}
+
+@media (max-width: 768px) {
+  .lp-features-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 700px) {
+  .lp-hero-float {
+    padding: 8px 12px 8px 8px;
+  }
+
+  .lp-hero-float strong {
+    font-size: 11.5px;
+  }
+
+  .lp-hero-float div > span {
+    font-size: 10px;
+  }
+}
+
+@media (max-width: 560px) {
+  .lp-hero h2 {
+    font-size: 27px;
+  }
+
+  /* Pemisah titik tidak perlu saat item trust sudah wrap ke baris baru. */
+  .lp-hero-trust .lp-hero-dot {
+    display: none;
+  }
+
+  .lp-hero-actions .btn {
+    min-height: 44px;
+  }
+
+  .lp-gallery-grid {
+    grid-template-columns: 1fr;
+    grid-auto-rows: 220px;
+  }
+
+  .lp-gallery-grid.lp-gallery-mosaic .lp-gallery-wide,
+  .lp-gallery-grid.lp-gallery-mosaic .lp-gallery-item:nth-child(4) {
+    grid-column: span 1;
+    grid-row: span 1;
+  }
+
+  .lp-gallery-grid:not(.lp-gallery-mosaic) {
+    grid-template-columns: 1fr;
+  }
+
+  .lp-gallery-grid.lp-gallery-mosaic .lp-gallery-wide figcaption strong {
+    font-size: 15px;
+  }
+
+  .lp-hero-photo-mini {
+    left: -4px;
+    bottom: -14px;
+    width: 118px;
+  }
+
+  .lp-hero-photo-mini figcaption {
+    padding: 18px 7px 6px;
+    font-size: 9.5px;
+  }
+
+  .lp-hero-float-b {
+    top: -14px;
+    right: -2px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lp-hero-float {
+    animation: none;
+  }
+
+  .lp-hero-photo,
+  .lp-hero-photo:hover,
+  .lp-hero-photo-mini,
+  .lp-hero-photo-mini:hover,
+  .lp-feature-photo img,
+  .lp-service-media img,
+  .lp-gallery-item img {
+    transition: none;
+    transform: none;
+  }
+}
+
+/* ---------- HERO SLIDESHOW: fade teks + titik navigasi ---------- */
+
+.lp-hero-copy {
+  transition: opacity 0.22s ease;
+}
+
+.lp-hero-copy.is-hero-fading {
+  opacity: 0.35;
+}
+
+.lp-hero-dots {
+  position: absolute;
+  right: 24px;
+  bottom: 16px;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.lp-hero-dots[hidden] {
+  display: none;
+}
+
+.lp-hero-slide-dot {
+  width: 10px;
+  height: 10px;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, 0.75);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.32);
+  cursor: pointer;
+  transition:
+    width 0.22s ease,
+    background 0.22s ease,
+    border-color 0.22s ease;
+}
+
+.lp-hero-slide-dot:hover {
+  background: rgba(255, 255, 255, 0.6);
+}
+
+.lp-hero-slide-dot.is-active {
+  width: 28px;
+  background: #fff;
+  border-color: #fff;
+}
+
+.lp-hero-slide-dot:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 3px;
+}
+
+@media (max-width: 960px) {
+  .lp-hero-dots {
+    right: auto;
+    left: 50%;
+    bottom: 10px;
+    transform: translateX(-50%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lp-hero-copy,
+  .lp-hero-slide-dot {
+    transition: none;
+  }
+}
+
+/* =========================================
+   RESPONSIF — KOMPOSISI TABLET & HP
+   ---------------------------------------------------------------
+   Ditulis paling akhir agar menimpa aturan responsif sebelumnya.
+   Tablet tetap memakai komposisi dua kolom seperti desktop; di HP
+   foto hero tidak lagi ditumpuk di bawah teks (penyebab hero jadi
+   sangat panjang), sehingga hero kembali ringkas satu panel.
+   ========================================= */
+
+/* Tablet: hero dua kolom, foto & teks diperkecil. */
+@media (min-width: 721px) and (max-width: 960px) {
+  .lp-hero {
+    flex-direction: row;
+    align-items: center;
+    gap: 24px;
+    padding: 30px 26px;
+  }
+
+  .lp-hero-copy {
+    flex: 1 1 0;
+    max-width: 430px;
+  }
+
+  .lp-hero h2 {
+    font-size: clamp(26px, 4vw, 34px);
+    letter-spacing: -1px;
+  }
+
+  .lp-hero p {
+    font-size: 13.5px;
+    line-height: 1.6;
+    margin-bottom: 18px;
+  }
+
+  .lp-hero-eyebrow {
+    margin-bottom: 12px;
+    padding: 6px 12px;
+    font-size: 11.5px;
+  }
+
+  .lp-hero-actions .btn {
+    min-height: 42px;
+    padding: 9px 14px;
+  }
+
+  .lp-hero-media {
+    flex: 0 0 250px;
+    max-width: 250px;
+    margin: 0;
+    padding: 6px 0;
+    /* Wajib: tanpa ini kolom foto ikut setinggi teks, sehingga foto
+       mini tidak menempel di sudut foto utama seperti di desktop. */
+    align-self: center;
+  }
+
+  .lp-hero-photo {
+    transform: none;
+    border-radius: 16px;
+  }
+
+  .lp-hero-photo-mini {
+    width: 104px;
+    left: -10px;
+    bottom: -14px;
+    border-width: 3px;
+  }
+
+  /* Kartu rating tetap tampil, hanya diperkecil. */
+  .lp-hero-float {
+    gap: 8px;
+    padding: 8px 10px 8px 8px;
+  }
+
+  .lp-hero-float-icon {
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    font-size: 11px;
+  }
+
+  .lp-hero-float strong {
+    font-size: 11px;
+  }
+
+  .lp-hero-float div > span {
+    font-size: 9.5px;
+  }
+
+  .lp-hero-float-b {
+    top: -10px;
+    right: -4px;
+  }
+}
+
+/* HP & tablet kecil: hero dua kolom (teks kiri, foto kanan).
+   Semua elemen tetap tampil, hanya skalanya yang diperkecil supaya
+   komposisinya tetap menyamping seperti desktop. */
+@media (max-width: 720px) {
+  .lp-hero {
+    flex-direction: row;
+    align-items: center;
+    gap: 14px;
+    padding: 22px 16px;
+    border-radius: 18px;
+  }
+
+  .lp-hero-copy {
+    flex: 1 1 auto;
+    max-width: none;
+    min-width: 0;
+  }
+
+  .lp-hero-media {
+    display: flex;
+    flex-direction: column;
+    flex: 0 0 36%;
+    width: auto;
+    max-width: 240px;
+    min-width: 104px;
+    margin: 0;
+    padding: 0;
+    align-self: center;
+  }
+
+  .lp-hero-photo {
+    border-radius: 14px;
+    transform: rotate(-1.5deg);
+  }
+
+  /* Foto utama agak tinggi supaya kolom kanan tidak kosong. */
+  .lp-hero-photo img {
+    aspect-ratio: 3 / 4;
+  }
+
+  .lp-hero-photo-mini {
+    width: 62%;
+    left: -6px;
+    bottom: -8px;
+    border-width: 2px;
+    border-radius: 10px;
+  }
+
+  .lp-hero-photo-mini figcaption {
+    padding: 14px 5px 4px;
+    font-size: 8.5px;
+    gap: 3px;
+  }
+
+  /* Kartu rating di atas foto: dengan urutan ini dasar kolom foto sama
+     dengan dasar foto utama, sehingga foto mini tetap menempel di sudut
+     foto dan tidak menimpa kartu rating. */
+  .lp-hero-float {
+    position: static;
+    order: -1;
+    width: fit-content;
+    max-width: 100%;
+    margin: 0 auto 8px;
+    padding: 5px 8px 5px 5px;
+    gap: 6px;
+    border-radius: 10px;
+    animation: none;
+  }
+
+  .lp-hero-float-icon {
+    width: 22px;
+    height: 22px;
+    border-radius: 7px;
+    font-size: 9px;
+  }
+
+  .lp-hero-float strong {
+    font-size: 9.5px;
+  }
+
+  .lp-hero-float div > span {
+    font-size: 8.5px;
+  }
+
+  .lp-hero-float-b {
+    top: auto;
+    right: auto;
+  }
+
+  .lp-hero-photo {
+    margin: 0;
+  }
+
+  .lp-hero-eyebrow {
+    margin-bottom: 8px;
+    padding: 4px 9px;
+    font-size: 10px;
+    gap: 5px;
+  }
+
+  .lp-hero h2 {
+    font-size: clamp(17px, 5vw, 24px);
+    line-height: 1.16;
+    letter-spacing: -0.5px;
+    margin-bottom: 7px;
+  }
+
+  .lp-hero p {
+    font-size: clamp(11px, 3.1vw, 13px);
+    line-height: 1.5;
+    margin-bottom: 10px;
+  }
+
+  .lp-hero-actions {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 6px;
+  }
+
+  .lp-hero-actions .btn {
+    width: 100%;
+    min-height: 36px;
+    padding: 7px 8px;
+    font-size: 11px;
+    gap: 6px;
+    border-radius: 9px;
+  }
+
+  .lp-hero-note {
+    margin-top: 7px;
+    font-size: 10px !important;
+    line-height: 1.45 !important;
+    gap: 5px;
+  }
+
+  .lp-hero-trust {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+    margin-top: 8px;
+    font-size: 9.5px;
+  }
+
+  .lp-hero-trust .lp-hero-dot {
+    display: none;
+  }
+}
+
+@media (max-width: 460px) {
+  .lp-cta-actions .btn {
+    width: auto;
+  }
+}
+
+/* Tablet: kartu keunggulan tetap 2x2 supaya tidak jadi 4 baris panjang. */
+@media (min-width: 561px) and (max-width: 768px) {
+  .lp-features-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* Tablet: navigasi dibungkus ke baris kedua supaya semua menu terlihat,
+   dan strip statistik kembali satu baris seperti desktop. */
+/* Laptop kecil: rapatkan sedikit supaya tetap satu baris penuh. */
+@media (min-width: 1025px) and (max-width: 1100px) {
+  .lp-nav .nav-link {
+    padding: 9px 10px;
+    font-size: 12.5px;
+  }
+}
+
+/* Tablet: navigasi tetap satu baris (bisa digeser) seperti HP & desktop. */
+@media (min-width: 561px) and (max-width: 1024px) {
+  .lp-nav {
+    flex-wrap: nowrap;
+    justify-content: safe center;
+    overflow-x: auto;
+  }
+
+  .lp-nav .nav-link {
+    padding: 8px 10px;
+    font-size: 12.5px;
+  }
+
+  .lp-stat-divider {
+    display: none;
+  }
+}
+
+/* Tablet lebar: strip statistik kembali satu baris seperti desktop. */
+@media (min-width: 721px) and (max-width: 960px) {
+  .lp-stats-strip {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) minmax(0, 1.25fr);
+    gap: 10px;
+    padding: 18px 16px;
+  }
+
+  .lp-stat-num {
+    font-size: 21px;
+  }
+
+  /* Jam buka ("08.00 - 17.00 WIB") butuh lebih banyak ruang. */
+  .lp-stat-num-sm {
+    font-size: 18px;
+  }
+}
+
+/* =========================================
+   HP: kartu lebih ringkas (keunggulan & promo 2 kolom),
+   galeri bisa digeser dengan tombol.
+   ========================================= */
+
+.lp-gallery-wrap {
+  min-width: 0;
+}
+
+.lp-gallery-nav {
+  display: none;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.lp-gallery-btn {
+  width: 36px;
+  height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--secondary);
+  font-size: 13px;
+  cursor: pointer;
+  transition: 0.2s ease;
+}
+
+.lp-gallery-btn:hover:not(:disabled) {
+  border-color: var(--primary-border);
+  color: var(--primary-text);
+  background: var(--primary-soft);
+}
+
+.lp-gallery-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+@media (max-width: 720px) {
+  .lp-gallery-nav:not([hidden]) {
+    display: flex;
+  }
+
+  /* Galeri: satu baris foto yang digeser tombol, bukan tumpukan panjang. */
+  .lp-gallery-grid,
+  .lp-gallery-grid:not(.lp-gallery-mosaic) {
+    display: flex;
+    grid-template-columns: none;
+    grid-auto-rows: auto;
+    gap: 10px;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: none;
+    padding-bottom: 4px;
+  }
+
+  .lp-gallery-grid::-webkit-scrollbar {
+    display: none;
+  }
+
+  .lp-gallery-grid.lp-gallery-mosaic .lp-gallery-item,
+  .lp-gallery-grid.lp-gallery-mosaic .lp-gallery-wide,
+  .lp-gallery-grid.lp-gallery-mosaic .lp-gallery-item:nth-child(4) {
+    grid-column: auto;
+    grid-row: auto;
+  }
+
+  .lp-gallery-grid .lp-gallery-item {
+    flex: 0 0 84%;
+    height: 190px;
+    scroll-snap-align: start;
+  }
+
+  .lp-gallery-grid .lp-gallery-item img {
+    height: 100%;
+  }
+
+  .lp-gallery-grid.lp-gallery-mosaic .lp-gallery-wide figcaption strong {
+    font-size: 13px;
+  }
+
+  .lp-gallery-item figcaption span {
+    font-size: 10.5px;
+  }
+
+  /* Keunggulan: 2 kartu per baris seperti tablet, ukuran diperkecil. */
+  .lp-features-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .lp-features-grid .lp-feature-card {
+    padding: 12px 11px;
+    gap: 7px;
+    border-radius: 12px;
+  }
+
+  .lp-features-grid .lp-feature-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 9px;
+    font-size: 13px;
+  }
+
+  .lp-feature-card h4 {
+    font-size: 12.5px;
+    line-height: 1.25;
+  }
+
+  .lp-feature-card p {
+    font-size: 10.5px;
+    line-height: 1.45;
+  }
+
+  .lp-feature-photo {
+    min-height: 210px;
+  }
+
+  /* Promo & diskon: 2 kartu berdampingan, isi dipadatkan agar pendek. */
+  .lp-promo-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .lp-promo-card {
+    padding: 12px 11px;
+    gap: 6px;
+    border-radius: 13px;
+  }
+
+  /* Kartu sempit: badge potongan turun ke baris sendiri agar tidak
+     terpotong di tepi kartu. */
+  .lp-promo-head {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .lp-promo-card .badge {
+    max-width: 100%;
+    white-space: normal;
+    text-align: center;
+    line-height: 1.2;
+  }
+
+  .lp-promo-icon {
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    font-size: 11px;
+  }
+
+  .lp-promo-card .badge {
+    padding: 3px 7px;
+    font-size: 9px;
+  }
+
+
+  .lp-promo-card h4 {
+    margin-top: 0;
+    font-size: 12.5px;
+    line-height: 1.25;
+  }
+
+  .lp-promo-card p {
+    font-size: 10.5px;
+    line-height: 1.4;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .lp-promo-card .lp-card-detail {
+    font-size: 10px;
+  }
+
+  .lp-promo-code {
+    justify-content: center;
+    padding: 5px 7px;
+    border-radius: 8px;
+  }
+
+  .lp-promo-code span {
+    display: none;
+  }
+
+  .lp-promo-code strong {
+    font-size: 11px;
+  }
+
+  .lp-promo-foot {
+    flex-wrap: wrap;
+    gap: 6px;
+    padding-top: 7px;
+    font-size: 9.5px;
+  }
+
+  .lp-promo-foot > span {
+    gap: 4px;
+  }
+
+  .lp-promo-foot a {
+    padding: 4px 8px;
+    font-size: 9.5px;
+  }
+}
+
+/* HP: statistik tetap 2 kolom (4 kotak = 2x2), tidak 4 baris penuh. */
+@media (max-width: 520px) {
+  .lp-stats-strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+    padding: 16px;
+  }
+
+  .lp-stat-box {
+    align-items: center;
+    text-align: center;
+    padding: 0;
+    background: transparent;
+    width: auto;
+  }
+}
+
+/* =========================================
+   SKALA HP: ukuran tulisan, tombol, dan kartu ikut lebar layar
+   (fluid clamp, bukan satu ukuran tetap untuk semua HP).
+   ========================================= */
+
+@media (max-width: 720px) {
+  .lp-layout {
+    --lp-phone-space: clamp(12px, 4vw, 18px);
+  }
+
+  .lp-layout .panel.vehicle-panel {
+    border-radius: clamp(14px, 4vw, 18px);
+  }
+
+  .lp-layout .panel-header {
+    gap: 8px;
+    padding: clamp(12px, 3.6vw, 16px) var(--lp-phone-space);
+  }
+
+  .lp-layout .panel-header h3 {
+    font-size: clamp(14.5px, 4.2vw, 17px);
+    margin-bottom: 3px;
+  }
+
+  .lp-layout .panel-header p {
+    font-size: clamp(10.5px, 3vw, 12px);
+    line-height: 1.45;
+  }
+
+  .lp-layout .panel-header .badge {
+    font-size: clamp(9.5px, 2.7vw, 11px);
+    padding: 4px 9px;
+  }
+
+  .lp-layout .panel-body {
+    padding: var(--lp-phone-space);
+  }
+
+  .lp-layout .btn {
+    min-height: 40px;
+    font-size: clamp(11.5px, 3.2vw, 13px);
+    padding: 9px clamp(12px, 3.6vw, 16px);
+  }
+
+  .lp-service-details {
+    padding: clamp(12px, 3.6vw, 16px) var(--lp-phone-space) 0;
+  }
+
+  .lp-service-details strong {
+    font-size: clamp(13px, 3.6vw, 15px);
+  }
+
+  .lp-service-details p {
+    font-size: clamp(11px, 3vw, 12.5px);
+  }
+
+  /* Layanan & Alur Servis di HP: 2 kartu berdampingan seperti kartu
+     keunggulan, dengan ukuran yang sama-sama ringkas. */
+  .lp-service-grid,
+  .lp-steps-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .lp-service-grid .lp-service-card {
+    padding: 0 0 12px;
+    border-radius: 12px;
+  }
+
+  .lp-service-grid .lp-service-media {
+    aspect-ratio: 4 / 3;
+  }
+
+  .lp-service-grid .lp-service-media .lp-service-icon-wrap {
+    left: 8px;
+    bottom: 8px;
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    font-size: 11px;
+  }
+
+  .lp-service-details {
+    padding: 10px 10px 0;
+  }
+
+  .lp-service-details strong {
+    display: block;
+    font-size: 12.5px;
+    line-height: 1.25;
+  }
+
+  .lp-service-details p {
+    margin-top: 3px;
+    font-size: 10.5px;
+    line-height: 1.45;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .lp-service-tag {
+    margin-top: 6px;
+    padding: 3px 7px;
+    font-size: 9px;
+  }
+
+  .lp-steps-grid .lp-step-card {
+    padding: 12px 11px;
+    gap: 6px;
+    border-radius: 12px;
+  }
+
+  .lp-steps-grid .lp-step-badge {
+    top: 8px;
+    right: 8px;
+    width: 20px;
+    height: 20px;
+    font-size: 9.5px;
+  }
+
+  .lp-steps-grid .lp-step-icon {
+    width: 30px;
+    height: 30px;
+    border-radius: 9px;
+    font-size: 12px;
+  }
+
+  .lp-steps-grid .lp-step-card h4 {
+    font-size: 12.5px;
+    line-height: 1.25;
+  }
+
+  .lp-steps-grid .lp-step-card p {
+    font-size: 10.5px;
+    line-height: 1.45;
+  }
+
+  .lp-faq-question {
+    padding: clamp(11px, 3.4vw, 14px) var(--lp-phone-space);
+    font-size: clamp(12px, 3.4vw, 13.5px);
+  }
+
+  .lp-faq-answer {
+    padding: 0 var(--lp-phone-space) clamp(12px, 3.4vw, 14px);
+    font-size: clamp(11px, 3vw, 12.5px);
+  }
+
+  .lp-cta-banner {
+    padding: clamp(22px, 6vw, 28px) var(--lp-phone-space);
+    border-radius: 16px;
+  }
+
+  .lp-cta-content h3 {
+    font-size: clamp(19px, 5.4vw, 25px);
+  }
+
+  .lp-cta-content p {
+    font-size: clamp(12px, 3.3vw, 14px);
+  }
+
+  /* Strip statistik (tepat di bawah hero): empat kotak muat satu baris
+     (kanan-kiri) walau di HP 320px, dengan ukuran yang mengecil. */
+  .lp-stats-strip {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    align-items: start;
+    gap: 6px clamp(3px, 1.4vw, 10px);
+    padding: 12px clamp(5px, 1.8vw, 12px);
+    margin-bottom: 18px;
+    border-radius: 15px;
+  }
+
+  .lp-stat-box {
+    gap: 1px;
+    min-width: 0;
+  }
+
+  .lp-stat-icon {
+    width: clamp(22px, 6vw, 30px);
+    height: clamp(22px, 6vw, 30px);
+    margin-bottom: 2px;
+    border-radius: 8px;
+    font-size: clamp(9px, 2.6vw, 12px);
+  }
+
+  .lp-stat-num {
+    font-size: clamp(16px, 4.6vw, 20px);
+    letter-spacing: -0.02em;
+  }
+
+  .lp-stat-num-sm {
+    font-size: clamp(9.5px, 2.8vw, 12.5px);
+    line-height: 1.2;
+    padding-top: 3px;
+  }
+
+  .lp-stat-lbl {
+    font-size: clamp(8.5px, 2.6vw, 10.5px);
+    line-height: 1.2;
+    text-wrap: balance;
+  }
+}
+
+/* =========================================
+   TANPA FOTO: panel warna + pola sebagai pengganti gambar
+   (dipakai hero, kartu keunggulan, layanan, dan galeri).
+   ========================================= */
+
+.lp-media-fallback {
+  --fill-from: var(--accent-from, #1d4ed8);
+  --fill-to: var(--accent-to, #38bdf8);
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  color: rgba(255, 255, 255, 0.92);
+  font-size: clamp(26px, 4.6vw, 42px);
+  background:
+    radial-gradient(circle at 22% 16%, rgba(255, 255, 255, 0.3), transparent 44%),
+    radial-gradient(circle at 84% 90%, rgba(255, 255, 255, 0.16), transparent 46%),
+    linear-gradient(140deg, var(--fill-from), var(--fill-to));
+}
+
+/* Tekstur titik halus supaya panel warna tidak terlihat kosong. */
+.lp-media-fallback::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(
+    rgba(255, 255, 255, 0.22) 1px,
+    transparent 1.4px
+  );
+  background-size: 18px 18px;
+  opacity: 0.55;
+}
+
+.lp-media-fallback > i {
+  position: relative;
+  z-index: 1;
+  filter: drop-shadow(0 10px 20px rgba(2, 12, 36, 0.35));
+}
+
+/* Hero: panel warna tetap punya tinggi seperti foto 4:3. */
+.lp-hero-photo .lp-media-fallback,
+.lp-hero-photo-mini .lp-media-fallback {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  font-size: clamp(30px, 7vw, 52px);
+}
+
+.lp-hero-photo-mini .lp-media-fallback {
+  place-items: start center;
+  padding-top: 9px;
+  font-size: clamp(18px, 4.4vw, 28px);
+  --fill-from: #059669;
+  --fill-to: #34d399;
+}
+
+/* Kartu keunggulan: panel warna di belakang teks caption. */
+.lp-media-feature {
+  --fill-from: #1e40af;
+  --fill-to: #0ea5e9;
+  /* Ikon di bagian atas, tidak menimpa caption di bawah. */
+  place-items: start center;
+  padding-top: clamp(24px, 6vw, 46px);
+  font-size: clamp(42px, 8vw, 74px);
+}
+
+/* Layanan: warna mengikuti aksen kartu, ikon tetap di chip kecil. */
+.lp-media-service {
+  background:
+    radial-gradient(circle at 24% 18%, rgba(255, 255, 255, 0.3), transparent 45%),
+    radial-gradient(circle at 82% 86%, rgba(255, 255, 255, 0.16), transparent 48%),
+    linear-gradient(140deg, var(--accent-from, #1d4ed8), var(--accent-to, #38bdf8));
+}
+
+.lp-service-card:hover .lp-media-service::before {
+  opacity: 0.8;
+}
+
+/* Galeri: tiap slot punya warna sendiri agar tidak monoton. */
+.lp-media-gallery {
+  font-size: clamp(28px, 6vw, 46px);
+}
+
+.lp-gallery-item:nth-child(1) .lp-media-gallery {
+  --fill-from: #1d4ed8;
+  --fill-to: #38bdf8;
+}
+
+.lp-gallery-item:nth-child(2) .lp-media-gallery {
+  --fill-from: #b45309;
+  --fill-to: #f59e0b;
+}
+
+.lp-gallery-item:nth-child(3) .lp-media-gallery {
+  --fill-from: #6d28d9;
+  --fill-to: #a78bfa;
+}
+
+.lp-gallery-item:nth-child(4) .lp-media-gallery {
+  --fill-from: #047857;
+  --fill-to: #34d399;
+}
+
+.lp-gallery-item:hover .lp-media-gallery > i {
+  transform: scale(1.08);
+}
+
+.lp-media-gallery > i {
+  transition: transform 0.4s ease;
+}
+
+.lp-gallery-grid.lp-gallery-mosaic .lp-gallery-wide .lp-media-gallery {
+  font-size: clamp(44px, 9vw, 82px);
+}
+
+@media (max-width: 720px) {
+  /* Di HP foto hero utama tetap memanjang (3:4) seperti sebelumnya. */
+  .lp-hero-photo .lp-media-fallback {
+    aspect-ratio: 3 / 4;
+  }
 }

@@ -136,13 +136,37 @@
         <div class="page-header">
           <h2>Kelola Landing Page</h2>
           <p>
-            Satu tempat untuk mengubah isi landing page: hero, informasi
-            bengkel, promo &amp; diskon, blok informasi, dan ulasan.
+            Satu tempat untuk mengubah isi landing page: hero, galeri bengkel,
+            informasi bengkel, promo &amp; diskon, blok informasi, dan ulasan.
           </p>
         </div>
 
+        <div class="landing-tabs" role="group" aria-label="Kategori pengelolaan landing page">
+          <button
+            type="button"
+            class="landing-tab is-active"
+            data-landing-tab="hero"
+            aria-pressed="true"
+          >
+            <i class="fa-solid fa-wand-magic-sparkles" aria-hidden="true"></i>
+            <span>Hero &amp; Galeri</span>
+          </button>
+          <button type="button" class="landing-tab" data-landing-tab="promo" aria-pressed="false">
+            <i class="fa-solid fa-tags" aria-hidden="true"></i>
+            <span>Promo &amp; Diskon</span>
+          </button>
+          <button type="button" class="landing-tab" data-landing-tab="blok" aria-pressed="false">
+            <i class="fa-solid fa-layer-group" aria-hidden="true"></i>
+            <span>Blok Informasi</span>
+          </button>
+          <button type="button" class="landing-tab" data-landing-tab="ulasan" aria-pressed="false">
+            <i class="fa-solid fa-star" aria-hidden="true"></i>
+            <span>Ulasan</span>
+          </button>
+        </div>
+
         <!-- HERO + INFORMASI BENGKEL -->
-        <section class="setting">
+        <section class="setting" data-landing-tab-panel="hero">
           <div class="setting-btn">
             <button type="button" class="btn btn-primary" id="btnHeroFoto">
               <i class="fa-solid fa-image" aria-hidden="true"></i>
@@ -151,6 +175,16 @@
             <span class="setting-description"
               >Atur foto latar dan teks pada bagian hero landing page (foto
               maks 5 MB).</span
+            >
+          </div>
+          <div class="setting-btn">
+            <button type="button" class="btn btn-secondary" id="btnGaleriFoto">
+              <i class="fa-solid fa-images" aria-hidden="true"></i>
+              Galeri Bengkel
+            </button>
+            <span class="setting-description"
+              >Kelola foto yang tampil di bagian Galeri Bengkel landing page
+              (maks 8 foto, 5 MB per foto).</span
             >
           </div>
           <div class="setting-btn">
@@ -165,7 +199,7 @@
           </div>
         </section>
 
-        <section class="panel vehicle-panel">
+        <section class="panel vehicle-panel" data-landing-tab-panel="hero">
           <div class="panel-header">
             <div>
               <h3>Pratinjau Isi Landing</h3>
@@ -184,7 +218,7 @@
         </section>
 
         <!-- PROMO & DISKON -->
-        <section class="stats-grid">
+        <section class="stats-grid" data-landing-tab-panel="promo" hidden>
           <div class="stat-card">
             <i class="fa-solid fa-tags stat-icon" aria-hidden="true"></i>
             <span class="stat-number" id="totalDiskon">0</span>
@@ -206,7 +240,7 @@
             <span class="stat-label">Pelanggan Klaim</span>
           </div>
         </section>
-        <section class="panel vehicle-panel">
+        <section class="panel vehicle-panel" data-landing-tab-panel="promo" hidden>
           <div class="panel-header">
             <div>
               <h3>Promo &amp; Diskon</h3>
@@ -256,7 +290,7 @@
           <div class="table-footer"><span id="diskonInfo" aria-live="polite"></span></div>
         </section>
 
-        <section class="panel vehicle-panel">
+        <section class="panel vehicle-panel" data-landing-tab-panel="promo" hidden>
           <div class="panel-header panel-header-inline">
             <div>
               <h3>Klaim Diskon</h3>
@@ -295,7 +329,7 @@
         </section>
 
         <!-- BLOK KONTEN -->
-        <section class="stats-grid">
+        <section class="stats-grid" data-landing-tab-panel="blok" hidden>
           <div class="stat-card">
             <i class="fa-solid fa-layer-group stat-icon" aria-hidden="true"></i>
             <span class="stat-number" id="totalBlok">0</span>
@@ -312,7 +346,7 @@
             <span class="stat-label">Disembunyikan</span>
           </div>
         </section>
-        <section class="panel vehicle-panel">
+        <section class="panel vehicle-panel" data-landing-tab-panel="blok" hidden>
           <div class="panel-header">
             <div>
               <h3>Blok Informasi Terbaru</h3>
@@ -361,7 +395,7 @@
         </section>
 
         <!-- ULASAN -->
-        <section class="stats-grid">
+        <section class="stats-grid" data-landing-tab-panel="ulasan" hidden>
           <div class="stat-card">
             <i class="fa-solid fa-star stat-icon" aria-hidden="true"></i
             ><span class="stat-number" id="statRataRating">-</span
@@ -383,7 +417,7 @@
             ><span class="stat-label">Service Belum Dinilai</span>
           </div>
         </section>
-        <section class="panel vehicle-panel">
+        <section class="panel vehicle-panel" data-landing-tab-panel="ulasan" hidden>
           <div class="panel-header">
             <div>
               <h3>Ulasan</h3>
@@ -558,75 +592,115 @@
           </button>
         </div>
         <div class="modal-body">
-          <div class="form-group">
-            <label for="heroLabel">Label Kecil</label>
-            <input
-              type="text"
-              id="heroLabel"
-              class="form-control"
-              maxlength="60"
-              placeholder="Contoh: Promo bulan ini"
-            />
+          <div class="hero-autoplay-row">
+            <label class="checkbox-label" for="heroAutoplay">
+              <input type="checkbox" id="heroAutoplay" />
+              <span>Ganti slide otomatis</span>
+            </label>
+            <span class="setting-description">
+              Berganti tiap 6,5 detik bila ada 2 slide atau lebih. Pengunjung
+              tetap bisa memilih slide lewat titik navigasi di hero.
+            </span>
           </div>
-          <div class="form-group">
-            <label for="heroJudul">Judul</label>
-            <input
-              type="text"
-              id="heroJudul"
-              class="form-control"
-              maxlength="120"
-              placeholder="Contoh: Rawat kendaraan tanpa antre dan tanpa ribet."
-            />
+
+          <div class="hero-slide-list" id="heroSlideList"></div>
+          <p class="setting-description" id="heroSlideEmpty">
+            Belum ada slide. Hero landing memakai teks dan foto bawaan.
+          </p>
+
+          <div class="hero-slide-toolbar">
+            <button type="button" class="btn btn-secondary btn-sm" id="btnTambahHeroSlide">
+              <i class="fa-solid fa-plus" aria-hidden="true"></i> Tambah Slide
+            </button>
+            <span class="setting-description">
+              Maksimal 5 slide. Format jpg/png/webp, maks 5 MB per foto; foto
+              besar otomatis dikompres (maks 1600 px).
+            </span>
           </div>
-          <div class="form-group">
-            <label for="heroDeskripsi">Deskripsi</label>
-            <textarea
-              id="heroDeskripsi"
-              class="form-control"
-              rows="3"
-              maxlength="400"
-              placeholder="Tuliskan deskripsi singkat layanan bengkel."
-            ></textarea>
-          </div>
-          <div class="form-group">
-            <label>Foto Latar Hero</label>
-            <div class="hero-foto-preview" id="heroFotoPreviewWrap">
-              <img id="heroFotoPreview" alt="Pratinjau foto hero" hidden />
-              <span class="hero-foto-empty" id="heroFotoEmpty">
-                <i class="fa-solid fa-image" aria-hidden="true"></i>
-                Belum ada foto — latar gradien tema yang digunakan.
-              </span>
-            </div>
-          </div>
-          <div class="form-group">
-            <label for="heroFotoInput">Pilih Foto Baru</label>
-            <input
-              type="file"
-              id="heroFotoInput"
-              class="form-control"
-              accept="image/*"
-            />
-            <span class="setting-description"
-              >Format jpg/png/webp, maksimal 5 MB. Foto lama otomatis
-              diganti.</span
-            >
-          </div>
+
           <p class="form-error" id="heroFotoFormError" hidden></p>
         </div>
         <div class="modal-footer">
-          <button
-            type="button"
-            class="btn btn-secondary"
-            id="btnHapusHeroFoto"
-            hidden
-          >
-            <i class="fa-solid fa-trash" aria-hidden="true"></i> Hapus Foto
-          </button>
           <button type="button" class="btn btn-secondary" data-close-modal="heroFotoModal">
             Batal
           </button>
           <button type="button" class="btn btn-primary" id="btnSimpanHeroFoto">
             <i class="fa-solid fa-floppy-disk" aria-hidden="true"></i> Simpan
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODAL GALERI BENGKEL -->
+    <div class="modal-overlay" id="galeriModal">
+      <div
+        class="modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="galeriModal-title"
+      >
+        <div class="modal-header">
+          <div>
+            <h3 id="galeriModal-title">Galeri Bengkel</h3>
+            <p>Atur foto, judul, dan keterangan yang tampil di landing page.</p>
+          </div>
+          <button
+            type="button"
+            class="modal-close"
+            data-close-modal="galeriModal"
+            aria-label="Tutup"
+          >
+            ×
+          </button>
+        </div>
+        <div class="modal-body">
+          <div class="galeri-manager" id="galeriManager"></div>
+          <p class="setting-description" id="galeriEmpty">
+            Belum ada foto galeri. Landing page masih memakai foto bawaan.
+          </p>
+          <div class="form-group">
+            <label for="galeriFotoInput">Tambah Foto</label>
+            <input
+              type="file"
+              id="galeriFotoInput"
+              class="form-control"
+              accept="image/*"
+              multiple
+            />
+            <span class="setting-description"
+              >Bisa pilih beberapa foto sekaligus. Format jpg/png/webp,
+              maksimal 5 MB per foto, total maksimal 8 foto. Foto besar
+              otomatis dikompres (maks 1600 px) sebelum diunggah.</span
+            >
+          </div>
+          <div
+            class="galeri-progress"
+            id="galeriProgress"
+            role="progressbar"
+            aria-label="Progres kompresi dan unggah foto galeri"
+            aria-valuemin="0"
+            aria-valuemax="100"
+            aria-valuenow="0"
+            hidden
+          >
+            <div class="galeri-progress-track">
+              <span class="galeri-progress-fill" id="galeriProgressFill"></span>
+            </div>
+            <span
+              class="galeri-progress-text"
+              id="galeriProgressText"
+              role="status"
+              aria-live="polite"
+            ></span>
+          </div>
+          <p class="form-error" id="galeriFormError" hidden></p>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-close-modal="galeriModal">
+            Batal
+          </button>
+          <button type="button" class="btn btn-primary" id="btnSimpanGaleri">
+            <i class="fa-solid fa-floppy-disk" aria-hidden="true"></i> Simpan Galeri
           </button>
         </div>
       </div>

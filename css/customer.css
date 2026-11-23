@@ -6,28 +6,61 @@
 /* HERO / SAMBUTAN */
 
 .customer-hero {
+  position: relative;
+  overflow: hidden;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 20px;
   flex-wrap: wrap;
   padding: 24px 26px;
-  border-radius: 18px;
+  border-radius: 20px;
   background:
     radial-gradient(
       circle at 90% 10%,
-      rgba(255, 255, 255, 0.22),
+      rgba(255, 255, 255, 0.24),
       transparent 45%
+    ),
+    radial-gradient(
+      circle at 0% 120%,
+      rgba(2, 132, 199, 0.55),
+      transparent 55%
     ),
     var(--primary-gradient);
   color: #fff;
-  box-shadow: var(--shadow-primary);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    0 26px 50px -30px rgba(30, 64, 175, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.12);
   margin-bottom: 20px;
+}
+
+/* Cincin dekoratif halus di sisi kanan hero. */
+.customer-hero::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  right: -60px;
+  width: 220px;
+  height: 220px;
+  transform: translateY(-50%);
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  box-shadow:
+    0 0 0 28px rgba(255, 255, 255, 0.05),
+    0 0 0 56px rgba(255, 255, 255, 0.035);
+  pointer-events: none;
+}
+
+.customer-hero > * {
+  position: relative;
+  z-index: 1;
 }
 
 .customer-hero h2 {
   font-size: 24px;
-  letter-spacing: -0.5px;
+  font-weight: 800;
+  letter-spacing: -0.6px;
   margin-bottom: 6px;
 }
 
@@ -42,8 +75,10 @@
   gap: 8px;
   padding: 10px 16px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.18);
-  border: 1px solid rgba(255, 255, 255, 0.28);
+  background: rgba(255, 255, 255, 0.16);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  backdrop-filter: blur(6px);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2);
   font-size: 13px;
   font-weight: 700;
   white-space: nowrap;
@@ -65,12 +100,14 @@
      --primary-solid (biru gelap) — bukan --primary-text yang di mode
      gelap berwarna biru muda dan tidak terbaca di atas putih. */
   color: var(--primary-solid);
-  box-shadow: var(--shadow-sm);
+  box-shadow: 0 12px 24px -14px rgba(2, 6, 23, 0.6);
 }
 
 .customer-hero .btn:hover {
-  background: rgba(255, 255, 255, 0.9);
+  background: #fff;
   color: var(--primary-solid-hover);
+  transform: translateY(-1px);
+  box-shadow: 0 16px 28px -14px rgba(2, 6, 23, 0.7);
 }
 
 /* KARTU KENDARAAN */
@@ -87,15 +124,19 @@
   gap: 12px;
   padding: 18px;
   border: 1px solid var(--border);
-  border-radius: 16px;
+  border-radius: 18px;
   background: var(--surface);
   box-shadow: var(--shadow-sm);
-  transition: 0.2s;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease,
+    border-color 0.2s ease;
 }
 
 .vehicle-card:hover {
-  transform: translateY(-2px);
+  transform: translateY(-3px);
   border-color: var(--primary-text);
+  box-shadow: var(--shadow-md);
 }
 
 .vehicle-card-head {
@@ -110,9 +151,10 @@
   align-items: center;
   gap: 8px;
   padding: 7px 13px;
-  border-radius: 8px;
-  background: var(--surface-3);
-  border: 1px dashed var(--border);
+  border-radius: 9px;
+  background: linear-gradient(180deg, var(--surface-3), var(--surface-2));
+  border: 1px dashed var(--border-input);
+  box-shadow: inset 0 1px 0 var(--surface);
   font-weight: 800;
   font-size: 14px;
   letter-spacing: 0.5px;
@@ -156,8 +198,10 @@
   gap: 18px;
   padding: 22px;
   border: 1px solid var(--border);
-  border-radius: 16px;
-  background: var(--surface);
+  border-radius: 18px;
+  background:
+    radial-gradient(circle at 100% 0%, var(--primary-soft), transparent 45%),
+    var(--surface);
   box-shadow: var(--shadow-sm);
   margin-bottom: 20px;
   min-width: 0;
@@ -171,14 +215,17 @@
 .profile-avatar {
   width: 72px;
   height: 72px;
-  border-radius: 20px;
+  border-radius: 22px;
   display: grid;
   place-items: center;
-  background: var(--primary-soft);
-  color: var(--primary-text);
+  background: var(--primary-gradient);
+  color: #fff;
   font-size: 28px;
   font-weight: 800;
   flex-shrink: 0;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.24),
+    0 14px 26px -16px rgba(18, 100, 232, 0.85);
 }
 
 .profile-card h3 {
@@ -274,8 +321,16 @@
   gap: 12px;
   padding: 14px;
   border: 1px solid var(--border);
-  border-radius: 12px;
+  border-radius: 14px;
   background: var(--surface-2);
+  transition:
+    border-color 0.15s ease,
+    background-color 0.15s ease;
+}
+
+.info-item:hover {
+  border-color: var(--border-input);
+  background: var(--surface);
 }
 
 .info-item i {

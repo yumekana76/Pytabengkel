@@ -57,6 +57,14 @@ create table if not exists public.workshop_info (
   hero_label     text not null default '',
   hero_judul     text not null default '',
   hero_deskripsi text not null default '',
+  -- Foto galeri landing page: array JSON [{ url, judul, deskripsi }].
+  -- Kosong = galeri bawaan di html/index.html yang dipakai.
+  galeri_foto jsonb not null default '[]'::jsonb,
+  -- Slide hero: array JSON [{ foto, label, judul, deskripsi }].
+  -- Kosong = teks/foto hero tunggal (kolom hero_*) atau HTML bawaan.
+  hero_slides jsonb not null default '[]'::jsonb,
+  -- Ganti slide hero otomatis bila ada 2 slide atau lebih.
+  hero_autoplay boolean not null default false,
   updated_at  timestamptz not null default now()
 );
 
@@ -1109,6 +1117,9 @@ alter table public.workshop_info add column if not exists hero_foto text not nul
 alter table public.workshop_info add column if not exists hero_label text not null default '';
 alter table public.workshop_info add column if not exists hero_judul text not null default '';
 alter table public.workshop_info add column if not exists hero_deskripsi text not null default '';
+alter table public.workshop_info add column if not exists galeri_foto jsonb not null default '[]'::jsonb;
+alter table public.workshop_info add column if not exists hero_slides jsonb not null default '[]'::jsonb;
+alter table public.workshop_info add column if not exists hero_autoplay boolean not null default false;
 
 drop function if exists public.public_workshop_info();
 
@@ -1123,7 +1134,10 @@ returns table (
   hero_foto text,
   hero_label text,
   hero_judul text,
-  hero_deskripsi text
+  hero_deskripsi text,
+  galeri_foto jsonb,
+  hero_slides jsonb,
+  hero_autoplay boolean
 )
 language sql
 stable
@@ -1131,7 +1145,8 @@ security definer
 set search_path = public
 as $$
   select nama, alamat, kontak, email, jam_buka, hari_buka, hero_foto,
-         hero_label, hero_judul, hero_deskripsi
+         hero_label, hero_judul, hero_deskripsi, galeri_foto,
+         hero_slides, hero_autoplay
   from public.workshop_info
   order by id
   limit 1;
