@@ -12,6 +12,25 @@
 
 /* ---------------- PRATINJAU ISI LANDING ---------------- */
 
+/* Slot foto tetap landing page yang dikelola lewat modal Foto Halaman:
+   hero samping, foto mini hero, keunggulan, dan 4 kartu layanan.
+   Kunci harus sama dengan MEDIA_FOTO_SLOTS di js/db.js. */
+const MEDIA_SLOTS = [
+  { key: "hero_sisi", label: "Foto hero samping" },
+  { key: "hero_mini", label: "Foto mini hero (Quality Check)" },
+  { key: "fitur", label: "Foto Keunggulan" },
+  { key: "layanan_servis", label: "Kartu layanan: Servis Rutin & Tune Up" },
+  {
+    key: "layanan_diagnosa",
+    label: "Kartu layanan: Perbaikan & Diagnosa Mesin",
+  },
+  { key: "layanan_suku", label: "Kartu layanan: Suku Cadang & Kaki-kaki" },
+  {
+    key: "layanan_qc",
+    label: "Kartu layanan: Quality Control & Test Drive",
+  },
+];
+
 function renderLandingPreview() {
   const box = document.getElementById("landingPreview");
   if (!box || typeof getBengkelInfoLengkap !== "function") return;
@@ -89,6 +108,34 @@ function renderLandingPreview() {
         "</div>"
     : "";
 
+  const mediaFoto = info.mediaFoto || {};
+  const mediaKeys = Object.keys(mediaFoto);
+  const mediaPreview = mediaKeys.length
+    ? '<div class="detail-item full">' +
+        '<span class="detail-label">Foto Halaman (' +
+        mediaKeys.length +
+        " slot)</span>" +
+        '<span class="detail-value landing-galeri-preview">' +
+        mediaKeys
+          .map(function (slot) {
+            const label = (
+              MEDIA_SLOTS.find(function (item) {
+                return item.key === slot;
+              }) || { label: slot }
+            ).label;
+            return (
+              '<img src="' +
+              escapeHTML(mediaFoto[slot]) +
+              '" alt="' +
+              escapeHTML(label) +
+              '" />'
+            );
+          })
+          .join("") +
+        "</span>" +
+        "</div>"
+    : "";
+
   box.innerHTML =
     item("Nama Bengkel", info.nama) +
     item("Label Hero", info.heroLabel) +
@@ -97,6 +144,7 @@ function renderLandingPreview() {
     item("Ganti Slide Otomatis", info.heroAutoplay ? "Aktif" : "Nonaktif") +
     foto +
     galeriPreview +
+    mediaPreview +
     item("Alamat", info.alamat, true) +
     item("Kontak", info.kontak) +
     item("Email", info.email) +
@@ -1015,6 +1063,212 @@ function initLandingAdminPage() {
         galeriSimpan.disabled = false;
         galeriSimpan.innerHTML = galeriTombolHTML;
         renderGaleriManager();
+      }
+    });
+  }
+
+  /* ---------------- FOTO HALAMAN (slot foto tetap landing) ----------------
+     Tujuh slot: foto hero samping, foto mini hero, foto keunggulan, dan
+     thumbnail 4 kartu layanan. Disimpan di workshop_info.media_foto
+     sebagai { slot: url }; slot yang kosong memakai foto bawaan di
+     html/index.html. Daftar slot ada di MEDIA_SLOTS (top-level). */
+  const mediaButton = document.getElementById("btnMediaFoto");
+  const mediaManager = document.getElementById("mediaManager");
+  const mediaInput = document.getElementById("mediaFotoInput");
+  const mediaSimpan = document.getElementById("btnSimpanMedia");
+  const mediaErrorEl = document.getElementById("mediaFormError");
+  const mediaSimpanHTML = mediaSimpan ? mediaSimpan.innerHTML : "";
+
+  let mediaItems = [];
+  let mediaPickIndex = -1;
+
+  function showMediaError(message) {
+    if (!mediaErrorEl) return;
+    mediaErrorEl.textContent = message || "";
+    mediaErrorEl.hidden = !message;
+  }
+
+  function renderMediaManager() {
+    if (!mediaManager) return;
+
+    mediaManager.innerHTML = mediaItems
+      .map(function (item, index) {
+        const sumberFoto = item.preview || item.url || "";
+        const thumb = sumberFoto
+          ? '<img class="galeri-admin-thumb" src="' +
+            escapeHTML(sumberFoto) +
+            '" alt="Pratinjau ' +
+            escapeHTML(item.label) +
+            '" />'
+          : '<span class="galeri-admin-thumb" style="display:grid; place-items:center; color:var(--secondary); font-size:26px;" aria-hidden="true"><i class="fa-solid fa-image"></i></span>';
+
+        return (
+          '<div class="galeri-admin-item">' +
+          thumb +
+          '<div class="galeri-admin-fields">' +
+          "<label>" +
+          escapeHTML(item.label) +
+          "</label>" +
+          '<span class="setting-description">' +
+          (item.url
+            ? "Foto baru dipakai setelah disimpan."
+            : "Memakai foto bawaan landing page.") +
+          "</span>" +
+          "</div>" +
+          '<div class="galeri-admin-actions">' +
+          '<button type="button" class="action-btn" data-media-pick="' +
+          index +
+          '"><i class="fa-solid fa-upload" aria-hidden="true"></i> Ganti</button>' +
+          '<button type="button" class="action-btn danger" data-media-reset="' +
+          index +
+          '"' +
+          (item.url ? "" : " disabled") +
+          '><i class="fa-solid fa-rotate-left" aria-hidden="true"></i> Foto Bawaan</button>' +
+          "</div>" +
+          "</div>"
+        );
+      })
+      .join("");
+  }
+
+  if (mediaButton) {
+    mediaButton.addEventListener("click", function () {
+      const media = getBengkelInfoLengkap().mediaFoto || {};
+
+      mediaItems = MEDIA_SLOTS.map(function (slot) {
+        return {
+          key: slot.key,
+          label: slot.label,
+          url: String(media[slot.key] || "").trim(),
+          file: null,
+          preview: "",
+        };
+      });
+
+      showMediaError("");
+      renderMediaManager();
+      openModal("landingMediaModal");
+    });
+  }
+
+  if (mediaManager) {
+    mediaManager.addEventListener("click", function (event) {
+      const pick = event.target.closest("[data-media-pick]");
+      const reset = event.target.closest("[data-media-reset]");
+
+      if (pick) {
+        mediaPickIndex = Number(pick.dataset.mediaPick);
+        /* Reset value dulu supaya memilih file yang sama tetap memicu
+           event change. */
+        mediaInput.value = "";
+        mediaInput.click();
+        return;
+      }
+
+      if (reset) {
+        const index = Number(reset.dataset.mediaReset);
+        const item = mediaItems[index];
+        if (!item) return;
+        item.url = "";
+        item.file = null;
+        item.preview = "";
+        renderMediaManager();
+      }
+    });
+  }
+
+  if (mediaInput) {
+    mediaInput.addEventListener("change", function () {
+      const file = mediaInput.files && mediaInput.files[0];
+      const item = mediaItems[mediaPickIndex];
+      if (!file || !item) return;
+
+      /* Validasi sama dengan uploadSitePhoto — ditolak di sini supaya
+         admin langsung tahu sebelum ada unggahan. */
+      if (!String(file.type || "").startsWith("image/")) {
+        showMediaError("File harus berupa gambar (jpg/png/webp).");
+        return;
+      }
+
+      if (file.size > 5 * 1024 * 1024) {
+        showMediaError("Ukuran foto maksimal 5 MB.");
+        return;
+      }
+
+      const reader = new FileReader();
+
+      reader.onload = function () {
+        item.file = file;
+        item.preview = String(reader.result || "");
+        showMediaError("");
+        renderMediaManager();
+      };
+
+      reader.onerror = function () {
+        showMediaError("Foto tidak dapat dibaca. Coba pilih lagi.");
+      };
+
+      reader.readAsDataURL(file);
+    });
+  }
+
+  if (mediaSimpan) {
+    mediaSimpan.addEventListener("click", async function () {
+      mediaSimpan.disabled = true;
+      mediaSimpan.innerHTML =
+        '<i class="fa-solid fa-spinner fa-spin" aria-hidden="true"></i> Menyimpan…';
+      showMediaError("");
+
+      const uploaded = [];
+
+      try {
+        for (let i = 0; i < mediaItems.length; i += 1) {
+          const item = mediaItems[i];
+          if (!item.file) continue;
+
+          const url = await uploadSitePhoto(item.file);
+          uploaded.push({ key: item.key, url: url });
+          item.url = url;
+          item.file = null;
+          item.preview = "";
+        }
+
+        /* Salinan URL lama dipakai untuk membersihkan storage setelah
+           simpan, ketika cache sudah berisi nilai baru. */
+        const sebelum = { ...(getBengkelInfoLengkap().mediaFoto || {}) };
+
+        const payload = {};
+        mediaItems.forEach(function (item) {
+          if (item.url) payload[item.key] = item.url;
+        });
+
+        saveWorkshopInfo({
+          ...getBengkelInfoLengkap(),
+          mediaFoto: payload,
+        });
+
+        /* Hapus dari storage foto yang sudah tidak dipakai slot mana pun
+           supaya bucket tidak menumpuk file tak terpakai. */
+        Object.keys(sebelum).forEach(function (key) {
+          const url = sebelum[key];
+          if (url && payload[key] !== url) {
+            removeSiteAsset(url).catch(function () {});
+          }
+        });
+
+        closeModal("landingMediaModal");
+        renderLandingPreview();
+        showPageNotice("Foto halaman disimpan.", "success");
+      } catch (error) {
+        /* Batalkan unggahan yang sudah jadi supaya tidak ada file yatim. */
+        uploaded.forEach(function (item) {
+          removeSiteAsset(item.url).catch(function () {});
+        });
+        showMediaError(error.message || "Gagal menyimpan foto halaman.");
+      } finally {
+        mediaSimpan.disabled = false;
+        mediaSimpan.innerHTML = mediaSimpanHTML;
+        renderMediaManager();
       }
     });
   }

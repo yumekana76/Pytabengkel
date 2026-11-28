@@ -197,6 +197,16 @@
               landing page.</span
             >
           </div>
+          <div class="setting-btn">
+            <button type="button" class="btn btn-secondary" id="btnMediaFoto">
+              <i class="fa-solid fa-panorama" aria-hidden="true"></i>
+              Foto Halaman
+            </button>
+            <span class="setting-description"
+              >Ganti foto hero samping, foto keunggulan, dan thumbnail kartu
+              layanan landing page (maks 5 MB per foto).</span
+            >
+          </div>
         </section>
 
         <section class="panel vehicle-panel" data-landing-tab-panel="hero">
@@ -701,6 +711,55 @@
           </button>
           <button type="button" class="btn btn-primary" id="btnSimpanGaleri">
             <i class="fa-solid fa-floppy-disk" aria-hidden="true"></i> Simpan Galeri
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODAL FOTO HALAMAN (slot foto tetap landing) -->
+    <div class="modal-overlay" id="landingMediaModal">
+      <div
+        class="modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="landingMediaModal-title"
+      >
+        <div class="modal-header">
+          <div>
+            <h3 id="landingMediaModal-title">Foto Halaman</h3>
+            <p>Atur foto hero samping, foto keunggulan, dan kartu layanan.</p>
+          </div>
+          <button
+            type="button"
+            class="modal-close"
+            data-close-modal="landingMediaModal"
+            aria-label="Tutup"
+          >
+            ×
+          </button>
+        </div>
+        <div class="modal-body">
+          <div class="galeri-manager" id="mediaManager"></div>
+          <input
+            type="file"
+            id="mediaFotoInput"
+            class="form-control"
+            accept="image/*"
+            hidden
+          />
+          <p class="setting-description">
+            Format jpg/png/webp, maksimal 5 MB per foto. Foto besar otomatis
+            dikompres (maks 1600 px) sebelum diunggah. Tombol
+            <strong>Foto Bawaan</strong> mengembalikan foto bawaan landing page.
+          </p>
+          <p class="form-error" id="mediaFormError" hidden></p>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-close-modal="landingMediaModal">
+            Batal
+          </button>
+          <button type="button" class="btn btn-primary" id="btnSimpanMedia">
+            <i class="fa-solid fa-floppy-disk" aria-hidden="true"></i> Simpan Foto
           </button>
         </div>
       </div>
