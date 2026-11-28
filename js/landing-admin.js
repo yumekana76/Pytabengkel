@@ -12,6 +12,61 @@
 
 /* ---------------- PRATINJAU ISI LANDING ---------------- */
 
+/* Slot foto tetap landing page yang dikelola lewat modal Foto Halaman:
+   hero samping, foto mini hero, keunggulan, dan 4 kartu layanan.
+   Kunci harus sama dengan MEDIA_FOTO_SLOTS di js/db.js. */
+const MEDIA_SLOTS = [
+  {
+    key: "hero_sisi",
+    kategori: "hero",
+    label: "Foto Hero Samping",
+    deskripsi: "Foto utama di sebelah kanan teks hero pembuka.",
+    defaultImg: "../../asset/img/hero-workshop.jpg",
+  },
+  {
+    key: "hero_mini",
+    kategori: "hero",
+    label: "Foto Mini Hero (Badge Quality)",
+    deskripsi: "Foto mengambang kecil pada badge di sudut foto hero samping.",
+    defaultImg: "../../asset/img/galeri-detailing.jpg",
+  },
+  {
+    key: "fitur",
+    kategori: "keunggulan",
+    label: "Foto Keunggulan Bengkel",
+    deskripsi: "Foto ilustrasi di sebelah daftar alasan memilih bengkel.",
+    defaultImg: "../../asset/img/keunggulan-technician.jpg",
+  },
+  {
+    key: "layanan_servis",
+    kategori: "layanan",
+    label: "Kartu Layanan: Servis Rutin & Tune Up",
+    deskripsi: "Foto cover kartu paket servis berkala dan tune up mesin.",
+    defaultImg: "../../asset/img/layanan-servis-rutin.jpg",
+  },
+  {
+    key: "layanan_diagnosa",
+    kategori: "layanan",
+    label: "Kartu Layanan: Perbaikan & Diagnosa",
+    deskripsi: "Foto cover kartu layanan perbaikan mesin dan scan komputer.",
+    defaultImg: "../../asset/img/layanan-diagnosa.jpg",
+  },
+  {
+    key: "layanan_suku",
+    kategori: "layanan",
+    label: "Kartu Layanan: Suku Cadang & Kaki-kaki",
+    deskripsi: "Foto cover kartu penggantian onderdil dan suspensi.",
+    defaultImg: "../../asset/img/layanan-suku-cadang.jpg",
+  },
+  {
+    key: "layanan_qc",
+    kategori: "layanan",
+    label: "Kartu Layanan: Quality Control & Test Drive",
+    deskripsi: "Foto cover kartu inspeksi akhir dan uji kelayakan jalan.",
+    defaultImg: "../../asset/img/layanan-quality-control.jpg",
+  },
+];
+
 function renderLandingPreview() {
   const box = document.getElementById("landingPreview");
   if (!box || typeof getBengkelInfoLengkap !== "function") return;
@@ -89,6 +144,69 @@ function renderLandingPreview() {
         "</div>"
     : "";
 
+  const mediaFoto = info.mediaFoto || {};
+  const activeMediaCount = MEDIA_SLOTS.filter(function (slot) {
+    const val = mediaFoto[slot.key];
+    const url = typeof val === "string" ? val : val && typeof val === "object" ? val.url : "";
+    return !!url;
+  }).length;
+
+  const mediaPreview =
+    '<div class="detail-item full">' +
+    '<div class="media-admin-preview-header">' +
+    '<span class="detail-label"><i class="fa-solid fa-panorama"></i> Pratinjau Foto Halaman (' +
+    (activeMediaCount > 0 ? activeMediaCount + " Foto Kustom" : "Semua Bawaan") +
+    ")</span>" +
+    '<button type="button" class="btn btn-sm btn-secondary" id="btnMediaFotoShortcut"><i class="fa-solid fa-pen-to-square"></i> Kelola Foto Halaman</button>' +
+    "</div>" +
+    '<div class="media-preview-grid">' +
+    MEDIA_SLOTS.map(function (slot) {
+      const slotData = mediaFoto[slot.key];
+      const slotUrl =
+        typeof slotData === "string"
+          ? slotData
+          : slotData && typeof slotData === "object"
+            ? slotData.url || ""
+            : "";
+      const displayUrl = slotUrl || slot.defaultImg;
+      const posisi =
+        slotData && typeof slotData === "object" && slotData.posisi
+          ? slotData.posisi
+          : "50% 50%";
+      const zoom =
+        slotData && typeof slotData === "object" && slotData.zoom
+          ? parseFloat(slotData.zoom) || 1
+          : 1;
+
+      return (
+        '<div class="media-preview-item" title="' +
+        escapeHTML(slot.label) +
+        '">' +
+        '<div class="media-preview-thumb-wrap">' +
+        '<img src="' +
+        escapeHTML(displayUrl) +
+        '" style="object-position:' +
+        escapeHTML(posisi) +
+        "; transform:scale(" +
+        zoom +
+        ');" alt="' +
+        escapeHTML(slot.label) +
+        '" />' +
+        (slotUrl
+          ? '<span class="media-preview-badge custom"><i class="fa-solid fa-cloud"></i> Kustom</span>'
+          : '<span class="media-preview-badge default">Bawaan</span>') +
+        "</div>" +
+        '<div class="media-preview-caption">' +
+        '<span class="media-preview-title">' +
+        escapeHTML(slot.label) +
+        "</span>" +
+        "</div>" +
+        "</div>"
+      );
+    }).join("") +
+    "</div>" +
+    "</div>";
+
   box.innerHTML =
     item("Nama Bengkel", info.nama) +
     item("Label Hero", info.heroLabel) +
@@ -97,6 +215,7 @@ function renderLandingPreview() {
     item("Ganti Slide Otomatis", info.heroAutoplay ? "Aktif" : "Nonaktif") +
     foto +
     galeriPreview +
+    mediaPreview +
     item("Alamat", info.alamat, true) +
     item("Kontak", info.kontak) +
     item("Email", info.email) +
@@ -171,6 +290,16 @@ function initLandingAdminPage() {
 
   initLandingTabs();
   renderLandingPreview();
+
+  const previewBox = document.getElementById("landingPreview");
+  if (previewBox) {
+    previewBox.addEventListener("click", function (event) {
+      const shortcut = event.target.closest("#btnMediaFotoShortcut");
+      if (shortcut && mediaButton) {
+        mediaButton.click();
+      }
+    });
+  }
 
   /* ---------------- INFORMASI BENGKEL ---------------- */
   const infoButton = document.getElementById("btnInfoBengkel");
@@ -1015,6 +1144,626 @@ function initLandingAdminPage() {
         galeriSimpan.disabled = false;
         galeriSimpan.innerHTML = galeriTombolHTML;
         renderGaleriManager();
+      }
+    });
+  }
+
+  /* ---------------- FOTO HALAMAN (slot foto tetap landing) ----------------
+     Tujuh slot: foto hero samping, foto mini hero, foto keunggulan, dan
+     thumbnail 4 kartu layanan. Disimpan di workshop_info.media_foto
+     sebagai { slot: { url, posisi, zoom } }; slot yang kosong memakai foto
+     bawaan di html/index.html. */
+  const mediaButton = document.getElementById("btnMediaFoto");
+  const mediaManager = document.getElementById("mediaManager");
+  const mediaInput = document.getElementById("mediaFotoInput");
+  const mediaSimpan = document.getElementById("btnSimpanMedia");
+  const mediaErrorEl = document.getElementById("mediaFormError");
+  const mediaFilterChips = document.getElementById("mediaFilterChips");
+  const mediaListView = document.getElementById("mediaListView");
+  const mediaDetailEditor = document.getElementById("mediaDetailEditor");
+  const mediaModalFooter = document.getElementById("mediaModalFooter");
+  const mediaSimpanHTML = mediaSimpan ? mediaSimpan.innerHTML : "";
+
+  /* Elemen Studio Editor Detail */
+  const btnBackToMediaList = document.getElementById("btnBackToMediaList");
+  const editorSlotCategory = document.getElementById("editorSlotCategory");
+  const editorSlotTitle = document.getElementById("editorSlotTitle");
+  const editorPanCanvas = document.getElementById("editorPanCanvas");
+  const editorCanvasImg = document.getElementById("editorCanvasImg");
+  const editorTargetPoint = document.getElementById("editorTargetPoint");
+  const btnEditorUpload = document.getElementById("btnEditorUpload");
+  const btnEditorResetFoto = document.getElementById("btnEditorResetFoto");
+  const editorZoomRange = document.getElementById("editorZoomRange");
+  const editorZoomValText = document.getElementById("editorZoomValText");
+  const btnZoomMinus = document.getElementById("btnZoomMinus");
+  const btnZoomPlus = document.getElementById("btnZoomPlus");
+  const editorPosValText = document.getElementById("editorPosValText");
+  const editorCompassGrid = document.getElementById("editorCompassGrid");
+  const btnEditorResetTransform = document.getElementById("btnEditorResetTransform");
+  const btnEditorDone = document.getElementById("btnEditorDone");
+
+  let mediaItems = [];
+  let mediaPickIndex = -1;
+  let mediaActiveFilter = "semua";
+  let activeEditorIndex = -1;
+
+  function showMediaError(message) {
+    if (!mediaErrorEl) return;
+    mediaErrorEl.textContent = message || "";
+    mediaErrorEl.hidden = !message;
+  }
+
+  function updateMediaChipCounts() {
+    const counts = { semua: mediaItems.length, hero: 0, keunggulan: 0, layanan: 0 };
+    mediaItems.forEach(function (item) {
+      if (item.kategori && counts[item.kategori] !== undefined) {
+        counts[item.kategori] += 1;
+      }
+    });
+    const cSemua = document.getElementById("chipCountSemua");
+    const cHero = document.getElementById("chipCountHero");
+    const cKeunggulan = document.getElementById("chipCountKeunggulan");
+    const cLayanan = document.getElementById("chipCountLayanan");
+    if (cSemua) cSemua.textContent = counts.semua;
+    if (cHero) cHero.textContent = counts.hero;
+    if (cKeunggulan) cKeunggulan.textContent = counts.keunggulan;
+    if (cLayanan) cLayanan.textContent = counts.layanan;
+  }
+
+  function renderMediaManager() {
+    if (!mediaManager) return;
+
+    updateMediaChipCounts();
+
+    const itemsToRender = mediaItems
+      .map(function (item, index) {
+        return { item: item, index: index };
+      })
+      .filter(function (entry) {
+        if (mediaActiveFilter === "semua") return true;
+        return entry.item.kategori === mediaActiveFilter;
+      });
+
+    if (itemsToRender.length === 0) {
+      mediaManager.innerHTML =
+        '<div class="media-empty-filter">' +
+        '<i class="fa-solid fa-filter-circle-xmark"></i>' +
+        '<p>Tidak ada slot foto untuk kategori ini.</p>' +
+        '</div>';
+      return;
+    }
+
+    mediaManager.innerHTML = itemsToRender
+      .map(function (entry) {
+        const item = entry.item;
+        const index = entry.index;
+        const sumberFoto = item.preview || item.url || item.defaultImg || "";
+        const posisi = item.posisi || "50% 50%";
+        const zoom = parseFloat(item.zoom) || 1;
+        const zoomPct = Math.round(zoom * 100);
+
+        let badgeStatus = "";
+        if (item.preview) {
+          badgeStatus =
+            '<span class="media-badge-new"><i class="fa-solid fa-sparkles"></i> Foto Baru (Belum Simpan)</span>';
+        } else if (item.url) {
+          badgeStatus =
+            '<span class="media-badge-custom"><i class="fa-solid fa-cloud-arrow-up"></i> Foto Kustom</span>';
+        } else {
+          badgeStatus =
+            '<span class="media-badge-default"><i class="fa-solid fa-image"></i> Foto Bawaan</span>';
+        }
+
+        const thumb = sumberFoto
+          ? '<div class="media-preview-container">' +
+            '<div class="media-admin-pan-box" data-media-open-editor="' +
+            index +
+            '" title="Klik untuk membuka editor visual lengkap slot ini">' +
+            '<img class="media-admin-pan-img" src="' +
+            escapeHTML(sumberFoto) +
+            '" style="object-position:' +
+            escapeHTML(posisi) +
+            "; transform:scale(" +
+            zoom +
+            ');" alt="Pratinjau ' +
+            escapeHTML(item.label) +
+            '" />' +
+            '<span class="media-admin-pan-hint"><i class="fa-solid fa-crop-simple"></i> Klik untuk Edit</span>' +
+            "</div>" +
+            "</div>"
+          : '<div class="media-admin-pan-box" style="display:grid; place-items:center; color:var(--secondary); font-size:32px;"><i class="fa-solid fa-image"></i></div>';
+
+        return (
+          '<div class="media-card-item' + (item.preview ? " has-new-image" : "") + '">' +
+          '<div class="media-card-head">' +
+          '<div class="media-card-title-group">' +
+          '<span class="media-card-category-tag">' +
+          (item.kategori ? escapeHTML(item.kategori.toUpperCase()) : "LANDING") +
+          "</span>" +
+          '<h4 class="media-card-title">' +
+          escapeHTML(item.label) +
+          "</h4>" +
+          '<p class="media-card-desc">' +
+          escapeHTML(item.deskripsi || "") +
+          "</p>" +
+          "</div>" +
+          '<div class="media-card-badges">' +
+          badgeStatus +
+          "</div>" +
+          "</div>" +
+          '<div class="media-card-body">' +
+          thumb +
+          '<div class="media-card-controls">' +
+          '<div class="media-card-meta-row">' +
+          '<span class="media-meta-tag"><i class="fa-solid fa-crosshairs"></i> Fokus: <strong>' +
+          escapeHTML(posisi) +
+          "</strong></span>" +
+          '<span class="media-meta-tag"><i class="fa-solid fa-magnifying-glass"></i> Zoom: <strong>' +
+          zoomPct +
+          "%</strong></span>" +
+          "</div>" +
+          '<div class="media-card-actions">' +
+          '<button type="button" class="btn btn-sm btn-primary" data-media-open-editor="' +
+          index +
+          '"><i class="fa-solid fa-sliders" aria-hidden="true"></i> Atur Tampilan / Edit Foto</button>' +
+          '<button type="button" class="btn btn-sm btn-secondary" data-media-pick="' +
+          index +
+          '"><i class="fa-solid fa-upload" aria-hidden="true"></i> Ganti File</button>' +
+          '<button type="button" class="btn btn-sm btn-danger-outline" data-media-reset="' +
+          index +
+          '"' +
+          (item.url || item.preview ? "" : " disabled") +
+          ' title="Kembali ke foto default landing page"><i class="fa-solid fa-rotate-left" aria-hidden="true"></i> Foto Bawaan</button>' +
+          "</div>" +
+          "</div>" +
+          "</div>" +
+          "</div>"
+        );
+      })
+      .join("");
+  }
+
+  /* ---------------- STUDIO EDITOR DETAIL INTERAKTIF ---------------- */
+  function openMediaEditor(index) {
+    const item = mediaItems[index];
+    if (!item) return;
+
+    activeEditorIndex = index;
+    const sumberFoto = item.preview || item.url || item.defaultImg || "";
+
+    if (editorSlotCategory) {
+      editorSlotCategory.textContent = (item.kategori || "LANDING").toUpperCase();
+    }
+    if (editorSlotTitle) {
+      editorSlotTitle.textContent = item.label;
+    }
+    if (editorCanvasImg) {
+      editorCanvasImg.src = sumberFoto;
+    }
+
+    const zoom = parseFloat(item.zoom) || 1;
+    const zoomPct = Math.round(zoom * 100);
+    if (editorZoomRange) editorZoomRange.value = zoomPct;
+    if (editorZoomValText) editorZoomValText.textContent = zoomPct + "%";
+
+    updateEditorCanvasDisplay(item.posisi || "50% 50%", zoom);
+
+    if (btnEditorResetFoto) {
+      btnEditorResetFoto.disabled = !item.url && !item.preview;
+    }
+
+    if (mediaListView) mediaListView.hidden = true;
+    if (mediaDetailEditor) mediaDetailEditor.hidden = false;
+    if (mediaModalFooter) mediaModalFooter.hidden = true;
+  }
+
+  function closeMediaEditor() {
+    activeEditorIndex = -1;
+    if (mediaDetailEditor) mediaDetailEditor.hidden = true;
+    if (mediaListView) mediaListView.hidden = false;
+    if (mediaModalFooter) mediaModalFooter.hidden = false;
+    renderMediaManager();
+  }
+
+  function parsePosStr(posStr) {
+    const parts = String(posStr || "50% 50%").trim().split(/\s+/);
+    const x = parseFloat(parts[0]) || 50;
+    const y = parseFloat(parts[1]) || 50;
+    return { x: x, y: y };
+  }
+
+  function updateEditorCanvasDisplay(posisi, zoom) {
+    if (editorCanvasImg) {
+      editorCanvasImg.style.objectPosition = posisi;
+      editorCanvasImg.style.transform = "scale(" + zoom + ")";
+    }
+    if (editorPosValText) {
+      editorPosValText.textContent = posisi;
+    }
+
+    /* Posisikan target point crosshair visual di atas gambar */
+    if (editorTargetPoint) {
+      const p = parsePosStr(posisi);
+      editorTargetPoint.style.left = p.x + "%";
+      editorTargetPoint.style.top = p.y + "%";
+    }
+
+    /* Sinkronkan tombol compass 9-titik */
+    if (editorCompassGrid) {
+      editorCompassGrid.querySelectorAll(".compass-cell").forEach(function (btn) {
+        btn.classList.toggle("is-active", btn.dataset.compassPos === posisi);
+      });
+    }
+  }
+
+  function initEditorCanvasInteractions() {
+    if (!editorPanCanvas) return;
+
+    let dragging = false;
+    let startX = 0;
+    let startY = 0;
+    let initPosX = 50;
+    let initPosY = 50;
+
+    editorPanCanvas.addEventListener("pointerdown", function (e) {
+      if (activeEditorIndex < 0) return;
+      const item = mediaItems[activeEditorIndex];
+      if (!item) return;
+
+      dragging = true;
+      editorPanCanvas.classList.add("is-dragging");
+      editorPanCanvas.setPointerCapture(e.pointerId);
+      startX = e.clientX;
+      startY = e.clientY;
+
+      const p = parsePosStr(item.posisi);
+      initPosX = p.x;
+      initPosY = p.y;
+    });
+
+    editorPanCanvas.addEventListener("pointermove", function (e) {
+      if (!dragging || activeEditorIndex < 0) return;
+      const item = mediaItems[activeEditorIndex];
+      if (!item) return;
+
+      const dx = e.clientX - startX;
+      const dy = e.clientY - startY;
+
+      const rect = editorPanCanvas.getBoundingClientRect();
+      const sensitivity = 1.25;
+      let newX = initPosX - (dx / rect.width) * 100 * sensitivity;
+      let newY = initPosY - (dy / rect.height) * 100 * sensitivity;
+
+      newX = Math.round(Math.min(100, Math.max(0, newX)));
+      newY = Math.round(Math.min(100, Math.max(0, newY)));
+
+      item.posisi = newX + "% " + newY + "%";
+      updateEditorCanvasDisplay(item.posisi, item.zoom || 1);
+    });
+
+    function stopEditorDrag(e) {
+      if (dragging) {
+        dragging = false;
+        editorPanCanvas.classList.remove("is-dragging");
+        try {
+          editorPanCanvas.releasePointerCapture(e.pointerId);
+        } catch (err) {}
+      }
+    }
+
+    editorPanCanvas.addEventListener("pointerup", stopEditorDrag);
+    editorPanCanvas.addEventListener("pointercancel", stopEditorDrag);
+
+    /* Kontrol Zoom slider */
+    if (editorZoomRange) {
+      editorZoomRange.addEventListener("input", function () {
+        if (activeEditorIndex < 0) return;
+        const item = mediaItems[activeEditorIndex];
+        if (!item) return;
+
+        const val = Number(editorZoomRange.value);
+        item.zoom = val / 100;
+        if (editorZoomValText) editorZoomValText.textContent = val + "%";
+        updateEditorCanvasDisplay(item.posisi || "50% 50%", item.zoom);
+      });
+    }
+
+    /* Tombol minus zoom */
+    if (btnZoomMinus) {
+      btnZoomMinus.addEventListener("click", function () {
+        if (activeEditorIndex < 0) return;
+        const cur = Number(editorZoomRange.value);
+        const next = Math.max(100, cur - 10);
+        editorZoomRange.value = next;
+        editorZoomRange.dispatchEvent(new Event("input"));
+      });
+    }
+
+    /* Tombol plus zoom */
+    if (btnZoomPlus) {
+      btnZoomPlus.addEventListener("click", function () {
+        if (activeEditorIndex < 0) return;
+        const cur = Number(editorZoomRange.value);
+        const next = Math.min(220, cur + 10);
+        editorZoomRange.value = next;
+        editorZoomRange.dispatchEvent(new Event("input"));
+      });
+    }
+
+    /* Compass 9 titik */
+    if (editorCompassGrid) {
+      editorCompassGrid.addEventListener("click", function (event) {
+        const cell = event.target.closest("[data-compass-pos]");
+        if (!cell || activeEditorIndex < 0) return;
+        const item = mediaItems[activeEditorIndex];
+        if (!item) return;
+
+        item.posisi = cell.dataset.compassPos;
+        updateEditorCanvasDisplay(item.posisi, item.zoom || 1);
+      });
+    }
+
+    /* Reset Transformasi (Posisi 50% 50% & Zoom 100%) */
+    if (btnEditorResetTransform) {
+      btnEditorResetTransform.addEventListener("click", function () {
+        if (activeEditorIndex < 0) return;
+        const item = mediaItems[activeEditorIndex];
+        if (!item) return;
+
+        item.posisi = "50% 50%";
+        item.zoom = 1;
+        if (editorZoomRange) editorZoomRange.value = 100;
+        if (editorZoomValText) editorZoomValText.textContent = "100%";
+        updateEditorCanvasDisplay(item.posisi, item.zoom);
+      });
+    }
+
+    /* Tombol Ganti Foto di dalam Editor */
+    if (btnEditorUpload) {
+      btnEditorUpload.addEventListener("click", function () {
+        if (activeEditorIndex < 0) return;
+        mediaPickIndex = activeEditorIndex;
+        mediaInput.value = "";
+        mediaInput.click();
+      });
+    }
+
+    /* Tombol Kembali ke Foto Bawaan di dalam Editor */
+    if (btnEditorResetFoto) {
+      btnEditorResetFoto.addEventListener("click", function () {
+        if (activeEditorIndex < 0) return;
+        const item = mediaItems[activeEditorIndex];
+        if (!item) return;
+
+        item.url = "";
+        item.file = null;
+        item.preview = "";
+        item.posisi = "50% 50%";
+        item.zoom = 1;
+
+        if (editorCanvasImg) editorCanvasImg.src = item.defaultImg;
+        if (editorZoomRange) editorZoomRange.value = 100;
+        if (editorZoomValText) editorZoomValText.textContent = "100%";
+        updateEditorCanvasDisplay(item.posisi, item.zoom);
+        btnEditorResetFoto.disabled = true;
+      });
+    }
+
+    /* Tombol Selesai / Terapkan */
+    if (btnEditorDone) {
+      btnEditorDone.addEventListener("click", closeMediaEditor);
+    }
+
+    /* Tombol Back */
+    if (btnBackToMediaList) {
+      btnBackToMediaList.addEventListener("click", closeMediaEditor);
+    }
+  }
+
+  if (mediaFilterChips) {
+    mediaFilterChips.addEventListener("click", function (event) {
+      const chip = event.target.closest("[data-media-filter]");
+      if (!chip) return;
+      const filter = chip.dataset.mediaFilter;
+      mediaActiveFilter = filter;
+      mediaFilterChips.querySelectorAll(".media-filter-chip").forEach(function (btn) {
+        btn.classList.toggle("is-active", btn === chip);
+      });
+      renderMediaManager();
+    });
+  }
+
+  if (mediaButton) {
+    mediaButton.addEventListener("click", function () {
+      const media = getBengkelInfoLengkap().mediaFoto || {};
+
+      mediaItems = MEDIA_SLOTS.map(function (slot) {
+        const val = media[slot.key];
+        const isObj = val && typeof val === "object";
+        const url = String((isObj ? val.url : val) || "").trim();
+        const posisi = isObj && val.posisi ? String(val.posisi) : "50% 50%";
+        const zoom = isObj && val.zoom ? parseFloat(val.zoom) || 1 : 1;
+
+        return {
+          key: slot.key,
+          kategori: slot.kategori || "layanan",
+          label: slot.label,
+          deskripsi: slot.deskripsi || "",
+          defaultImg: slot.defaultImg,
+          url: url,
+          posisi: posisi,
+          zoom: zoom,
+          file: null,
+          preview: "",
+        };
+      });
+
+      mediaActiveFilter = "semua";
+      if (mediaFilterChips) {
+        mediaFilterChips.querySelectorAll(".media-filter-chip").forEach(function (btn) {
+          btn.classList.toggle("is-active", btn.dataset.mediaFilter === "semua");
+        });
+      }
+
+      showMediaError("");
+      closeMediaEditor();
+      renderMediaManager();
+      openModal("landingMediaModal");
+    });
+  }
+
+  if (mediaManager) {
+    mediaManager.addEventListener("click", function (event) {
+      const openEditor = event.target.closest("[data-media-open-editor]");
+      const pick = event.target.closest("[data-media-pick]");
+      const reset = event.target.closest("[data-media-reset]");
+
+      if (openEditor) {
+        const index = Number(openEditor.dataset.mediaOpenEditor);
+        openMediaEditor(index);
+        return;
+      }
+
+      if (pick) {
+        mediaPickIndex = Number(pick.dataset.mediaPick);
+        mediaInput.value = "";
+        mediaInput.click();
+        return;
+      }
+
+      if (reset) {
+        const index = Number(reset.dataset.mediaReset);
+        const item = mediaItems[index];
+        if (!item) return;
+        item.url = "";
+        item.file = null;
+        item.preview = "";
+        item.posisi = "50% 50%";
+        item.zoom = 1;
+        renderMediaManager();
+      }
+    });
+  }
+
+  initEditorCanvasInteractions();
+
+  if (mediaInput) {
+    mediaInput.addEventListener("change", function () {
+      const file = mediaInput.files && mediaInput.files[0];
+      const item = mediaItems[mediaPickIndex];
+      if (!file || !item) return;
+
+      /* Validasi sama dengan uploadSitePhoto — ditolak di sini supaya
+         admin langsung tahu sebelum ada unggahan. */
+      if (!String(file.type || "").startsWith("image/")) {
+        showMediaError("File harus berupa gambar (jpg/png/webp).");
+        return;
+      }
+
+      if (file.size > 5 * 1024 * 1024) {
+        showMediaError("Ukuran foto maksimal 5 MB.");
+        return;
+      }
+
+      const reader = new FileReader();
+
+      reader.onload = function () {
+        item.file = file;
+        item.preview = String(reader.result || "");
+        showMediaError("");
+        if (activeEditorIndex === mediaPickIndex) {
+          if (editorCanvasImg) editorCanvasImg.src = item.preview;
+          if (btnEditorResetFoto) btnEditorResetFoto.disabled = false;
+        }
+        renderMediaManager();
+      };
+
+      reader.onerror = function () {
+        showMediaError("Foto tidak dapat dibaca. Coba pilih lagi.");
+      };
+
+      reader.readAsDataURL(file);
+    });
+  }
+
+  if (mediaSimpan) {
+    mediaSimpan.addEventListener("click", async function () {
+      mediaSimpan.disabled = true;
+      mediaSimpan.innerHTML =
+        '<i class="fa-solid fa-spinner fa-spin" aria-hidden="true"></i> Menyimpan…';
+      showMediaError("");
+
+      const uploaded = [];
+
+      try {
+        for (let i = 0; i < mediaItems.length; i += 1) {
+          const item = mediaItems[i];
+          if (!item.file) continue;
+
+          const url = await uploadSitePhoto(item.file);
+          uploaded.push({ key: item.key, url: url });
+          item.url = url;
+          item.file = null;
+          item.preview = "";
+        }
+
+        /* Salinan URL lama dipakai untuk membersihkan storage setelah
+           simpan, ketika cache sudah berisi nilai baru. */
+        const sebelum = { ...(getBengkelInfoLengkap().mediaFoto || {}) };
+
+        const payload = {};
+        mediaItems.forEach(function (item) {
+          const posisi = item.posisi || "50% 50%";
+          const zoom = item.zoom || 1;
+          if (item.url || posisi !== "50% 50%" || zoom !== 1) {
+            payload[item.key] = {
+              url: item.url || "",
+              posisi: posisi,
+              zoom: zoom,
+            };
+          }
+        });
+
+        saveWorkshopInfo({
+          ...getBengkelInfoLengkap(),
+          mediaFoto: payload,
+        });
+
+        /* Hapus dari storage foto yang sudah tidak dipakai slot mana pun
+           supaya bucket tidak menumpuk file tak terpakai. */
+        Object.keys(sebelum).forEach(function (key) {
+          const valLama = sebelum[key];
+          const urlLama =
+            typeof valLama === "string"
+              ? valLama
+              : valLama && typeof valLama === "object"
+                ? valLama.url
+                : "";
+          const valBaru = payload[key];
+          const urlBaru =
+            typeof valBaru === "string"
+              ? valBaru
+              : valBaru && typeof valBaru === "object"
+                ? valBaru.url
+                : "";
+          if (urlLama && urlBaru !== urlLama) {
+            removeSiteAsset(urlLama).catch(function () {});
+          }
+        });
+
+        closeModal("landingMediaModal");
+        renderLandingPreview();
+        showPageNotice("Foto halaman berhasil disimpan.", "success");
+      } catch (error) {
+        /* Batalkan unggahan yang sudah jadi supaya tidak ada file yatim. */
+        uploaded.forEach(function (item) {
+          removeSiteAsset(item.url).catch(function () {});
+        });
+        showMediaError(error.message || "Gagal menyimpan foto halaman.");
+      } finally {
+        mediaSimpan.disabled = false;
+        mediaSimpan.innerHTML = mediaSimpanHTML;
+        renderMediaManager();
       }
     });
   }

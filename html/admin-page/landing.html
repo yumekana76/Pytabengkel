@@ -8,21 +8,21 @@
     />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Pytabengkel | Kelola Landing Page</title>
-    <link rel="stylesheet" href="../../css/fonts.css" />
-    <link rel="stylesheet" href="../../css/global.css" />
+    <link rel="stylesheet" href="../../css/fonts.css?v=20261128" />
+    <link rel="stylesheet" href="../../css/global.css?v=20261128" />
     <link
       rel="stylesheet"
       href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
     />
-    <link rel="stylesheet" href="../../css/pengaturan.css" />
-    <link rel="stylesheet" href="../../css/diskon.css" />
-    <link rel="stylesheet" href="../../css/blok.css" />
-    <link rel="stylesheet" href="../../css/ulasan.css" />
-    <script src="../../js/error-logger.js"></script>
-    <script src="../../js/theme.js"></script>
-    <script src="../../js/config.js"></script>
-    <script src="../../js/vendor/supabase.min.js"></script>
-    <script src="../../js/supabase.js"></script>
+    <link rel="stylesheet" href="../../css/pengaturan.css?v=20261128" />
+    <link rel="stylesheet" href="../../css/diskon.css?v=20261128" />
+    <link rel="stylesheet" href="../../css/blok.css?v=20261128" />
+    <link rel="stylesheet" href="../../css/ulasan.css?v=20261128" />
+    <script src="../../js/error-logger.js?v=20261128"></script>
+    <script src="../../js/theme.js?v=20261128"></script>
+    <script src="../../js/config.js?v=20261128"></script>
+    <script src="../../js/vendor/supabase.min.js?v=20261128"></script>
+    <script src="../../js/supabase.js?v=20261128"></script>
     <script>
       applyThemeBeforePaint();
       /* Hanya super admin yang boleh mengubah landing page. */
@@ -195,6 +195,16 @@
             <span class="setting-description"
               >Kelola nama, alamat, kontak, email, dan jam buka yang tampil di
               landing page.</span
+            >
+          </div>
+          <div class="setting-btn">
+            <button type="button" class="btn btn-secondary" id="btnMediaFoto">
+              <i class="fa-solid fa-panorama" aria-hidden="true"></i>
+              Foto Halaman
+            </button>
+            <span class="setting-description"
+              >Ganti foto hero samping, foto keunggulan, dan thumbnail kartu
+              layanan landing page (maks 5 MB per foto).</span
             >
           </div>
         </section>
@@ -701,6 +711,179 @@
           </button>
           <button type="button" class="btn btn-primary" id="btnSimpanGaleri">
             <i class="fa-solid fa-floppy-disk" aria-hidden="true"></i> Simpan Galeri
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODAL FOTO HALAMAN (slot foto tetap landing) -->
+    <div class="modal-overlay" id="landingMediaModal">
+      <div
+        class="modal modal-media-wide"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="landingMediaModal-title"
+      >
+        <div class="modal-header">
+          <div>
+            <h3 id="landingMediaModal-title">Foto Halaman Landing</h3>
+            <p>Sesuaikan foto hero, foto keunggulan bengkel, dan 4 kartu layanan landing page.</p>
+          </div>
+          <button
+            type="button"
+            class="modal-close"
+            data-close-modal="landingMediaModal"
+            aria-label="Tutup"
+          >
+            ×
+          </button>
+        </div>
+        <div class="modal-body">
+          <!-- VIEW DAFTAR SLOT -->
+          <div id="mediaListView">
+            <div class="media-help-banner">
+              <div class="media-help-icon">
+                <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
+              </div>
+              <div class="media-help-text">
+                <strong>Kelola Foto Lebih Nyaman:</strong>
+                Pilih foto yang ingin diubah, lalu klik <strong>"Atur Tampilan / Edit Foto"</strong> untuk membuka studio visual: geser posisi fokus dengan mudah, gunakan preset 9 arah pandang, serta atur zoom secara akurat.
+              </div>
+            </div>
+
+            <div class="media-filter-bar">
+              <div class="media-filter-chips" id="mediaFilterChips">
+                <button type="button" class="media-filter-chip is-active" data-media-filter="semua">
+                  <i class="fa-solid fa-border-all" aria-hidden="true"></i> Semua Slot <span class="media-chip-count" id="chipCountSemua">7</span>
+                </button>
+                <button type="button" class="media-filter-chip" data-media-filter="hero">
+                  <i class="fa-solid fa-wand-magic-sparkles" aria-hidden="true"></i> Hero <span class="media-chip-count" id="chipCountHero">2</span>
+                </button>
+                <button type="button" class="media-filter-chip" data-media-filter="keunggulan">
+                  <i class="fa-solid fa-award" aria-hidden="true"></i> Keunggulan <span class="media-chip-count" id="chipCountKeunggulan">1</span>
+                </button>
+                <button type="button" class="media-filter-chip" data-media-filter="layanan">
+                  <i class="fa-solid fa-wrench" aria-hidden="true"></i> Layanan <span class="media-chip-count" id="chipCountLayanan">4</span>
+                </button>
+              </div>
+            </div>
+
+            <div class="media-grid-container" id="mediaManager"></div>
+            <input
+              type="file"
+              id="mediaFotoInput"
+              class="form-control"
+              accept="image/*"
+              hidden
+            />
+            <p class="setting-description" style="margin-top: 14px;">
+              Mendukung format JPG, PNG, atau WebP dengan batas maksimal 5 MB per foto. Foto otomatis dioptimalkan sebelum diunggah ke server.
+            </p>
+            <p class="form-error" id="mediaFormError" hidden></p>
+          </div>
+
+          <!-- VIEW STUDIO EDITOR DETAIL FOTO -->
+          <div id="mediaDetailEditor" hidden>
+            <div class="media-editor-topbar">
+              <button type="button" class="btn btn-sm btn-secondary" id="btnBackToMediaList">
+                <i class="fa-solid fa-arrow-left" aria-hidden="true"></i> Kembali ke Daftar Slot
+              </button>
+              <div class="media-editor-slot-badge" id="editorSlotBadge">
+                <span class="media-editor-slot-cat" id="editorSlotCategory">HERO</span>
+                <strong id="editorSlotTitle">Foto Hero Samping</strong>
+              </div>
+            </div>
+
+            <div class="media-editor-layout">
+              <!-- Kiri: Kanvas pratinjau besar interaktif -->
+              <div class="media-editor-canvas-column">
+                <div class="media-editor-canvas-wrap">
+                  <div class="media-editor-canvas" id="editorPanCanvas" title="Klik dan geser foto langsung untuk mengatur titik fokus">
+                    <img class="media-editor-canvas-img" id="editorCanvasImg" src="" alt="Pratinjau Editor" />
+                    <!-- Grid 3x3 rule of thirds -->
+                    <div class="media-editor-thirds-grid" aria-hidden="true">
+                      <div class="grid-line line-h1"></div>
+                      <div class="grid-line line-h2"></div>
+                      <div class="grid-line line-v1"></div>
+                      <div class="grid-line line-v2"></div>
+                    </div>
+                    <!-- Crosshair fokus tengah dinamis -->
+                    <div class="media-editor-target-point" id="editorTargetPoint" aria-hidden="true">
+                      <i class="fa-solid fa-crosshairs"></i>
+                    </div>
+                    <div class="media-editor-drag-pill">
+                      <i class="fa-solid fa-arrows-up-down-left-right"></i> Klik &amp; Geser Foto
+                    </div>
+                  </div>
+                </div>
+                <div class="media-editor-canvas-footer">
+                  <button type="button" class="btn btn-sm btn-primary-outline" id="btnEditorUpload">
+                    <i class="fa-solid fa-arrow-up-from-bracket" aria-hidden="true"></i> Ganti Foto Ini
+                  </button>
+                  <button type="button" class="btn btn-sm btn-danger-outline" id="btnEditorResetFoto">
+                    <i class="fa-solid fa-rotate-left" aria-hidden="true"></i> Kembali ke Foto Bawaan
+                  </button>
+                </div>
+              </div>
+
+              <!-- Kanan: Panel kontrol Zoom & Presets -->
+              <div class="media-editor-controls-column">
+                <!-- Kontrol Zoom -->
+                <div class="media-control-section">
+                  <div class="media-control-section-header">
+                    <label for="editorZoomRange"><i class="fa-solid fa-magnifying-glass-plus"></i> Pembesaran Foto (Zoom)</label>
+                    <span class="media-editor-value-pill" id="editorZoomValText">100%</span>
+                  </div>
+                  <div class="media-zoom-slider-wrap">
+                    <button type="button" class="media-zoom-step-btn" id="btnZoomMinus" title="Kurangi Zoom" aria-label="Kurangi Zoom">
+                      <i class="fa-solid fa-minus"></i>
+                    </button>
+                    <input type="range" id="editorZoomRange" min="100" max="220" step="5" value="100" />
+                    <button type="button" class="media-zoom-step-btn" id="btnZoomPlus" title="Tambah Zoom" aria-label="Tambah Zoom">
+                      <i class="fa-solid fa-plus"></i>
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Presets Titik Fokus (9-point compass) -->
+                <div class="media-control-section">
+                  <div class="media-control-section-header">
+                    <span><i class="fa-solid fa-compass"></i> Arah Fokus Cepat (9 Titik)</span>
+                    <span class="media-editor-value-pill monospace" id="editorPosValText">50% 50%</span>
+                  </div>
+                  <p class="media-control-tip">Klik kotak untuk mengarahkan fokus kamera langsung ke area yang diinginkan:</p>
+                  <div class="media-compass-grid" id="editorCompassGrid">
+                    <button type="button" class="compass-cell" data-compass-pos="0% 0%" title="Kiri Atas">↖</button>
+                    <button type="button" class="compass-cell" data-compass-pos="50% 0%" title="Tengah Atas">↑</button>
+                    <button type="button" class="compass-cell" data-compass-pos="100% 0%" title="Kanan Atas">↗</button>
+                    <button type="button" class="compass-cell" data-compass-pos="0% 50%" title="Kiri Tengah">←</button>
+                    <button type="button" class="compass-cell" data-compass-pos="50% 50%" title="Tengah (Default)">•</button>
+                    <button type="button" class="compass-cell" data-compass-pos="100% 50%" title="Kanan Tengah">→</button>
+                    <button type="button" class="compass-cell" data-compass-pos="0% 100%" title="Kiri Bawah">↙</button>
+                    <button type="button" class="compass-cell" data-compass-pos="50% 100%" title="Tengah Bawah">↓</button>
+                    <button type="button" class="compass-cell" data-compass-pos="100% 100%" title="Kanan Bawah">↘</button>
+                  </div>
+                </div>
+
+                <!-- Tombol aksi selesai editor -->
+                <div class="media-editor-actions">
+                  <button type="button" class="btn btn-secondary btn-full" id="btnEditorResetTransform">
+                    <i class="fa-solid fa-crop" aria-hidden="true"></i> Reset Posisi &amp; Zoom
+                  </button>
+                  <button type="button" class="btn btn-primary btn-full" id="btnEditorDone">
+                    <i class="fa-solid fa-check" aria-hidden="true"></i> Terapkan Pengaturan
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer" id="mediaModalFooter">
+          <button type="button" class="btn btn-secondary" data-close-modal="landingMediaModal">
+            Batal
+          </button>
+          <button type="button" class="btn btn-primary" id="btnSimpanMedia">
+            <i class="fa-solid fa-floppy-disk" aria-hidden="true"></i> Simpan Foto
           </button>
         </div>
       </div>

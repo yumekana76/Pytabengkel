@@ -667,6 +667,7 @@ function blockToDb(row) {
     deskripsi: row.deskripsi || "",
     tipe: row.tipe === "gambar" || row.tipe === "cta" ? row.tipe : "teks",
     gambar_url: row.gambarUrl || "",
+    gambar_posisi: normalizePosisi(row.gambarPosisi),
     tautan: row.tautan || "",
     tautan_label: row.tautanLabel || "",
     urutan: Number(row.urutan) || 0,
@@ -682,6 +683,7 @@ function blockFromDb(row) {
     deskripsi: row.deskripsi || "",
     tipe: row.tipe === "gambar" || row.tipe === "cta" ? row.tipe : "teks",
     gambarUrl: row.gambar_url || "",
+    gambarPosisi: normalizePosisi(row.gambar_posisi),
     tautan: row.tautan || "",
     tautanLabel: row.tautan_label || "",
     urutan: Number(row.urutan) || 0,
@@ -886,6 +888,7 @@ async function dbInitOnce() {
           galeriFoto: normalizeGalleryFoto(info.data[0].galeri_foto),
           heroSlides: normalizeHeroSlides(info.data[0].hero_slides),
           heroAutoplay: info.data[0].hero_autoplay === true,
+          mediaFoto: normalizeMediaFoto(info.data[0].media_foto),
         }
       : {};
     DB.cache.accounts = (profiles.data || []).map((row) => ({
@@ -1062,6 +1065,28 @@ function getMekanikAktif() {
 /* Galeri landing disimpan sebagai array JSON: [{ url, judul, deskripsi }].
    Terima juga string JSON (data lama / hasil restore backup) supaya
    halaman tidak rusak karena format yang berbeda. */
+/* Titik fokus foto (object-position / background-position).
+   Mendukung format persentase kontinu: "X% Y%" (0% - 100%).
+   Nilai di luar rentang atau tidak valid dinormalkan ke "50% 50%". */
+function normalizePosisi(value) {
+  const teks = String(value || "").trim().replace(/\s+/g, " ");
+  const cocok = teks.match(/^(\d{1,3}(?:\.\d+)?)%\s+(\d{1,3}(?:\.\d+)?)%$/);
+
+  if (!cocok) return "50% 50%";
+  const x = Math.min(100, Math.max(0, parseFloat(cocok[1])));
+  const y = Math.min(100, Math.max(0, parseFloat(cocok[2])));
+  return Math.round(x) + "% " + Math.round(y) + "%";
+}
+
+/* Normalisasi tingkat pembesaran (zoom/scale): float antara 1.0 (100%)
+   sampai 2.5 (250%). Default = 1. */
+function normalizeZoom(value) {
+  const num = parseFloat(value);
+  if (isNaN(num) || num < 1) return 1;
+  if (num > 2.5) return 2.5;
+  return Math.round(num * 100) / 100;
+}
+
 function normalizeGalleryFoto(value) {
   let list = value;
 
@@ -1081,12 +1106,14 @@ function normalizeGalleryFoto(value) {
       url: String(item.url || "").trim(),
       judul: String(item.judul || "").trim(),
       deskripsi: String(item.deskripsi || "").trim(),
+      posisi: normalizePosisi(item.posisi),
     }))
     .filter((item) => item.url)
     .slice(0, 8);
 }
 
-/* Slide hero landing: [{ foto, label, judul, deskripsi }]. Maksimal 5
+/* Slide hero landing: [{ foto, label, judul, deskripsi, posisi }].
+   posisi = titik fokus background hero. Maksimal 5
    slide; slide yang benar-benar kosong tidak ikut disimpan. */
 function normalizeHeroSlides(value) {
   let list = value;
@@ -1108,11 +1135,61 @@ function normalizeHeroSlides(value) {
       label: String(item.label || "").trim(),
       judul: String(item.judul || "").trim(),
       deskripsi: String(item.deskripsi || "").trim(),
+      posisi: normalizePosisi(item.posisi),
     }))
     .filter(
       (item) => item.foto || item.label || item.judul || item.deskripsi,
     )
     .slice(0, 5);
+}
+
+/* Foto slot tetap landing page: object JSON { slot: { url, posisi } }
+   yang disimpan di workshop_info.media_foto. Slot: hero samping, foto
+   mini hero, foto keunggulan, dan 4 thumbnail kartu layanan. Kosong =
+   memakai foto bawaan di html/index.html. Bentuk lama { slot: url }
+   (string polos) tetap dibaca. */
+var MEDIA_FOTO_SLOTS = [
+  "hero_sisi",
+  "hero_mini",
+  "fitur",
+  "layanan_servis",
+  "layanan_diagnosa",
+  "layanan_suku",
+  "layanan_qc",
+];
+
+function normalizeMediaFoto(value) {
+  let media = value;
+
+  if (typeof media === "string") {
+    try {
+      media = JSON.parse(media);
+    } catch (error) {
+      media = null;
+    }
+  }
+
+  if (!media || typeof media !== "object" || Array.isArray(media)) {
+    return {};
+  }
+
+  const hasil = {};
+
+  MEDIA_FOTO_SLOTS.forEach((slot) => {
+    const nilai = media[slot];
+    const obj = nilai && typeof nilai === "object" ? nilai : null;
+    const url = String((obj ? obj.url : nilai) || "").trim();
+    const posisi = normalizePosisi(obj ? obj.posisi : "");
+    const zoom = normalizeZoom(obj ? obj.zoom : 1);
+
+    /* Slot tersimpan bila punya URL admin ATAU titik fokus/zoom yang
+       tidak default — posisi/zoom juga bisa mengatur foto bawaan. */
+    if (url || posisi !== "50% 50%" || zoom !== 1) {
+      hasil[slot] = { url: url, posisi: posisi, zoom: zoom };
+    }
+  });
+
+  return hasil;
 }
 
 function getBengkelInfoLengkap() {
@@ -1132,6 +1209,7 @@ function getBengkelInfoLengkap() {
     galeriFoto: normalizeGalleryFoto(info.galeriFoto),
     heroSlides: normalizeHeroSlides(info.heroSlides),
     heroAutoplay: info.heroAutoplay === true,
+    mediaFoto: normalizeMediaFoto(info.mediaFoto),
   };
 }
 
@@ -1738,6 +1816,57 @@ async function uploadHeroPhoto(file) {
   return pub.publicUrl;
 }
 
+/* Unggah satu foto slot halaman (hero samping, keunggulan, kartu
+   layanan) ke bucket site-assets. Alur dan batasnya sama dengan foto
+   hero; URL publiknya disimpan di workshop_info.media_foto. */
+async function uploadSitePhoto(file) {
+  if (!supabaseClient) {
+    throw new Error("Foto hanya tersedia pada mode Supabase.");
+  }
+
+  if (!dbIsAdmin()) {
+    throw new Error("Hanya admin yang dapat mengganti foto landing page.");
+  }
+
+  if (!file || !String(file.type || "").startsWith("image/")) {
+    throw new Error("File harus berupa gambar (jpg/png/webp).");
+  }
+
+  if (file.size > 5 * 1024 * 1024) {
+    throw new Error("Ukuran foto maksimal 5 MB.");
+  }
+
+  const siapUpload = await compressLandingPhoto(file);
+
+  if (siapUpload.size > 5 * 1024 * 1024) {
+    throw new Error("Foto masih lebih dari 5 MB setelah dikompres.");
+  }
+
+  const extRaw =
+    String(siapUpload.name || "")
+      .split(".")
+      .pop() || "jpg";
+  const ext = extRaw.toLowerCase().replace(/[^a-z0-9]/g, "") || "jpg";
+  const path = `foto-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+
+  const { error: uploadError } = await supabaseClient.storage
+    .from("site-assets")
+    .upload(path, siapUpload, {
+      upsert: false,
+      contentType: siapUpload.type || "image/jpeg",
+    });
+
+  if (uploadError) {
+    throw new Error(uploadError.message);
+  }
+
+  const { data: pub } = supabaseClient.storage
+    .from("site-assets")
+    .getPublicUrl(path);
+
+  return pub.publicUrl;
+}
+
 /* Muat file gambar menjadi <img> lewat data: URL — blob: diblokir CSP
    img-src halaman admin. Dipakai untuk kompresi foto galeri & hero. */
 function loadImageForCompression(file) {
@@ -2101,6 +2230,12 @@ function saveWorkshopInfo(info) {
     info.heroAutoplay !== undefined
       ? Boolean(info.heroAutoplay)
       : Boolean(prev.heroAutoplay);
+  /* Foto slot halaman juga tidak ikut ditimpa bila pemanggil tidak
+     menyertakannya (form Informasi Bengkel, misalnya). */
+  const mediaFoto =
+    info.mediaFoto !== undefined
+      ? normalizeMediaFoto(info.mediaFoto)
+      : normalizeMediaFoto(prev.mediaFoto);
 
   DB.cache.info = {
     ...info,
@@ -2111,6 +2246,7 @@ function saveWorkshopInfo(info) {
     galeriFoto: normalizeGalleryFoto(keep("galeriFoto")),
     heroSlides: normalizeHeroSlides(keep("heroSlides")),
     heroAutoplay: heroAutoplay,
+    mediaFoto: mediaFoto,
   };
 
   if (!supabaseClient || !dbIsAdmin()) {
@@ -2137,6 +2273,7 @@ function saveWorkshopInfo(info) {
         galeri_foto: DB.cache.info.galeriFoto || [],
         hero_slides: DB.cache.info.heroSlides || [],
         hero_autoplay: Boolean(DB.cache.info.heroAutoplay),
+        media_foto: DB.cache.info.mediaFoto || {},
       },
     ]);
 

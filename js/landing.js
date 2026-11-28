@@ -154,6 +154,130 @@
     });
 
     initGallerySlider();
+    siapkanItemGaleri(grid);
+  }
+
+  /* ---------- LIGHTBOX GALERI ----------
+     Kartu galeri hanya menampilkan foto + judul (keterangan disembunyikan
+     oleh CSS); deskripsi muncul di lightbox setelah fotonya diklik. */
+  var lightboxFokusSebelum = null;
+
+  function siapkanItemGaleri(grid) {
+    Array.prototype.forEach.call(
+      grid.querySelectorAll(".lp-gallery-item"),
+      function (item) {
+        if (item.dataset.lightboxReady === "1") return;
+        item.dataset.lightboxReady = "1";
+        item.setAttribute("tabindex", "0");
+        item.setAttribute("role", "button");
+
+        var judul = item.querySelector("figcaption strong");
+        item.setAttribute(
+          "aria-label",
+          "Lihat detail foto: " +
+            (judul && judul.textContent.trim()
+              ? judul.textContent.trim()
+              : "Galeri Bengkel"),
+        );
+      },
+    );
+  }
+
+  function tutupLightbox() {
+    var box = document.getElementById("lpLightbox");
+    if (!box || box.hidden) return;
+
+    box.hidden = true;
+    document.body.style.removeProperty("overflow");
+
+    if (lightboxFokusSebelum && document.contains(lightboxFokusSebelum)) {
+      lightboxFokusSebelum.focus();
+    }
+    lightboxFokusSebelum = null;
+  }
+
+  function bukaLightbox(item) {
+    var box = document.getElementById("lpLightbox");
+    if (!box) return;
+
+    var sumber = item.querySelector("img");
+    var judul = item.querySelector("figcaption strong");
+    var deskripsi = item.querySelector("figcaption span");
+    var lbImg = document.getElementById("lpLightboxImg");
+    var lbPlaceholder = document.getElementById("lpLightboxPlaceholder");
+    var lbJudul = document.getElementById("lpLightboxJudul");
+    var lbDeskripsi = document.getElementById("lpLightboxDeskripsi");
+
+    if (sumber && sumber.getAttribute("src")) {
+      lbImg.src = sumber.getAttribute("src");
+      lbImg.alt = sumber.getAttribute("alt") || "";
+      lbImg.hidden = false;
+      lbPlaceholder.hidden = true;
+    } else {
+      /* Galeri bawaan belum punya foto asli — tampilkan blok gradasi
+         dengan ikon yang sama seperti di kartu. */
+      var fallback = item.querySelector(".lp-media-fallback");
+      lbPlaceholder.innerHTML = fallback
+        ? fallback.innerHTML
+        : '<i class="fa-solid fa-motorcycle"></i>';
+      lbImg.hidden = true;
+      lbImg.removeAttribute("src");
+      lbPlaceholder.hidden = false;
+    }
+
+    lbJudul.textContent =
+      (judul && judul.textContent.trim()) || "Galeri Bengkel";
+
+    var teks = deskripsi ? deskripsi.textContent.trim() : "";
+    lbDeskripsi.textContent = teks;
+    lbDeskripsi.hidden = !teks;
+
+    lightboxFokusSebelum = item;
+    box.hidden = false;
+    document.body.style.overflow = "hidden";
+    document.getElementById("lpLightboxClose").focus();
+  }
+
+  function initLightbox() {
+    var box = document.getElementById("lpLightbox");
+    if (!box || box.dataset.lightboxReady === "1") return;
+    box.dataset.lightboxReady = "1";
+
+    var grid = document.querySelector(".lp-gallery-grid");
+
+    if (grid) {
+      grid.addEventListener("click", function (event) {
+        var item = event.target && event.target.closest
+          ? event.target.closest(".lp-gallery-item")
+          : null;
+        if (item && grid.contains(item)) bukaLightbox(item);
+      });
+
+      grid.addEventListener("keydown", function (event) {
+        if (event.key !== "Enter" && event.key !== " ") return;
+        var item = event.target && event.target.closest
+          ? event.target.closest(".lp-gallery-item")
+          : null;
+        if (!item) return;
+        event.preventDefault();
+        bukaLightbox(item);
+      });
+
+      siapkanItemGaleri(grid);
+    }
+
+    document
+      .getElementById("lpLightboxClose")
+      .addEventListener("click", tutupLightbox);
+
+    /* Klik area gelap di luar gambar ikut menutup. */
+    box.addEventListener("click", function (event) {
+      if (event.target === box) tutupLightbox();
+    });
+
+    document.addEventListener("keydown", function (event) {
+      if (event.key === "Escape") tutupLightbox();
+    });
   }
 
   /* ---------- DATA PUBLIK ---------- */
@@ -420,6 +544,62 @@
     }
   }
 
+  /* Foto slot tetap (hero samping, hero mini, keunggulan, kartu layanan).
+     Kosong = foto bawaan di html/index.html; URL admin menggantikannya. */
+  var MEDIA_FOTO_IDS = {
+    hero_sisi: "lpMediaHeroSisi",
+    hero_mini: "lpMediaHeroMini",
+    fitur: "lpMediaFitur",
+    layanan_servis: "lpMediaLayananServis",
+    layanan_diagnosa: "lpMediaLayananDiagnosa",
+    layanan_suku: "lpMediaLayananSuku",
+    layanan_qc: "lpMediaLayananQc",
+  };
+
+  function renderMediaFoto(info) {
+    var media = info.media_foto;
+
+    if (typeof media === "string") {
+      try {
+        media = JSON.parse(media);
+      } catch (error) {
+        media = null;
+      }
+    }
+
+    Object.keys(MEDIA_FOTO_IDS).forEach(function (slot) {
+      var img = document.getElementById(MEDIA_FOTO_IDS[slot]);
+      if (!img) return;
+
+      /* Gambar gagal dimuat (URL dihapus/diblokir) → lepas <img>
+         supaya ikon fallback di bawahnya tampil lagi. */
+      img.onerror = function () {
+        img.remove();
+      };
+
+      var item = media && typeof media === "object" ? media[slot] : null;
+      var url = "";
+      var posisi = "50% 50%";
+      var zoom = 1;
+
+      if (typeof item === "string") {
+        url = item.trim();
+      } else if (item && typeof item === "object") {
+        url = String(item.url || "").trim();
+        posisi = String(item.posisi || "50% 50%").trim();
+        zoom = parseFloat(item.zoom) || 1;
+      }
+
+      if (url) img.src = url;
+      if (posisi) img.style.objectPosition = posisi;
+      if (zoom && zoom > 1) {
+        img.style.transform = "scale(" + zoom + ")";
+      } else {
+        img.style.transform = "";
+      }
+    });
+  }
+
   function renderInfo(rows) {
     var info = Array.isArray(rows) ? rows[0] : rows;
     if (!info) return;
@@ -453,6 +633,10 @@
     /* Galeri bengkel diatur admin lewat halaman Landing Page. Kalau
        kosong, galeri bawaan di HTML tetap tampil. */
     renderGallery(info.galeri_foto);
+
+    /* Foto slot tetap (hero samping, keunggulan, kartu layanan) mengikuti
+       data admin; kosong = foto bawaan di html/index.html. */
+    renderMediaFoto(info);
 
   }
 
@@ -1129,6 +1313,7 @@
   initReveal();
   initLandingNav();
   initGallerySlider();
+  initLightbox();
   initAuthLinks();
   initReviewFilter();
   loadPublicData();

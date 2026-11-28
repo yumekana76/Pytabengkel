@@ -12,20 +12,20 @@
       content="Pytabengkel — promo service, ulasan pelanggan, layanan bengkel, dan kontak dalam satu halaman."
     />
     <title>Pytabengkel | Promo, Layanan & Kontak</title>
-    <link rel="stylesheet" href="../css/fonts.css" />
-    <link rel="stylesheet" href="../css/global.css" />
+    <link rel="stylesheet" href="../css/fonts.css?v=20261128" />
+    <link rel="stylesheet" href="../css/global.css?v=20261128" />
     <link
       rel="stylesheet"
       href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
     />
-    <link rel="stylesheet" href="../css/customer.css" />
-    <link rel="stylesheet" href="../css/ulasan.css" />
-    <link rel="stylesheet" href="../css/landing.css" />
-    <script src="../js/error-logger.js"></script>
-    <script src="../js/theme.js"></script>
-    <script src="../js/config.js"></script>
-    <script src="../js/vendor/supabase.min.js"></script>
-    <script src="../js/supabase.js"></script>
+    <link rel="stylesheet" href="../css/customer.css?v=20261128" />
+    <link rel="stylesheet" href="../css/ulasan.css?v=20261128" />
+    <link rel="stylesheet" href="../css/landing.css?v=20261128" />
+    <script src="../js/error-logger.js?v=20261128"></script>
+    <script src="../js/theme.js?v=20261128"></script>
+    <script src="../js/config.js?v=20261128"></script>
+    <script src="../js/vendor/supabase.min.js?v=20261128"></script>
+    <script src="../js/supabase.js?v=20261128"></script>
     <script>
       applyThemeBeforePaint();
     </script>
@@ -161,11 +161,21 @@
           </div>
           <div class="lp-hero-media">
             <figure class="lp-hero-photo">
+              <img
+                id="lpMediaHeroSisi"
+                src="../asset/img/hero-workshop.jpg"
+                alt="Suasana bengkel Pytabengkel"
+              />
               <span class="lp-media-fallback lp-media-hero" aria-hidden="true">
                 <i class="fa-solid fa-car-side"></i>
               </span>
             </figure>
             <figure class="lp-hero-photo-mini">
+              <img
+                id="lpMediaHeroMini"
+                src="../asset/img/galeri-detailing.jpg"
+                alt="Detailing kendaraan di Pytabengkel"
+              />
               <span class="lp-media-fallback lp-media-mini" aria-hidden="true">
                 <i class="fa-solid fa-clipboard-check"></i>
               </span>
@@ -244,6 +254,12 @@
           <div class="panel-body">
             <div class="lp-feature-layout">
               <figure class="lp-feature-photo">
+                <img
+                  id="lpMediaFitur"
+                  src="../asset/img/keunggulan-technician.jpg"
+                  alt="Teknisi Pytabengkel memeriksa kendaraan"
+                  loading="lazy"
+                />
                 <span class="lp-media-fallback lp-media-feature" aria-hidden="true">
                   <i class="fa-solid fa-user-gear"></i>
                 </span>
@@ -348,6 +364,12 @@
             <div class="lp-service-grid">
               <a class="lp-service-card" href="detail.html?type=layanan&id=servis-rutin-tune-up">
                 <div class="lp-service-media">
+                  <img
+                    id="lpMediaLayananServis"
+                    src="../asset/img/layanan-servis-rutin.jpg"
+                    alt="Servis rutin dan tune up"
+                    loading="lazy"
+                  />
                   <span class="lp-media-fallback lp-media-service" aria-hidden="true"></span>
                   <div class="lp-service-icon-wrap">
                     <i class="fa-solid fa-oil-can" aria-hidden="true"></i>
@@ -361,6 +383,12 @@
               </a>
               <a class="lp-service-card" href="detail.html?type=layanan&id=perbaikan-diagnosa-mesin">
                 <div class="lp-service-media">
+                  <img
+                    id="lpMediaLayananDiagnosa"
+                    src="../asset/img/layanan-diagnosa.jpg"
+                    alt="Diagnosa mesin komputerized"
+                    loading="lazy"
+                  />
                   <span class="lp-media-fallback lp-media-service" aria-hidden="true"></span>
                   <div class="lp-service-icon-wrap">
                     <i class="fa-solid fa-wrench" aria-hidden="true"></i>
@@ -374,6 +402,12 @@
               </a>
               <a class="lp-service-card" href="detail.html?type=layanan&id=suku-cadang-kaki-kaki">
                 <div class="lp-service-media">
+                  <img
+                    id="lpMediaLayananSuku"
+                    src="../asset/img/layanan-suku-cadang.jpg"
+                    alt="Suku cadang dan kaki-kaki"
+                    loading="lazy"
+                  />
                   <span class="lp-media-fallback lp-media-service" aria-hidden="true"></span>
                   <div class="lp-service-icon-wrap">
                     <i class="fa-solid fa-gears" aria-hidden="true"></i>
@@ -387,6 +421,12 @@
               </a>
               <a class="lp-service-card" href="detail.html?type=layanan&id=quality-control-test-drive">
                 <div class="lp-service-media">
+                  <img
+                    id="lpMediaLayananQc"
+                    src="../asset/img/layanan-quality-control.jpg"
+                    alt="Quality control dan test drive"
+                    loading="lazy"
+                  />
                   <span class="lp-media-fallback lp-media-service" aria-hidden="true"></span>
                   <div class="lp-service-icon-wrap">
                     <i class="fa-solid fa-clipboard-check" aria-hidden="true"></i>
@@ -763,6 +803,40 @@
           <span class="lp-footer-badge">Sistem Manajemen Servis Bengkel</span>
         </div>
       </footer>
+    </div>
+
+    <!-- LIGHTBOX GALERI — detail foto muncul saat fotonya diklik -->
+    <div
+      class="lp-lightbox"
+      id="lpLightbox"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Detail foto galeri"
+      hidden
+    >
+      <button
+        type="button"
+        class="lp-lightbox-close"
+        id="lpLightboxClose"
+        aria-label="Tutup detail foto"
+      >
+        <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+      </button>
+      <figure class="lp-lightbox-figure">
+        <img id="lpLightboxImg" alt="" hidden />
+        <span
+          class="lp-media-fallback lp-lightbox-placeholder"
+          id="lpLightboxPlaceholder"
+          aria-hidden="true"
+          hidden
+        >
+          <i class="fa-solid fa-motorcycle"></i>
+        </span>
+        <figcaption>
+          <strong id="lpLightboxJudul">Galeri Bengkel</strong>
+          <span id="lpLightboxDeskripsi" hidden></span>
+        </figcaption>
+      </figure>
     </div>
 
     <script src="../js/global.js"></script>
