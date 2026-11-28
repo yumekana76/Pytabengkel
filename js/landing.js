@@ -577,12 +577,26 @@
         img.remove();
       };
 
-      var url =
-        media && typeof media === "object"
-          ? String(media[slot] || "").trim()
-          : "";
+      var item = media && typeof media === "object" ? media[slot] : null;
+      var url = "";
+      var posisi = "50% 50%";
+      var zoom = 1;
+
+      if (typeof item === "string") {
+        url = item.trim();
+      } else if (item && typeof item === "object") {
+        url = String(item.url || "").trim();
+        posisi = String(item.posisi || "50% 50%").trim();
+        zoom = parseFloat(item.zoom) || 1;
+      }
 
       if (url) img.src = url;
+      if (posisi) img.style.objectPosition = posisi;
+      if (zoom && zoom > 1) {
+        img.style.transform = "scale(" + zoom + ")";
+      } else {
+        img.style.transform = "";
+      }
     });
   }
 

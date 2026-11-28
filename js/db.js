@@ -667,6 +667,7 @@ function blockToDb(row) {
     deskripsi: row.deskripsi || "",
     tipe: row.tipe === "gambar" || row.tipe === "cta" ? row.tipe : "teks",
     gambar_url: row.gambarUrl || "",
+    gambar_posisi: normalizePosisi(row.gambarPosisi),
     tautan: row.tautan || "",
     tautan_label: row.tautanLabel || "",
     urutan: Number(row.urutan) || 0,
@@ -682,6 +683,7 @@ function blockFromDb(row) {
     deskripsi: row.deskripsi || "",
     tipe: row.tipe === "gambar" || row.tipe === "cta" ? row.tipe : "teks",
     gambarUrl: row.gambar_url || "",
+    gambarPosisi: normalizePosisi(row.gambar_posisi),
     tautan: row.tautan || "",
     tautanLabel: row.tautan_label || "",
     urutan: Number(row.urutan) || 0,
@@ -1063,6 +1065,28 @@ function getMekanikAktif() {
 /* Galeri landing disimpan sebagai array JSON: [{ url, judul, deskripsi }].
    Terima juga string JSON (data lama / hasil restore backup) supaya
    halaman tidak rusak karena format yang berbeda. */
+/* Titik fokus foto (object-position / background-position).
+   Mendukung format persentase kontinu: "X% Y%" (0% - 100%).
+   Nilai di luar rentang atau tidak valid dinormalkan ke "50% 50%". */
+function normalizePosisi(value) {
+  const teks = String(value || "").trim().replace(/\s+/g, " ");
+  const cocok = teks.match(/^(\d{1,3}(?:\.\d+)?)%\s+(\d{1,3}(?:\.\d+)?)%$/);
+
+  if (!cocok) return "50% 50%";
+  const x = Math.min(100, Math.max(0, parseFloat(cocok[1])));
+  const y = Math.min(100, Math.max(0, parseFloat(cocok[2])));
+  return Math.round(x) + "% " + Math.round(y) + "%";
+}
+
+/* Normalisasi tingkat pembesaran (zoom/scale): float antara 1.0 (100%)
+   sampai 2.5 (250%). Default = 1. */
+function normalizeZoom(value) {
+  const num = parseFloat(value);
+  if (isNaN(num) || num < 1) return 1;
+  if (num > 2.5) return 2.5;
+  return Math.round(num * 100) / 100;
+}
+
 function normalizeGalleryFoto(value) {
   let list = value;
 
@@ -1082,12 +1106,14 @@ function normalizeGalleryFoto(value) {
       url: String(item.url || "").trim(),
       judul: String(item.judul || "").trim(),
       deskripsi: String(item.deskripsi || "").trim(),
+      posisi: normalizePosisi(item.posisi),
     }))
     .filter((item) => item.url)
     .slice(0, 8);
 }
 
-/* Slide hero landing: [{ foto, label, judul, deskripsi }]. Maksimal 5
+/* Slide hero landing: [{ foto, label, judul, deskripsi, posisi }].
+   posisi = titik fokus background hero. Maksimal 5
    slide; slide yang benar-benar kosong tidak ikut disimpan. */
 function normalizeHeroSlides(value) {
   let list = value;
@@ -1109,6 +1135,7 @@ function normalizeHeroSlides(value) {
       label: String(item.label || "").trim(),
       judul: String(item.judul || "").trim(),
       deskripsi: String(item.deskripsi || "").trim(),
+      posisi: normalizePosisi(item.posisi),
     }))
     .filter(
       (item) => item.foto || item.label || item.judul || item.deskripsi,
@@ -1116,10 +1143,11 @@ function normalizeHeroSlides(value) {
     .slice(0, 5);
 }
 
-/* Foto slot tetap landing page: object JSON { slot: url } yang disimpan
-   di workshop_info.media_foto. Slot: hero samping, foto mini hero,
-   foto keunggulan, dan 4 thumbnail kartu layanan. Kosong = memakai foto
-   bawaan di html/index.html. */
+/* Foto slot tetap landing page: object JSON { slot: { url, posisi } }
+   yang disimpan di workshop_info.media_foto. Slot: hero samping, foto
+   mini hero, foto keunggulan, dan 4 thumbnail kartu layanan. Kosong =
+   memakai foto bawaan di html/index.html. Bentuk lama { slot: url }
+   (string polos) tetap dibaca. */
 var MEDIA_FOTO_SLOTS = [
   "hero_sisi",
   "hero_mini",
@@ -1148,8 +1176,17 @@ function normalizeMediaFoto(value) {
   const hasil = {};
 
   MEDIA_FOTO_SLOTS.forEach((slot) => {
-    const url = String(media[slot] || "").trim();
-    if (url) hasil[slot] = url;
+    const nilai = media[slot];
+    const obj = nilai && typeof nilai === "object" ? nilai : null;
+    const url = String((obj ? obj.url : nilai) || "").trim();
+    const posisi = normalizePosisi(obj ? obj.posisi : "");
+    const zoom = normalizeZoom(obj ? obj.zoom : 1);
+
+    /* Slot tersimpan bila punya URL admin ATAU titik fokus/zoom yang
+       tidak default — posisi/zoom juga bisa mengatur foto bawaan. */
+    if (url || posisi !== "50% 50%" || zoom !== 1) {
+      hasil[slot] = { url: url, posisi: posisi, zoom: zoom };
+    }
   });
 
   return hasil;
