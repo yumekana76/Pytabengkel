@@ -65,6 +65,9 @@ create table if not exists public.workshop_info (
   hero_slides jsonb not null default '[]'::jsonb,
   -- Ganti slide hero otomatis bila ada 2 slide atau lebih.
   hero_autoplay boolean not null default false,
+  -- Foto slot tetap landing (hero samping, hero mini, keunggulan,
+  -- kartu layanan): object JSON { slot: url }. Kosong = foto bawaan.
+  media_foto jsonb not null default '{}'::jsonb,
   updated_at  timestamptz not null default now()
 );
 
@@ -1120,6 +1123,7 @@ alter table public.workshop_info add column if not exists hero_deskripsi text no
 alter table public.workshop_info add column if not exists galeri_foto jsonb not null default '[]'::jsonb;
 alter table public.workshop_info add column if not exists hero_slides jsonb not null default '[]'::jsonb;
 alter table public.workshop_info add column if not exists hero_autoplay boolean not null default false;
+alter table public.workshop_info add column if not exists media_foto jsonb not null default '{}'::jsonb;
 
 drop function if exists public.public_workshop_info();
 
@@ -1137,7 +1141,8 @@ returns table (
   hero_deskripsi text,
   galeri_foto jsonb,
   hero_slides jsonb,
-  hero_autoplay boolean
+  hero_autoplay boolean,
+  media_foto jsonb
 )
 language sql
 stable
@@ -1146,7 +1151,7 @@ set search_path = public
 as $$
   select nama, alamat, kontak, email, jam_buka, hari_buka, hero_foto,
          hero_label, hero_judul, hero_deskripsi, galeri_foto,
-         hero_slides, hero_autoplay
+         hero_slides, hero_autoplay, media_foto
   from public.workshop_info
   order by id
   limit 1;
