@@ -886,6 +886,7 @@ async function dbInitOnce() {
           galeriFoto: normalizeGalleryFoto(info.data[0].galeri_foto),
           heroSlides: normalizeHeroSlides(info.data[0].hero_slides),
           heroAutoplay: info.data[0].hero_autoplay === true,
+          mediaFoto: normalizeMediaFoto(info.data[0].media_foto),
         }
       : {};
     DB.cache.accounts = (profiles.data || []).map((row) => ({
@@ -1115,6 +1116,45 @@ function normalizeHeroSlides(value) {
     .slice(0, 5);
 }
 
+/* Foto slot tetap landing page: object JSON { slot: url } yang disimpan
+   di workshop_info.media_foto. Slot: hero samping, foto mini hero,
+   foto keunggulan, dan 4 thumbnail kartu layanan. Kosong = memakai foto
+   bawaan di html/index.html. */
+var MEDIA_FOTO_SLOTS = [
+  "hero_sisi",
+  "hero_mini",
+  "fitur",
+  "layanan_servis",
+  "layanan_diagnosa",
+  "layanan_suku",
+  "layanan_qc",
+];
+
+function normalizeMediaFoto(value) {
+  let media = value;
+
+  if (typeof media === "string") {
+    try {
+      media = JSON.parse(media);
+    } catch (error) {
+      media = null;
+    }
+  }
+
+  if (!media || typeof media !== "object" || Array.isArray(media)) {
+    return {};
+  }
+
+  const hasil = {};
+
+  MEDIA_FOTO_SLOTS.forEach((slot) => {
+    const url = String(media[slot] || "").trim();
+    if (url) hasil[slot] = url;
+  });
+
+  return hasil;
+}
+
 function getBengkelInfoLengkap() {
   const info = getWorkshopInfo() || {};
 
@@ -1132,6 +1172,7 @@ function getBengkelInfoLengkap() {
     galeriFoto: normalizeGalleryFoto(info.galeriFoto),
     heroSlides: normalizeHeroSlides(info.heroSlides),
     heroAutoplay: info.heroAutoplay === true,
+    mediaFoto: normalizeMediaFoto(info.mediaFoto),
   };
 }
 
@@ -1738,6 +1779,57 @@ async function uploadHeroPhoto(file) {
   return pub.publicUrl;
 }
 
+/* Unggah satu foto slot halaman (hero samping, keunggulan, kartu
+   layanan) ke bucket site-assets. Alur dan batasnya sama dengan foto
+   hero; URL publiknya disimpan di workshop_info.media_foto. */
+async function uploadSitePhoto(file) {
+  if (!supabaseClient) {
+    throw new Error("Foto hanya tersedia pada mode Supabase.");
+  }
+
+  if (!dbIsAdmin()) {
+    throw new Error("Hanya admin yang dapat mengganti foto landing page.");
+  }
+
+  if (!file || !String(file.type || "").startsWith("image/")) {
+    throw new Error("File harus berupa gambar (jpg/png/webp).");
+  }
+
+  if (file.size > 5 * 1024 * 1024) {
+    throw new Error("Ukuran foto maksimal 5 MB.");
+  }
+
+  const siapUpload = await compressLandingPhoto(file);
+
+  if (siapUpload.size > 5 * 1024 * 1024) {
+    throw new Error("Foto masih lebih dari 5 MB setelah dikompres.");
+  }
+
+  const extRaw =
+    String(siapUpload.name || "")
+      .split(".")
+      .pop() || "jpg";
+  const ext = extRaw.toLowerCase().replace(/[^a-z0-9]/g, "") || "jpg";
+  const path = `foto-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+
+  const { error: uploadError } = await supabaseClient.storage
+    .from("site-assets")
+    .upload(path, siapUpload, {
+      upsert: false,
+      contentType: siapUpload.type || "image/jpeg",
+    });
+
+  if (uploadError) {
+    throw new Error(uploadError.message);
+  }
+
+  const { data: pub } = supabaseClient.storage
+    .from("site-assets")
+    .getPublicUrl(path);
+
+  return pub.publicUrl;
+}
+
 /* Muat file gambar menjadi <img> lewat data: URL — blob: diblokir CSP
    img-src halaman admin. Dipakai untuk kompresi foto galeri & hero. */
 function loadImageForCompression(file) {
@@ -2101,6 +2193,12 @@ function saveWorkshopInfo(info) {
     info.heroAutoplay !== undefined
       ? Boolean(info.heroAutoplay)
       : Boolean(prev.heroAutoplay);
+  /* Foto slot halaman juga tidak ikut ditimpa bila pemanggil tidak
+     menyertakannya (form Informasi Bengkel, misalnya). */
+  const mediaFoto =
+    info.mediaFoto !== undefined
+      ? normalizeMediaFoto(info.mediaFoto)
+      : normalizeMediaFoto(prev.mediaFoto);
 
   DB.cache.info = {
     ...info,
@@ -2111,6 +2209,7 @@ function saveWorkshopInfo(info) {
     galeriFoto: normalizeGalleryFoto(keep("galeriFoto")),
     heroSlides: normalizeHeroSlides(keep("heroSlides")),
     heroAutoplay: heroAutoplay,
+    mediaFoto: mediaFoto,
   };
 
   if (!supabaseClient || !dbIsAdmin()) {
@@ -2137,6 +2236,7 @@ function saveWorkshopInfo(info) {
         galeri_foto: DB.cache.info.galeriFoto || [],
         hero_slides: DB.cache.info.heroSlides || [],
         hero_autoplay: Boolean(DB.cache.info.heroAutoplay),
+        media_foto: DB.cache.info.mediaFoto || {},
       },
     ]);
 
