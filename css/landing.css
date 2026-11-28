@@ -4014,6 +4014,16 @@ a.lp-service-card:focus-visible {
   --fill-to: #34d399;
 }
 
+/* Slot sudah punya foto (bawaan HTML atau dari admin) → ikon fallback
+   tidak ikut tampil supaya tidak menumpuk di bawah foto. landing.js
+   melepas <img> bila gambarnya gagal dimuat, sehingga ikon kembali. */
+.lp-hero-photo > img ~ .lp-media-fallback,
+.lp-hero-photo-mini > img ~ .lp-media-fallback,
+.lp-feature-photo > img ~ .lp-media-fallback,
+.lp-service-media > img ~ .lp-media-fallback {
+  display: none;
+}
+
 /* Kartu keunggulan: panel warna di belakang teks caption. */
 .lp-media-feature {
   --fill-from: #1e40af;

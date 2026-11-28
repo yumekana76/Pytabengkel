@@ -420,6 +420,48 @@
     }
   }
 
+  /* Foto slot tetap (hero samping, hero mini, keunggulan, kartu layanan).
+     Kosong = foto bawaan di html/index.html; URL admin menggantikannya. */
+  var MEDIA_FOTO_IDS = {
+    hero_sisi: "lpMediaHeroSisi",
+    hero_mini: "lpMediaHeroMini",
+    fitur: "lpMediaFitur",
+    layanan_servis: "lpMediaLayananServis",
+    layanan_diagnosa: "lpMediaLayananDiagnosa",
+    layanan_suku: "lpMediaLayananSuku",
+    layanan_qc: "lpMediaLayananQc",
+  };
+
+  function renderMediaFoto(info) {
+    var media = info.media_foto;
+
+    if (typeof media === "string") {
+      try {
+        media = JSON.parse(media);
+      } catch (error) {
+        media = null;
+      }
+    }
+
+    Object.keys(MEDIA_FOTO_IDS).forEach(function (slot) {
+      var img = document.getElementById(MEDIA_FOTO_IDS[slot]);
+      if (!img) return;
+
+      /* Gambar gagal dimuat (URL dihapus/diblokir) → lepas <img>
+         supaya ikon fallback di bawahnya tampil lagi. */
+      img.onerror = function () {
+        img.remove();
+      };
+
+      var url =
+        media && typeof media === "object"
+          ? String(media[slot] || "").trim()
+          : "";
+
+      if (url) img.src = url;
+    });
+  }
+
   function renderInfo(rows) {
     var info = Array.isArray(rows) ? rows[0] : rows;
     if (!info) return;
@@ -453,6 +495,10 @@
     /* Galeri bengkel diatur admin lewat halaman Landing Page. Kalau
        kosong, galeri bawaan di HTML tetap tampil. */
     renderGallery(info.galeri_foto);
+
+    /* Foto slot tetap (hero samping, keunggulan, kartu layanan) mengikuti
+       data admin; kosong = foto bawaan di html/index.html. */
+    renderMediaFoto(info);
 
   }
 
