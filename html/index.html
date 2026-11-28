@@ -805,6 +805,40 @@
       </footer>
     </div>
 
+    <!-- LIGHTBOX GALERI — detail foto muncul saat fotonya diklik -->
+    <div
+      class="lp-lightbox"
+      id="lpLightbox"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Detail foto galeri"
+      hidden
+    >
+      <button
+        type="button"
+        class="lp-lightbox-close"
+        id="lpLightboxClose"
+        aria-label="Tutup detail foto"
+      >
+        <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+      </button>
+      <figure class="lp-lightbox-figure">
+        <img id="lpLightboxImg" alt="" hidden />
+        <span
+          class="lp-media-fallback lp-lightbox-placeholder"
+          id="lpLightboxPlaceholder"
+          aria-hidden="true"
+          hidden
+        >
+          <i class="fa-solid fa-motorcycle"></i>
+        </span>
+        <figcaption>
+          <strong id="lpLightboxJudul">Galeri Bengkel</strong>
+          <span id="lpLightboxDeskripsi" hidden></span>
+        </figcaption>
+      </figure>
+    </div>
+
     <script src="../js/global.js"></script>
     <script src="../js/landing.js"></script>
   </body>
